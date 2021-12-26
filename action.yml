@@ -19,7 +19,7 @@ runs:
   using: 'composite'
   steps:
     - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
-      id: cache
+      id: cache-artifacts
       with:
         path: ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
