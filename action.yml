@@ -27,9 +27,7 @@ runs:
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
     - run: |
-        echo "Setting steps.$CACHE_NAME.outputs.cache-hit to $CACHE_HIT"
         echo "::set-output name=cache-hit::$CACHE_HIT"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
-        CACHE_NAME: ${{ inputs.cache-name }}
       shell: bash
