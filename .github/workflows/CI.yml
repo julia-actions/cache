@@ -17,13 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - shell: julia --color=yes {0}
-      run: '@assert !isdir("~/.julia/artifacts/")'
     - name: Generate random Project.toml (cache key)
       shell: julia --color=yes {0}
-      run: 'write("Project.toml", string(rand()))'
+      run: 'write("Project.toml", string(rand(10)))'
     - name: Save cache
       uses: ./
+    - shell: julia --color=yes {0}
+      run: '@assert isempty(readdir("~/.julia/artifacts/"))'
     - shell: julia --color=yes {0}
       run: 'using Pkg; Pkg.add("pandoc_jll")'
   test-restore:
