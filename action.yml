@@ -1,5 +1,10 @@
 name: 'Cache Julia Artifacts'
 description: 'Cache Julia artifacts using actions/cache'
+author: 'Sascha Mann'
+
+branding:
+  icon: 'archive'
+  color: 'purple'
 
 inputs:
   cache-name:
