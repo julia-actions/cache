@@ -1,0 +1,29 @@
+name: 'Cache Julia Artifacts'
+description: 'Cache Julia artifacts using actions/cache'
+
+inputs:
+  cache-name:
+    description: 'Name used as part of the cache keys'
+    default: 'cache-artifacts'
+
+outputs:
+  cache-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key. Forwarded from actions/cache'
+
+runs:
+  using: 'composite'
+  steps:
+    - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
+      id: cache
+      with:
+        path: ~/.julia/artifacts
+        key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
+        restore-keys: |
+          ${{ runner.os }}-test-${{ inputs.cache-name }}-
+          ${{ runner.os }}-test-
+          ${{ runner.os }}-
+
+    - run: echo "::set-output name=cache-hit::$CACHE_HIT"
+      env:
+        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+      shell: bash
