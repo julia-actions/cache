@@ -48,7 +48,7 @@ jobs:
     - name: Restore cache
       uses: ./
       with:
-        cache-name: ${{ needs.test-save.cache-name }}
+        cache-name: ${{ needs.test-save.outputs.cache-name }}
     - name: Check non-empty artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
