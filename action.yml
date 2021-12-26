@@ -19,7 +19,7 @@ runs:
   using: 'composite'
   steps:
     - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
-      id: cache
+      id: cache-artifacts
       with:
         path: ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
@@ -28,7 +28,9 @@ runs:
           ${{ runner.os }}-test-
           ${{ runner.os }}-
 
-    - run: echo "::set-output name=cache-hit::$CACHE_HIT"
+    - run: |
+        echo "Setting steps.${{ inputs.cache-name }}.outputs.cache-hit to $CACHE_HIT"
+        echo "::set-output name=cache-hit::$CACHE_HIT"
       env:
-        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+        CACHE_HIT: ${{ steps.${{ inputs.cache-name }}.outputs.cache-hit }}
       shell: bash
