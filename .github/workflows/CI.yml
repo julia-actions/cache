@@ -1,0 +1,36 @@
+name: CI
+
+on:
+  push:
+    branches:
+      - main
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+  pull_request:
+    paths-ignore:
+      - "README.md"
+      - "LICENSE"
+
+jobs:
+  test-save:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Save cache
+      uses: ./
+    - shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add("pandoc_jll")
+  test-restore:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@v2
+    - name: Restore cache
+      uses: ./
+    - shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add("pandoc_jll")
+
