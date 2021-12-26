@@ -17,6 +17,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
+    - shell: julia --color=yes {0}
+      run: @assert !isdir("~/.julia/artifacts/")
     - name: Save cache
       uses: ./
     - shell: julia --color=yes {0}
@@ -31,7 +33,5 @@ jobs:
     - name: Restore cache
       uses: ./
     - shell: julia --color=yes {0}
-      run: |
-        using Pkg
-        Pkg.add("pandoc_jll")
+      run: @assert isdir("~/.julia/artifacts/")
 
