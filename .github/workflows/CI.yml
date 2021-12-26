@@ -24,6 +24,7 @@ jobs:
         using Pkg
         Pkg.add("pandoc_jll")
   test-restore:
+    needs: test-save
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
