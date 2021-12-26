@@ -24,9 +24,10 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ hashFiles('random.txt') }}
-    - shell: julia --color=yes {0}
+    - name: Check empty artifacts dir
+      shell: julia --color=yes {0}
       run: |
-        dir = joinpath(homedir(), ".julia", "artifacts)
+        dir = joinpath(homedir(), ".julia", "artifacts")
         @assert isempty(readdir(dir))
     - shell: julia --color=yes {0}
       run: 'using Pkg; Pkg.add("pandoc_jll")'
