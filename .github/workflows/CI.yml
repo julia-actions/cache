@@ -29,7 +29,8 @@ jobs:
       run: |
         dir = joinpath(homedir(), ".julia", "artifacts")
         @assert isempty(readdir(dir))
-    - shell: julia --color=yes {0}
+    - name: Install a small binary
+      shell: julia --color=yes {0}
       run: 'using Pkg; Pkg.add("pandoc_jll")'
   test-restore:
     needs: test-save
@@ -38,6 +39,9 @@ jobs:
     - uses: actions/checkout@v2
     - name: Restore cache
       uses: ./
-    - shell: julia --color=yes {0}
-      run: '@assert isdir("~/.julia/artifacts/")'
+    - name: Check non-empty artifacts dir
+      shell: julia --color=yes {0}
+      run: |
+        dir = joinpath(homedir(), ".julia", "artifacts")
+        @assert !isempty(readdir(dir))
 
