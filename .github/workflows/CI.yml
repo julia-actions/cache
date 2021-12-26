@@ -29,9 +29,9 @@ jobs:
     - name: Set cache-name as output
       id: cache-artifacts
       run: |
-        echo "::set-output name=$cache-name"
+        echo "::set-output name=$CACHE_NAME"
       env:
-        cache-name: ${{ hashFiles('random.txt') }}
+        CACHE_NAME: ${{ hashFiles('random.txt') }}
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
