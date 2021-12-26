@@ -15,13 +15,21 @@ on:
 jobs:
   test-save:
     runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-artifacts.name }}
     steps:
     - uses: actions/checkout@v2
-    - name: Generate random file (cache name -> cache key)
+    - name: Generate random file
       shell: julia --color=yes {0}
       run: 'write("random.txt", string(rand(10)))'
     - name: Save cache
       uses: ./
+      with:
+        cache-name: ${{ hashFiles('random.txt') }}
+    - name: Set cache-name as output
+      id: cache-artifacts
+      run: |
+        echo "::set-output name=$cache-name"
       with:
         cache-name: ${{ hashFiles('random.txt') }}
     - name: Check no artifacts dir
@@ -39,6 +47,8 @@ jobs:
     - uses: actions/checkout@v2
     - name: Restore cache
       uses: ./
+      with:
+        cache-name: ${{ needs.test-save.cache-name }}
     - name: Check non-empty artifacts dir
       shell: julia --color=yes {0}
       run: |
