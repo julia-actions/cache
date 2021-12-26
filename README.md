@@ -16,6 +16,29 @@ Using this action is equivalent to including the following step in your workflow
       ${{ runner.os }}-
 ```
 
+## Usage
+
+### Inputs
+
+```yaml
+- uses: julia-actions/cache-artifacts@v1
+  with:
+    # The cache name is used as part of the cache key.
+    # It is equivalent to the cache-name environment variable in the snippet above.
+    #
+    # Default: cache-artifacts
+    cache-name: ''
+```
+
+### Outputs
+
+```yaml
+outputs:
+  # A boolean value to indicate an exact match was found for the primary key.
+  # Forwarded from actions/cache, check its documentation for more info.
+  cache-hit: ''
+```
+
 ## Third Party Notice
 
 This action is built around [`actions/cache`](https://github.com/actions/cache/) and includes parts of that action. `actions/cache` has been released under the following licence:
