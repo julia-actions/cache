@@ -20,7 +20,7 @@ jobs:
     steps:
     - uses: actions/checkout@v2
     - name: Generate random file
-      shell: julia --color=yes {0}
+      shell: 'julia --color=yes {0}'
       run: 'write("random.txt", string(rand(10)))'
     - name: Save cache
       uses: ./
@@ -30,15 +30,15 @@ jobs:
       id: cache-artifacts
       run: |
         echo "::set-output name=$cache-name"
-      with:
+      env:
         cache-name: ${{ hashFiles('random.txt') }}
     - name: Check no artifacts dir
-      shell: julia --color=yes {0}
+      shell: 'julia --color=yes {0}'
       run: |
         dir = joinpath(homedir(), ".julia", "artifacts")
         @assert !isdir(dir)
     - name: Install a small binary
-      shell: julia --color=yes {0}
+      shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
   test-restore:
     needs: test-save
@@ -50,7 +50,7 @@ jobs:
       with:
         cache-name: ${{ needs.test-save.cache-name }}
     - name: Check non-empty artifacts dir
-      shell: julia --color=yes {0}
+      shell: 'julia --color=yes {0}'
       run: |
         dir = joinpath(homedir(), ".julia", "artifacts")
         @assert !isempty(readdir(dir))
