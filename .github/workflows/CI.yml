@@ -21,6 +21,9 @@ jobs:
       run: '@assert !isdir("~/.julia/artifacts/")'
     - name: Save cache
       uses: ./
+    - name: Generate random file in artifacts dir
+      shell: julia --color=yes {0}
+      run: '@show mktempdir(parent="~/.julia/artifacts/")'
     - shell: julia --color=yes {0}
       run: |
         using Pkg
