@@ -17,11 +17,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
-    - name: Generate random Project.toml (cache key)
+    - name: Generate random file (cache name -> cache key)
       shell: julia --color=yes {0}
-      run: 'write("Project.toml", string(rand(10)))'
+      run: 'write("random.txt", string(rand(10)))'
     - name: Save cache
       uses: ./
+      with:
+        cache-name: ${{ hashFiles('random.txt') }}
     - shell: julia --color=yes {0}
       run: '@assert isempty(readdir("~/.julia/artifacts/"))'
     - shell: julia --color=yes {0}
