@@ -35,7 +35,7 @@ jobs:
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
-        dir = joinpath(homedir(), ".julia", "artifacts")
+        dir = "~/.julia/artifacts/"
         @assert !isdir(dir)
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
@@ -52,6 +52,7 @@ jobs:
     - name: Check non-empty artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
-        dir = joinpath(homedir(), ".julia", "artifacts")
+        dir = "~/.julia/artifacts"
+        @assert isdir(dir)
         @assert !isempty(readdir(dir))
 
