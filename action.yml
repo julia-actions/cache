@@ -31,8 +31,6 @@ runs:
 
     - run: |
         echo "Setting outputs.cache-hit to \"$CACHE_HIT\""
-        # Check non-empty.
-        [ -z "$CACHE_HIT" ] && exit(1)
         echo "::set-output name=cache-hit::$CACHE_HIT"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
