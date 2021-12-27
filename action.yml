@@ -31,7 +31,6 @@ runs:
 
     - id: hit
       run: |
-        echo "Setting outputs.cache-hit to \"$CACHE_HIT\""
         echo "::set-output name=cache-hit::$(echo $CACHE_HIT)"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}

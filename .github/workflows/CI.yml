@@ -4,9 +4,8 @@ on:
   push:
     branches:
       - main
-    paths-ignore:
-      - "README.md"
-      - "LICENSE"
+    paths:
+      - 'action.yml'
   pull_request:
     paths-ignore:
       - "README.md"
@@ -18,7 +17,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
     - name: Generate random file
       shell: 'julia --color=yes {0}'
       run: 'write("random.txt", string(rand(10)))'
@@ -47,7 +46,7 @@ jobs:
     needs: test-save
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
     - name: Restore cache
       id: cache
       uses: ./
