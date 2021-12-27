@@ -9,9 +9,9 @@ Using this action is equivalent to including the following step in your workflow
     cache-name: cache-artifacts
   with:
     path: ~/.julia/artifacts
-      key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
+      key: ${{ runner.os }}-test-${{ env.cache-name }}-${{ hashFiles('**/Project.toml') }}
       restore-keys: |
-        ${{ runner.os }}-test-${{ inputs.cache-name }}-
+        ${{ runner.os }}-test-${{ env.cache-name }}-
 ```
 
 ## Usage
