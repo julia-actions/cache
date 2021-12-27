@@ -16,6 +16,7 @@ inputs:
 outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key. Forwarded from actions/cache'
+    value: ${{ steps.hit.outputs.cache-hit }}
 
 runs:
   using: 'composite'
@@ -29,7 +30,10 @@ runs:
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
-    - run: echo "::set-output name=cache-hit::$CACHE_HIT"
+    - id: hit
+      run: |
+        echo "Setting outputs.cache-hit to \"$CACHE_HIT\""
+        echo "::set-output name=cache-hit::$(echo $CACHE_HIT)"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
       shell: bash
