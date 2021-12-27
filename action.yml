@@ -13,7 +13,8 @@ inputs:
 
 outputs:
   cache-hit:
-    description: 'A boolean value to indicate an exact match was found for the primary key. Forwarded from actions/cache'
+    description: 'A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache'
+    value: ${{ steps.hit.outputs.cache-hit }}
 
 runs:
   using: 'composite'
@@ -21,14 +22,14 @@ runs:
     - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
       id: cache
       with:
-        path: ~/.julia/artifacts
+        path: |
+          ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
-          ${{ runner.os }}-test-
-          ${{ runner.os }}-
 
-    - run: echo "::set-output name=cache-hit::$CACHE_HIT"
+    - id: hit
+      run: echo "::set-output name=cache-hit::$(echo $CACHE_HIT)"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
       shell: bash
