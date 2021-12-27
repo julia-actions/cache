@@ -1,7 +1,6 @@
-name: 'Cache Julia artifacts, packages and registry'
+name: 'Cache Julia artifacts'
 description: 'Cache Julia artifacts using actions/cache'
 author: 'julia-actions'
-
 
 branding:
   icon: 'archive'
@@ -10,7 +9,7 @@ branding:
 inputs:
   cache-name:
     description: 'Name used as part of the cache keys'
-    default: 'julia-cache'
+    default: 'cache-artifacts'
 
 outputs:
   cache-hit:
@@ -25,8 +24,6 @@ runs:
       with:
         path: |
           ~/.julia/artifacts
-          ~/.julia/packages
-          ~/.julia/registries
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
