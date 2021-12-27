@@ -1,6 +1,6 @@
 name: 'Cache Julia Artifacts'
 description: 'Cache Julia artifacts using actions/cache'
-author: 'Sascha Mann'
+author: 'Sascha Mann, Rik Huijzer, and contributors'
 
 branding:
   icon: 'archive'
