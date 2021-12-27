@@ -15,20 +15,19 @@ inputs:
 
 outputs:
   cache-hit:
-    description: 'A boolean value to indicate an exact match was found for the primary key. Forwarded from actions/cache'
+    description: 'A boolean value to indicate an exact match was found for the primary key. Return \"\" when the key is new. Forwarded from actions/cache'
     value: ${{ steps.hit.outputs.cache-hit }}
 
 runs:
   using: 'composite'
   steps:
-    # actions/cache@v1.0.7
-    - uses: actions/cache@1a9e2138d905efd099035b49d8b7a3888c653ca8
+    - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
       id: cache
       with:
         path: ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
-          ${{ runner.os }}-test-
+          ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
     - id: hit
       run: |

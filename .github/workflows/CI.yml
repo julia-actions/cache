@@ -50,7 +50,8 @@ jobs:
     steps:
     - run: |
         @show ENV["cache-hit"]
-        @assert ENV["cache-hit"] == "false"
+        # actions/cache returns empty when the cache key is new.
+        @assert ENV["cache-hit"] == ""
       shell: 'julia --color=yes {0}'
       env:
         cache-hit: ${{ needs.test-save.outputs.cache-hit }}
