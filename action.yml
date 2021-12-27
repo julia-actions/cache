@@ -28,7 +28,7 @@ runs:
         path: ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
-          ${{ runner.os }}-test-${{ inputs.cache-name }}-
+          ${{ runner.os }}-test-
 
     - id: hit
       run: |
