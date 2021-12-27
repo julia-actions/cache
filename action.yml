@@ -1,6 +1,8 @@
 name: 'Cache Julia Artifacts'
 description: 'Cache Julia artifacts using actions/cache'
-author: 'Sascha Mann'
+author:
+  - 'Sascha Mann'
+  - 'Rik Huijzer'
 
 branding:
   icon: 'archive'
@@ -18,8 +20,9 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
-      id: cache-artifacts
+    # actions/cache@v1.0.7
+    - uses: actions/cache@1a9e2138d905efd099035b49d8b7a3888c653ca8
+      id: cache
       with:
         path: ~/.julia/artifacts
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
@@ -27,6 +30,9 @@ runs:
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
     - run: |
+        echo "Setting outputs.cache-hit to \"$CACHE_HIT\""
+        # Check non-empty.
+        [ -z "$CACHE_HIT" ] && exit(1)
         echo "::set-output name=cache-hit::$CACHE_HIT"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}

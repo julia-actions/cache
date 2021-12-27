@@ -16,43 +16,66 @@ jobs:
   test-save:
     runs-on: ubuntu-latest
     outputs:
-      cache-name: ${{ steps.cache-artifacts.name }}
+      cache-name: ${{ steps.name.outputs.cache-name }}
+      cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
     - uses: actions/checkout@v2
     - name: Generate random file
       shell: 'julia --color=yes {0}'
       run: 'write("random.txt", string(rand(10)))'
     - name: Save cache
+      id: cache
       uses: ./
       with:
         cache-name: ${{ hashFiles('random.txt') }}
     - name: Set cache-name as output
-      id: cache-artifacts
+      id: name
       run: |
-        echo "::set-output name=$CACHE_NAME"
+        echo "Setting outputs.cache-name to \"$CACHE_NAME\""
+        echo "::set-output name=cache-name::$CACHE_NAME"
       env:
         CACHE_NAME: ${{ hashFiles('random.txt') }}
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
-        dir = "~/.julia/artifacts/"
+        dir = joinpath(first(DEPOT_PATH), "artifacts")
         @assert !isdir(dir)
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
+
+  test-output:
+    needs: test-save
+    runs-on: ubuntu-latest
+    steps:
+    - run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "false"
+      shell: 'julia --color=yes {0}'
+      env:
+        cache-hit: ${{ needs.test-save.outputs.cache-hit }}
+
   test-restore:
     needs: test-save
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@v2
     - name: Restore cache
+      id: cache
       uses: ./
       with:
         cache-name: ${{ needs.test-save.outputs.cache-name }}
+    - name: Test cache-hit output
+      shell: 'julia --color=yes {0}'
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "true"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
     - name: Check non-empty artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
-        dir = "~/.julia/artifacts"
+        dir = joinpath(first(DEPOT_PATH), "artifacts")
         @assert isdir(dir)
         @assert !isempty(readdir(dir))
 
