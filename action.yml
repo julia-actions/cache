@@ -35,7 +35,7 @@ runs:
         [ "$CACHE_PACKAGES" = "true" ] && PATHS="${PATHS}~/.julia/packages"$'\n'
         [ "$CACHE_REGISTRY" = "true" ] && PATHS="${PATHS}~/.julia/registry"$'\n'
         if [ "$PATHS" = "" ]; then
-          echo "At least one of cache-artifacts, cache-packages or cache-registry has to be true"
+          echo "::error title=Invalid inputs::At least one of cache-artifacts, cache-packages or cache-registry has to be true"
           exit 1
         fi
         echo "::set-output name=cache-paths::$PATHS"
