@@ -17,7 +17,6 @@ jobs:
     runs-on: ubuntu-latest
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
-      cache-hit: ${{ steps.cache.outputs.cache-hit }}
     steps:
     - uses: actions/checkout@v2
     - name: Generate random file
@@ -43,18 +42,6 @@ jobs:
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
-
-  test-output:
-    needs: test-save
-    runs-on: ubuntu-latest
-    steps:
-    - run: |
-        @show ENV["cache-hit"]
-        # actions/cache returns empty when the cache key is new.
-        @assert ENV["cache-hit"] == ""
-      shell: 'julia --color=yes {0}'
-      env:
-        cache-hit: ${{ needs.test-save.outputs.cache-hit }}
 
   test-restore:
     needs: test-save
