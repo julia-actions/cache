@@ -1,5 +1,5 @@
-name: 'Cache Julia Artifacts'
-description: 'Cache Julia artifacts using actions/cache'
+name: 'Cache Julia artifacts, packages and registry'
+description: 'Cache Julia using actions/cache'
 author: 'Sascha Mann, Rik Huijzer, and contributors'
 
 branding:
@@ -9,7 +9,16 @@ branding:
 inputs:
   cache-name:
     description: 'Name used as part of the cache keys'
-    default: 'cache-artifacts'
+    default: 'julia-cache'
+  cache-artifacts:
+    description: 'Whether to cache artifacts'
+    default: 'true'
+  cache-packages:
+    description: 'Whether to cache packages'
+    default: 'true'
+  cache-registry:
+    description: 'Whether to cache the registry'
+    default: 'false'
 
 outputs:
   cache-hit:
@@ -19,11 +28,27 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - id: paths
+      run: |
+        PATHS=""
+        [ "$CACHE_ARTIFACTS" = "true" ] && PATHS="${PATHS}~/.julia/artifacts"$'\n'
+        [ "$CACHE_PACKAGES" = "true" ] && PATHS="${PATHS}~/.julia/packages"$'\n'
+        [ "$CACHE_REGISTRY" = "true" ] && PATHS="${PATHS}~/.julia/registry"$'\n'
+        if [ "$PATHS" = "" ]; then
+          echo "::error title=Invalid inputs::At least one of cache-artifacts, cache-packages or cache-registry has to be true"
+          exit 1
+        fi
+        echo "::set-output name=cache-paths::$PATHS"
+      env:
+        CACHE_ARTIFACTS: ${{ inputs.cache-artifacts }}
+        CACHE_PACKAGES: ${{ inputs.cache-packages }}
+        CACHE_REGISTRY: ${{ inputs.cache-registry }}
+      shell: bash
+
     - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
       id: cache
       with:
-        path: |
-          ~/.julia/artifacts
+        path: ${{ steps.paths.outputs.cache-paths }}
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
