@@ -38,7 +38,7 @@ runs:
           echo "At least one of cache-artifacts, cache-packages or cache-registry has to be true"
           exit 1
         fi
-        echo "::set-output name=cache-paths::$(echo "$PATHS")"
+        echo "::set-output name=cache-paths::$PATHS"
       env:
         CACHE_ARTIFACTS: ${{ inputs.cache-artifacts }}
         CACHE_PACKAGES: ${{ inputs.cache-packages }}
