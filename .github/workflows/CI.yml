@@ -12,7 +12,11 @@ on:
 
 jobs:
   test-save:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
@@ -43,7 +47,11 @@ jobs:
 
   test-restore:
     needs: test-save
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        os: [ubuntu-latest, windows-latest, macOS-latest]
+      fail-fast: false
+    runs-on: ${{ matrix.os }}
     steps:
     - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
     - name: Restore cache
