@@ -29,9 +29,7 @@ runs:
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
-    - run: |
-        echo "Setting outputs.cache-hit to \"$CACHE_HIT\""
-        echo "::set-output name=cache-hit::$CACHE_HIT"
+    - run: echo "::set-output name=cache-hit::$CACHE_HIT"
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
       shell: bash
