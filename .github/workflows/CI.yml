@@ -11,29 +11,34 @@ on:
       - 'action.yml'
 
 jobs:
+  generate-key:
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.name.outputs.cache-name }}
+    steps:
+    - name: Generate random file
+      shell: 'julia --color=yes {0}'
+      run: 'write("random.txt", string(rand(10)))'
+    - name: Set cache-name as output
+      id: name
+      run: echo "::set-output name=key::$(echo $CACHE_NAME)"
+      env:
+        CACHE_NAME: ${{ hashFiles('random.txt') }}
+
   test-save:
+    needs: generate-key
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
-    outputs:
-      cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
     - uses: actions/checkout@ec3a7ce113134d7a93b817d10a8272cb61118579
-    - name: Generate random file
-      shell: 'julia --color=yes {0}'
-      run: 'write("random.txt", string(rand(10)))'
     - name: Save cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ hashFiles('random.txt') }}
-    - name: Set cache-name as output
-      id: name
-      run: echo "::set-output name=cache-name::$(echo $CACHE_NAME)"
-      env:
-        CACHE_NAME: ${{ hashFiles('random.txt') }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
@@ -44,7 +49,7 @@ jobs:
       run: 'using Pkg; Pkg.add("pandoc_jll")'
 
   test-restore:
-    needs: test-save
+    needs: [generate-key, test-save]
     strategy:
       matrix:
         os: [ubuntu-latest, windows-latest, macOS-latest]
@@ -56,7 +61,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.test-save.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
