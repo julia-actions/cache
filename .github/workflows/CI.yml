@@ -7,9 +7,8 @@ on:
     paths:
       - 'action.yml'
   pull_request:
-    paths-ignore:
-      - "README.md"
-      - "LICENSE"
+    paths:
+      - 'action.yml'
 
 jobs:
   test-save:
