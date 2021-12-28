@@ -11,13 +11,13 @@ inputs:
     description: 'Name used as part of the cache keys'
     default: 'julia-cache'
   cache-artifacts:
-    description: 'Whether to cache artifacts'
+    description: 'Whether to cache ~/.julia/artifacts/'
     default: 'true'
   cache-packages:
-    description: 'Whether to cache packages'
+    description: 'Whether to cache ~/.julia/packages/'
     default: 'true'
-  cache-registry:
-    description: 'Whether to cache the registry'
+  cache-registries:
+    description: 'Whether to cache ~/.julia/registries/'
     default: 'false'
 
 outputs:
@@ -30,25 +30,18 @@ runs:
   steps:
     - id: paths
       run: |
-        PATHS=""
-        [ "$CACHE_ARTIFACTS" = "true" ] && PATHS="${PATHS}~/.julia/artifacts"$'\n'
-        [ "$CACHE_PACKAGES" = "true" ] && PATHS="${PATHS}~/.julia/packages"$'\n'
-        [ "$CACHE_REGISTRY" = "true" ] && PATHS="${PATHS}~/.julia/registry"$'\n'
-        if [ "$PATHS" = "" ]; then
-          echo "::error title=Invalid inputs::At least one of cache-artifacts, cache-packages or cache-registry has to be true"
-          exit 1
-        fi
-        echo "::set-output name=cache-paths::$PATHS"
-      env:
-        CACHE_ARTIFACTS: ${{ inputs.cache-artifacts }}
-        CACHE_PACKAGES: ${{ inputs.cache-packages }}
-        CACHE_REGISTRY: ${{ inputs.cache-registry }}
+        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
+        echo "ARTIFACTS_PATH=$A_PATH" >> $GITHUB_ENV
+        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="~/.julia/packages"
+        echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
+        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
+        echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache@937d24475381cd9c75ae6db12cb4e79714b926ed
       id: cache
       with:
-        path: ${{ steps.paths.outputs.cache-paths }}
+        path: "${{ format('{0}\n{1}\n{2}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH) }}"
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
