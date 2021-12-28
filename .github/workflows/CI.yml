@@ -69,10 +69,11 @@ jobs:
         @assert ENV["cache-hit"] == "true"
       env:
         cache-hit: ${{ steps.cache.outputs.cache-hit }}
-    - name: Check non-empty artifacts dir
+    - name: Check non-empty artifacts and packages dir
       shell: 'julia --color=yes {0}'
       run: |
-        dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert isdir(dir)
-        @assert !isempty(readdir(dir))
+        artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isempty(readdir(artifacts_dir))
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isempty(readdir(packages_dir))
 
