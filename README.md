@@ -1,7 +1,6 @@
 # julia-actions/cache Action
 
-A shortcut action to cache Julia artifacts, packages and (optionally) registries.
-This reduces GitHub Actions running time.
+A shortcut action to cache Julia artifacts, packages and (optionally) registries to reduce GitHub Actions running time.
 
 ## Usage
 
