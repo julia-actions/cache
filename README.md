@@ -50,7 +50,7 @@ That is why caching the registries is disabled by default.
 This action is a wrapper around <https://github.com/actions/cache>.
 In summary, this action stores the files in the aforementioned paths in one compressed file when running for the first time.
 This cached file is then restored upon the second run.
-The benefit of this is that downloading one big file is quicker than downloading many different files from different locations.
+The benefit of this is that downloading one big file is quicker than downloading many different files from many different locations.
 
 ## Third Party Notice
 
