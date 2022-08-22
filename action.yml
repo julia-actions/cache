@@ -38,7 +38,7 @@ runs:
         echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
       shell: bash
 
-    - uses: actions/cache@a7c34adf76222e77931dedbf4a45b2e4648ced19
+    - uses: actions/cache@fd5de65bc895cf536527842281bea11763fefd77
       id: cache
       with:
         path: "${{ format('{0}\n{1}\n{2}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH) }}"
