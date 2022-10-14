@@ -23,7 +23,7 @@ jobs:
       run: 'write("random.txt", string(rand(10)))'
     - name: Set cache-name as output
       id: name
-      run: echo "::set-output name=cache-name::${{ hashFiles('random.txt') }}"
+      run: echo "cache-name=${{ hashFiles('random.txt') }}" >> $GITHUB_OUTPUT
 
   test-save:
     needs: generate-key
