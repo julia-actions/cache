@@ -47,7 +47,7 @@ runs:
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
 
     - id: hit
-      run: echo "cache-hit$CACHE_HIT" >> $GITHUB_OUTPUT
+      run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
       shell: bash
