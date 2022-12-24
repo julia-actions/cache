@@ -39,8 +39,8 @@ runs:
         echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
-        [ "${{ inputs.cache-precompilation-cache }}" = "true" ] && PC_PATH="~/.julia/compiled"
-        echo "PRECOMPILATION_CACHE_PATH=$PC_PATH" >> $GITHUB_ENV
+        [ "${{ inputs.cache-precompilation-cache }}" = "true" ] && PCC_PATH="~/.julia/compiled"
+        echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache@c1a5de879eb890d062a85ee0252d6036480b1fe2
