@@ -46,7 +46,7 @@ runs:
     - uses: actions/cache@c1a5de879eb890d062a85ee0252d6036480b1fe2
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH), env.PRECOMPILATION_CACHE_PATH }}"
+        path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH, env.PRECOMPILATION_CACHE_PATH) }}"
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
