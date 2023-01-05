@@ -19,7 +19,7 @@ inputs:
   cache-registries:
     description: 'Whether to cache ~/.julia/registries/'
     default: 'false'
-  cache-precompilation-cache:
+  cache-compiled:
     description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
     default: 'false'
 
@@ -39,7 +39,7 @@ runs:
         echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
-        [ "${{ inputs.cache-precompilation-cache }}" = "true" ] && PCC_PATH="~/.julia/compiled"
+        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
         echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
       shell: bash
 
