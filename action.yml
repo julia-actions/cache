@@ -19,6 +19,9 @@ inputs:
   cache-registries:
     description: 'Whether to cache ~/.julia/registries/'
     default: 'false'
+  cache-compiled:
+    description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
+    default: 'false'
 
 outputs:
   cache-hit:
@@ -36,12 +39,14 @@ runs:
         echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
+        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
+        echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
       shell: bash
 
     - uses: actions/cache@4723a57e26efda3a62cbde1812113b730952852d
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH) }}"
+        path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH, env.PRECOMPILATION_CACHE_PATH) }}"
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
