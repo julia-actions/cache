@@ -8,7 +8,7 @@ branding:
 
 inputs:
   cache-name:
-    description: 'Name used as part of the cache keys'
+    description: 'Name used as part of the cache key. If your matrix has `julia-version` or `arch` under different names, interpolate their values into this name'
     default: 'julia-cache'
   cache-artifacts:
     description: 'Whether to cache ~/.julia/artifacts/'
@@ -17,13 +17,16 @@ inputs:
     description: 'Whether to cache ~/.julia/packages/'
     default: 'true'
   cache-registries:
-    description: 'Whether to cache ~/.julia/registries/'
+    description: 'Whether to cache ~/.julia/registries/. This is off by default to ensure CI gets latest versions'
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
-    default: 'false'
+    description: 'Whether to cache ~/.julia/compiled/'
+    default: 'true'
   cache-scratchspaces:
     description: 'Whether to cache ~/.julia/scratchspaces/'
+    default: 'true'
+  cache-logs:
+    description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down'
     default: 'true'
 
 outputs:
@@ -43,18 +46,40 @@ runs:
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
-        echo "precompilation-cache-path=$PCC_PATH" >> $GITHUB_OUTPUT
+        echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="~/.julia/scratchspaces"
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
+        [ "${{ inputs.cache-log }}" = "true" ] && L_PATH="~/.julia/logs"
+        echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
-    - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
+    - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}\n{4}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path, steps.paths.outputs.scratchspaces-path) }}"
-        key: ${{ runner.os }}-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
+        path: |
+          ${{ steps.paths.outputs.artifacts-path }}
+          ${{ steps.paths.outputs.packages-path }}
+          ${{ steps.paths.outputs.registries-path }}
+          ${{ steps.paths.outputs.scratchspaces-path }}
+          ${{ steps.paths.outputs.compiled-path }}
+          ${{ steps.paths.outputs.logs-path }}
+        # the key should be unique to the run, otherwise actions/cache will refuse to save it
+        key: ${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
+        # Note: if changed, make sure the restore key is updated in the delete step too
         restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-name }}-
+          ${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}
+        enableCrossOsArchive: false
+
+    # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
+    # that match the restore key just before saving the new cache
+    - uses: pyTooling/Actions/with-post-step@v0.4.6
+      with:
+        # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
+        # main:  julia ${{ github.action_path }}/handle_caches.jl "list"
+        main: echo ""
+        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}"
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
