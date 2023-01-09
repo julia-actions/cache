@@ -8,8 +8,8 @@ branding:
 
 inputs:
   cache-name:
-    description: 'Name used as part of the cache keys'
-    default: 'julia-cache'
+    description: 'Name used as part of the cache keys. The default works best if `julia-version` and `arch` are in your matrix'
+    default: '${{ matrix.julia-version }}-${{ matrix.arch }}'
   cache-artifacts:
     description: 'Whether to cache ~/.julia/artifacts/'
     default: 'true'
@@ -20,8 +20,8 @@ inputs:
     description: 'Whether to cache ~/.julia/registries/'
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
-    default: 'false'
+    description: 'Whether to cache ~/.julia/compiled/'
+    default: 'true'
   cache-scratchspaces:
     description: 'Whether to cache ~/.julia/scratchspaces/'
     default: 'true'
@@ -30,6 +30,9 @@ outputs:
   cache-hit:
     description: 'A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache'
     value: ${{ steps.hit.outputs.cache-hit }}
+  cache-compiled-hit:
+    description: 'A boolean value to indicate an exact match was found for the primary key of the compiled cache. Returns \"\" when the key is new. Forwarded from actions/cache'
+    value: ${{ steps.hit.outputs.cache-compiled-hit }}
 
 runs:
   using: 'composite'
@@ -51,13 +54,36 @@ runs:
     - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}\n{4}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path, steps.paths.outputs.scratchspaces-path) }}"
-        key: ${{ runner.os }}-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
+        path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.scratchspaces-path) }}"
+        key: julia-cache-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-name }}-
+          julia-cache-${{ inputs.cache-name }}-
+        enableCrossOsArchive: true
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
       env:
         CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
+      shell: bash
+
+    - name: Symlink depot to inside github workspace to make hashFiles read files
+      run: |
+        ln -s ~/.julia julia_depot
+      shell: bash
+
+    - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
+      id: cache-compiled
+      if: inputs.cache-compiled == 'true'
+      with:
+        path: ~/.julia/compiled
+        key: julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}-${{ hashFiles('--follow-symbolic-links', 'julia_depot/compiled/**') }}
+        restore-keys: |
+          julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}
+        enableCrossOsArchive: false
+
+    - id: compiled-hit
+      if: inputs.cache-compiled == 'true'
+      run: echo "cache-compiled-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
+      env:
+        CACHE_HIT: ${{ steps.cache-compiled.outputs.cache-hit }}
       shell: bash
