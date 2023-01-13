@@ -69,7 +69,7 @@ jobs:
         @assert ENV["cache-hit"] == "true"
       env:
         cache-hit: ${{ steps.cache.outputs.cache-hit }}
-    - name: Check (non-)existance of affected dirs
+    - name: Check existance or emptiness of affected dirs
       shell: 'julia --color=yes {0}'
       run: |
         # Artifacts and Packages should exist as they've been cached
@@ -80,5 +80,5 @@ jobs:
 
         # Caching the compiled dir is disabled by default and should not exist after restoring a cache
         compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
-        @assert isempty(readdir(compiled_dir))
+        @assert !isdir(compiled_dir) || isempty(readdir(compiled_dir))
 
