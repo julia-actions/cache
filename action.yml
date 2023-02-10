@@ -43,7 +43,7 @@ runs:
         echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
       shell: bash
 
-    - uses: actions/cache@627f0f41f6904a5b1efbaed9f96d9eb58e92e920
+    - uses: actions/cache@6998d139ddd3e68c71e9e398d8e40b71a2f39812
       id: cache
       with:
         path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH, env.PRECOMPILATION_CACHE_PATH) }}"
