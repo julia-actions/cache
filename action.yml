@@ -18,7 +18,7 @@ inputs:
     default: 'true'
   cache-registries:
     description: 'Whether to cache ~/.julia/registries/'
-    default: 'false'
+    default: 'true'
   cache-compiled:
     description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
     default: 'false'

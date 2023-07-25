@@ -22,24 +22,14 @@ jobs:
     - uses: julia-actions/julia-runtest@v1
 ```
 
-By default, this caches the files in `~/.julia/artifacts/` and `~/.julia/packages/`.
-To also cache `~/.julia/registries/`, use
-
-```yaml
-    - uses: julia-actions/cache@v1
-      with:
-        cache-registries: "true"
-```
-
-Note that caching the registries may actually slow down the workflow running time on Windows runners.
-That is why caching the registries is disabled by default.
+By default, this caches the files in `~/.julia/artifacts/`,  `~/.julia/packages/` and `~/.julia/registries`.
 
 ### Inputs
 
 - `cache-name` - Name used as part of the cache keys
 - `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Enabled by default.
 - `cache-packages` - Whether to cache `~/.julia/packages/`. Enabled by default.
-- `cache-registries` - Whether to cache `~/.julia/registries/`. Disabled by default.
+- `cache-registries` - Whether to cache `~/.julia/registries/`. Enabled by default.
 - `cache-compiled` - Whether to cache `~/.julia/compiled/`. Disabled by default. **USE ONLY IF YOU KNOW WHAT YOU'RE DOING!** See [#11](https://github.com/julia-actions/cache/issues/11).
 
 ### Outputs
