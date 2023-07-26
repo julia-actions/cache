@@ -22,6 +22,9 @@ inputs:
   cache-compiled:
     description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
     default: 'false'
+  cache-scratchspaces:
+    description: 'Whether to cache ~/.julia/scratchspaces/'
+    default: 'true'
 
 outputs:
   cache-hit:
@@ -41,12 +44,14 @@ runs:
         echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
         echo "precompilation-cache-path=$PCC_PATH" >> $GITHUB_OUTPUT
+        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="~/.julia/scratchspaces"
+        echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path) }}"
+        path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path, steps.paths.outputs.scratchspaces-path) }}"
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-

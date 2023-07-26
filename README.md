@@ -15,7 +15,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: julia-actions/setup-julia@v1
     - uses: julia-actions/cache@v1
     - uses: julia-actions/julia-buildpkg@v1
@@ -41,6 +41,7 @@ That is why caching the registries is disabled by default.
 - `cache-packages` - Whether to cache `~/.julia/packages/`. Enabled by default.
 - `cache-registries` - Whether to cache `~/.julia/registries/`. Disabled by default.
 - `cache-compiled` - Whether to cache `~/.julia/compiled/`. Disabled by default. **USE ONLY IF YOU KNOW WHAT YOU'RE DOING!** See [#11](https://github.com/julia-actions/cache/issues/11).
+- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Enabled by default.
 
 ### Outputs
 
