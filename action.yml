@@ -34,19 +34,19 @@ runs:
     - id: paths
       run: |
         [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
-        echo "ARTIFACTS_PATH=$A_PATH" >> $GITHUB_ENV
+        echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="~/.julia/packages"
-        echo "PACKAGES_PATH=$P_PATH" >> $GITHUB_ENV
+        echo "packages-path=$P_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
-        echo "REGISTRIES_PATH=$R_PATH" >> $GITHUB_ENV
+        echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
-        echo "PRECOMPILATION_CACHE_PATH=$PCC_PATH" >> $GITHUB_ENV
+        echo "precompilation-cache-path=$PCC_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@88522ab9f39a2ea568f7027eddc7d8d8bc9d59c8
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}', env.ARTIFACTS_PATH, env.PACKAGES_PATH, env.REGISTRIES_PATH, env.PRECOMPILATION_CACHE_PATH) }}"
+        path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path) }}"
         key: ${{ runner.os }}-test-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
           ${{ runner.os }}-test-${{ inputs.cache-name }}-
