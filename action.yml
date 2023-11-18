@@ -51,7 +51,7 @@ runs:
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
-    - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
+    - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
       with:
         path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.scratchspaces-path) }}"
@@ -71,7 +71,7 @@ runs:
         ln -s ~/.julia julia_depot
       shell: bash
 
-    - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
+    - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache-compiled
       if: inputs.cache-compiled == 'true'
       env:
