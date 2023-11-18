@@ -57,7 +57,7 @@ runs:
         path: "${{ format('{0}\n{1}\n{2}\n{3}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.scratchspaces-path) }}"
         key: julia-cache-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
         restore-keys: |
-          julia-cache-${{ inputs.cache-name }}-
+          julia-cache-${{ inputs.cache-name }}
         enableCrossOsArchive: true
 
     - id: hit
@@ -76,7 +76,7 @@ runs:
       if: inputs.cache-compiled == 'true'
       with:
         path: ~/.julia/compiled
-        key: julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}-${{ hashFiles('--follow-symbolic-links', 'julia_depot/compiled/**') }}
+        key: julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}-fooooooooooooooooooooooooobaar #${{ hashFiles('--follow-symbolic-links', 'julia_depot/compiled/**') }}
         restore-keys: |
           julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}
         enableCrossOsArchive: false
