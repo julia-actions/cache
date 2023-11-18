@@ -78,7 +78,7 @@ runs:
         DEPOT_HASH: ${{ hashFiles('--follow-symbolic-links', 'julia_depot/compiled/**') }}
       with:
         path: ~/.julia/compiled
-        key: julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}-${{ env.DEPOT_HASH }}
+        key: julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}-$DEPOT_HASH
         restore-keys: |
           julia-cache-compiled-${{ inputs.cache-name }}-${{ runner.os }}
         enableCrossOsArchive: false
