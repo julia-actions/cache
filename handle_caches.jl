@@ -11,6 +11,7 @@ elseif func == "rm"
         search_again = length(hits) == 100
         filter!(contains(restore_key), hits)
         isempty(hits) && break
+        # We can delete everything that matches the restore key because the new cache is saved later.
         for c in hits
             try
                 run(`gh cache delete $(split(c)[1])`)
