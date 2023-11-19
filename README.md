@@ -1,6 +1,6 @@
 # julia-actions/cache Action
 
-A shortcut action to cache Julia artifacts, packages and (optionally) registries to reduce GitHub Actions running time.
+A shortcut action to cache Julia depot contents to reduce GitHub Actions running time.
 
 ## Usage
 
@@ -34,25 +34,59 @@ To also cache `~/.julia/registries/`, use
 Note that caching the registries may actually slow down the workflow running time on Windows runners.
 That is why caching the registries is disabled by default.
 
-### Inputs
+### Optional Inputs
 
-- `cache-name` - Name used as part of the cache keys
-- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Enabled by default.
-- `cache-packages` - Whether to cache `~/.julia/packages/`. Enabled by default.
-- `cache-registries` - Whether to cache `~/.julia/registries/`. Disabled by default.
-- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Disabled by default. **USE ONLY IF YOU KNOW WHAT YOU'RE DOING!** See [#11](https://github.com/julia-actions/cache/issues/11).
-- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Enabled by default.
+- `cache-name` - Name used as part of the cache keys. Defaults to `julia-cache`. If your matrix has `julia-version` or
+  `arch` under different names, interpolate their values into this name.
+- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `yes`.
+- `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `yes`.
+- `cache-registries` - Whether to cache `~/.julia/registries/`. Defaults to `no`. Disabled to ensure CI gets latest versions.
+- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `yes`.
+- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `yes`.
+- `cache-log` - Whether to cache `~/.julia/logs/`. Defaults to `yes`. Helps auto-`Pkg.gc()` keep the cache small
 
 ### Outputs
 
 - `cache-hit` - A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache.
 
-## How it works
+## How It Works
 
 This action is a wrapper around <https://github.com/actions/cache>.
 In summary, this action stores the files in the aforementioned paths in one compressed file when running for the first time.
-This cached file is then restored upon the second run.
-The benefit of this is that downloading one big file is quicker than downloading many different files from many different locations.
+This cached file is then restored upon the second run, and afterwards resaved under a new key, and the previous cache deleted.
+The benefit of this is that downloading one big file is quicker than downloading many different files from many different locations
+and precompiling them.
+
+### Cache keys
+
+The cache key that the cache will be saved as is based on:
+- The `cache-name` input
+- An assumed `matrix.julia-version` variable (ignored if not found)
+- The `runner.os`
+- An assumed `matrix.arch` variable (ignored if not found)
+- The run id
+- The run attempt number
+
+> [!NOTE]
+> If in your workflow the above matrix variables are named differently, either conform them, or interpolate them into your
+`cache-name` to ensure that individual caches are maintained for unique job types that run concurrently, otherwise caching
+may not be effective.
+
+### Cache Retention
+
+This action automatically deletes old caches that match the first 4 fields of the above key:
+- The `cache-name` input
+- An assumed `matrix.julia-version` variable (ignored if not found)
+- The `runner.os`
+- An assumed `matrix.arch` variable (ignored if not found)
+
+Which means your caches files will not grow needlessly. Github also deletes cache files after 7 days.
+
+### Cache Garbage Collection
+
+Caches are restored and re-saved after every run, retaining the state of the depot throughout runs.
+Their size will be regulated like a local depot automatically by the automatic `Pkg.gc()` functionality that clears out
+old content, which is made possible because the `/log` contents are cached.
 
 ## Third Party Notice
 
