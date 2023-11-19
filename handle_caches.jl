@@ -28,4 +28,6 @@ elseif func == "rm"
         println("$(length(caches)) existing caches deleted that match restore key `$restore_key`:")
         println.(caches)
     end
+else
+    throw(ArgumentError("Unexpected first argument: $func"))
 end
