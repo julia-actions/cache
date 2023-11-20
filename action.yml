@@ -28,6 +28,9 @@ inputs:
   cache-logs:
     description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down'
     default: 'true'
+  delete-old-caches:
+    description: 'Whether to delete old caches for the given key'
+    default: 'true'
 
 outputs:
   cache-hit:
@@ -73,6 +76,7 @@ runs:
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
     # that match the restore key just before saving the new cache
     - uses: pyTooling/Actions/with-post-step@v0.4.6
+      if: ${{ inputs.delete-old-caches == 'true' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "list"

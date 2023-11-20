@@ -38,12 +38,13 @@ That is why caching the registries is disabled by default.
 
 - `cache-name` - Name used as part of the cache keys. Defaults to `julia-cache`. If your matrix has `julia-version` or
   `arch` under different names, interpolate their values into this name.
-- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `yes`.
-- `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `yes`.
-- `cache-registries` - Whether to cache `~/.julia/registries/`. Defaults to `no`. Disabled to ensure CI gets latest versions.
-- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `yes`.
-- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `yes`.
-- `cache-log` - Whether to cache `~/.julia/logs/`. Defaults to `yes`. Helps auto-`Pkg.gc()` keep the cache small
+- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `true`.
+- `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `true`.
+- `cache-registries` - Whether to cache `~/.julia/registries/`. Defaults to `false`. Disabled to ensure CI gets latest versions.
+- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `true`.
+- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
+- `cache-log` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`
 
 ### Outputs
 
@@ -80,7 +81,10 @@ This action automatically deletes old caches that match the first 4 fields of th
 - The `runner.os`
 - An assumed `matrix.arch` variable (ignored if not found)
 
-Which means your caches files will not grow needlessly. Github also deletes cache files after 7 days.
+Which means your caches files will not grow needlessly. Github also deletes cache files after
+[90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
+
+To disable deletion set input `delete-old-caches` to `false`.
 
 ### Cache Garbage Collection
 
