@@ -42,6 +42,7 @@ That is why caching the registries is disabled by default.
 - `cache-registries` - Whether to cache `~/.julia/registries/`. Disabled by default.
 - `cache-compiled` - Whether to cache `~/.julia/compiled/`. Disabled by default. **USE ONLY IF YOU KNOW WHAT YOU'RE DOING!** See [#11](https://github.com/julia-actions/cache/issues/11).
 - `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Enabled by default.
+- `cache-custom` - Provide a directory name to cache a custom depot directory at `~/.julia/{name}/`. Disabled by default.
 
 ### Outputs
 
