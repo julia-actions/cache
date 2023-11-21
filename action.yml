@@ -52,7 +52,7 @@ runs:
         echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="~/.julia/scratchspaces"
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-log }}" = "true" ] && L_PATH="~/.julia/logs"
+        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
