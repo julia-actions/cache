@@ -74,12 +74,16 @@ jobs:
     - name: Check existance or emptiness of affected dirs
       shell: 'julia --color=yes {0}'
       run: |
-        # Artifacts, Packages and Compiled should exist as they've been cached
+        # These dirs should exist as they've been cached
         artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
         @assert !isempty(readdir(artifacts_dir))
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert !isempty(readdir(packages_dir))
         compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
         @assert !isempty(readdir(compiled_dir))
+        scratchspaces_dir = joinpath(first(DEPOT_PATH), "scratchspaces")
+        @assert !isempty(readdir(scratchspaces_dir))
+        logs_dir = joinpath(first(DEPOT_PATH), "logs")
+        @assert !isempty(readdir(logs_dir))
 
 
