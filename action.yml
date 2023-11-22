@@ -55,7 +55,7 @@ runs:
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
 
-        echo '${{ toJSON(matrix || {}) }}' | jq -r 'if . then to_entries | map("\(.value)") | "matrix-string=" + join("-") else "matrix-string=" end' >> $GITHUB_OUTPUT
+        echo '${{ toJSON(doesnotexist) }}' | jq -r 'if . then to_entries | map("\(.value)") | "matrix-string=" + join("-") else "matrix-string=" end' >> $GITHUB_OUTPUT
       shell: bash
       # matrix-string is a string join of all matrix variables that helps concurrent runs have unique cache keys
       # TODO: Figure out if its possible to render `matrix-string` and the keys in the same run without duplication
