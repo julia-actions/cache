@@ -3,6 +3,7 @@ func = ARGS[2]
 restore_key = get(ARGS, 3, "")
 
 cd(workspace) do
+    println("Setting working directory to $workspace")
     if func == "list"
         println("Listing existing caches")
         run(`gh cache list --limit 100`)
