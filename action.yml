@@ -8,7 +8,7 @@ branding:
 
 inputs:
   cache-name:
-    description: 'Name used as part of the cache key. If your matrix has `julia-version` or `arch` under different names, interpolate their values into this name'
+    description: 'The cache key prefix. The key body automatically includes matrix vars `version/julia-version`, `arch` and the OS. Include any other parameters/details to ensure one unique cache key per concurrent job type.'
     default: 'julia-cache'
   cache-artifacts:
     description: 'Whether to cache ~/.julia/artifacts/'
@@ -40,7 +40,7 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - id: paths
+    - id: vars
       run: |
         [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
         echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
@@ -54,23 +54,24 @@ runs:
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
+
+        echo "restore-key=${{ inputs.cache-name }}-${{ matrix.version }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
+        echo "key=${{ inputs.cache-name }}-${{ matrix.version }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
       with:
         path: |
-          ${{ steps.paths.outputs.artifacts-path }}
-          ${{ steps.paths.outputs.packages-path }}
-          ${{ steps.paths.outputs.registries-path }}
-          ${{ steps.paths.outputs.scratchspaces-path }}
-          ${{ steps.paths.outputs.compiled-path }}
-          ${{ steps.paths.outputs.logs-path }}
-        # the key should be unique to the run, otherwise actions/cache will refuse to save it
-        key: ${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}
-        # Note: if changed, make sure the restore key is updated in the delete step too
-        restore-keys: |
-          ${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}
+          ${{ steps.vars.outputs.artifacts-path }}
+          ${{ steps.vars.outputs.packages-path }}
+          ${{ steps.vars.outputs.registries-path }}
+          ${{ steps.vars.outputs.scratchspaces-path }}
+          ${{ steps.vars.outputs.compiled-path }}
+          ${{ steps.vars.outputs.logs-path }}
+
+        key: ${{ steps.vars.outputs.key }}
+        restore-keys: ${{ steps.vars.outputs.restore-key }}
         enableCrossOsArchive: false
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
@@ -81,7 +82,7 @@ runs:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "list"
         main: echo ""
-        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ inputs.cache-name }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}"
+        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ steps.vars.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ github.token }}
 
