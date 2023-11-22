@@ -82,7 +82,7 @@ runs:
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
     # that match the restore key just before saving the new cache
-    - uses: ./with-post-step
+    - uses: ${{ github.action_path }}/with-post-step
       if: ${{ inputs.delete-old-caches == 'true' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
