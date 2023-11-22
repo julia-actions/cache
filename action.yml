@@ -61,8 +61,8 @@ runs:
       # TODO: Figure out if its possible to render `matrix-string` and the keys in the same run without duplication
     - id: keys
       run: |
-        echo "restore-key=${{ inputs.cache-name }}-${{ steps.vars.outputs.matrix-string }}-${{ runner.os }}" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ steps.vars.outputs.matrix-string }}-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}" >> $GITHUB_OUTPUT
+        echo "key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
