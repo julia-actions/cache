@@ -52,7 +52,7 @@ However note that caching the registries may mean that the registry will not be 
 This action is a wrapper around <https://github.com/actions/cache>.
 In summary, this action stores the files in the aforementioned paths in one compressed file when running for the first time.
 This cached file is then restored upon the second run, and afterwards resaved under a new key, and the previous cache deleted.
-The benefit of this is that downloading one big file is quicker than downloading many different files from many different locations
+The benefit of caching is that downloading one big file is quicker than downloading many different files from many different locations
 and precompiling them.
 
 ### Cache keys
