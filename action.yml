@@ -86,12 +86,11 @@ runs:
       if: ${{ inputs.delete-old-caches == 'true' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
-        # main:  julia ${{ github.action_path }}/handle_caches.jl "list"
+        # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.workspace }}" "list"
         main: echo ""
-        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ steps.keys.outputs.restore-key }}"
+        post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.workspace }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ github.token }}
-      working-directory: ${{ github.workspace }}
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
