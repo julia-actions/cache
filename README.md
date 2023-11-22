@@ -34,7 +34,7 @@ However note that caching the registries may mean that the registry will not be 
 
 ### Optional Inputs
 
-- `cache-name` - The cache key prefix. Defaults to `julia-cache`. The key body automatically includes matrix vars `version/julia-version`, `arch` and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+- `cache-name` - The cache key prefix. Defaults to `julia-cache`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `true`.
 - `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `true`.
 - `cache-registries` - Whether to cache `~/.julia/registries/`. Defaults to `false`. Disabled to ensure CI gets latest versions.
@@ -59,24 +59,21 @@ and precompiling them.
 
 The cache key that the cache will be saved as is based on:
 - The `cache-name` input
-- An assumed `matrix.julia-version` or `matrix.version` variable (ignored if not found)
-- The `runner.os`
-- An assumed `matrix.arch` variable (ignored if not found)
+- All variables in the `matrix`
+- The `runner.os` (may be in the matrix too, but included for safety)
 - The run id
 - The run attempt number
 
 > [!NOTE]
-> If in your workflow if you do not use a matrix, or the above matrix variables are named differently,
-> you should iterpolate variables into `cache-name` or add description that will ensure a unique cache key for
+> If in your workflow if you do not use a matrix for concurrency you should make `cache-name` such that it is unique for
 > concurrent jobs, otherwise caching may not be effective.
 
 ### Cache Retention
 
 This action automatically deletes old caches that match the first 4 fields of the above key:
 - The `cache-name` input
-- An assumed `matrix.julia-version` or `matrix.version` variable (ignored if not found)
-- The `runner.os`
-- An assumed `matrix.arch` variable (ignored if not found)
+- All variables in the `matrix`
+- The `runner.os` (may be in the matrix too, but included for safety)
 
 Which means your caches files will not grow needlessly. Github also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)

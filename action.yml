@@ -55,8 +55,14 @@ runs:
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
 
-        echo "restore-key=${{ inputs.cache-name }}-${{ matrix.version }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ matrix.version }}-${{ matrix.julia-version }}-${{ runner.os }}-${{ matrix.arch }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        echo '${{ toJSON(matrix || '') }}' | jq -r 'to_entries | map("\(.value)") | "matrix-string=" + join("-")' >> $GITHUB_OUTPUT
+      shell: bash
+      # matrix-string is a string join of all matrix variables that helps concurrent runs have unique cache keys
+      # TODO: Figure out if its possible to render `matrix-string` and the keys in the same run without duplication
+    - id: keys
+      run: |
+        echo "restore-key=${{ inputs.cache-name }}-${{ steps.vars.outputs.matrix-string }}-${{ runner.os }}" >> $GITHUB_OUTPUT
+        echo "key=${{ inputs.cache-name }}-${{ steps.vars.outputs.matrix-string }}-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
@@ -70,8 +76,8 @@ runs:
           ${{ steps.vars.outputs.compiled-path }}
           ${{ steps.vars.outputs.logs-path }}
 
-        key: ${{ steps.vars.outputs.key }}
-        restore-keys: ${{ steps.vars.outputs.restore-key }}
+        key: ${{ steps.keys.outputs.key }}
+        restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
@@ -82,7 +88,7 @@ runs:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "list"
         main: echo ""
-        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ steps.vars.outputs.restore-key }}"
+        post: julia ${{ github.action_path }}/handle_caches.jl "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ github.token }}
 
