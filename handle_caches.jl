@@ -39,11 +39,9 @@ function handle_caches()
     end
 end
 
-run(`du -shc \~/.julia/\*`)
-# This deletes anything known to be unused immediately
-Pkg.gc(collect_delay=Second(0))
-run(`du -shc \~/.julia/\*`)
 try
+    # This deletes anything known to be unused immediately
+    Pkg.gc(collect_delay=Second(0))
     handle_caches()
 catch e
     @error "An error occurred while managing existing caches" e
