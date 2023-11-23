@@ -87,7 +87,7 @@ runs:
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.workspace }}" "list"
-        main: du -shc ~/.julia/*
+        main: if [ -d ~/.julia ]; then du -shc ~/.julia/*; fi
         post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.workspace }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ github.token }}
