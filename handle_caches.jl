@@ -1,3 +1,4 @@
+using Pkg, Dates
 function handle_caches()
     workspace = ARGS[1]
     func = ARGS[2]
@@ -37,6 +38,11 @@ function handle_caches()
         end
     end
 end
+
+run(`du -shc \~/.julia/\*`)
+# This deletes anything known to be unused immediately
+Pkg.gc(collect_delay=Second(0))
+run(`du -shc \~/.julia/\*`)
 try
     handle_caches()
 catch e
