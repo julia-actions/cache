@@ -59,10 +59,12 @@ runs:
       shell: bash
       # matrix-string is a string join of all matrix variables that helps concurrent runs have unique cache keys
       # TODO: Figure out if its possible to render `matrix-string` and the keys in the same run without duplication
+      # The underscore at the end of the restore key helps demark the end of the restore section. Without this
+      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those with a matrix.
     - id: keys
       run: |
-        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}-${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}_" >> $GITHUB_OUTPUT
+        echo "key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}_${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
