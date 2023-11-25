@@ -43,7 +43,7 @@ outputs:
 runs:
   using: 'composite'
   steps:
-    - id: vars
+    - id: paths
       run: |
         [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
         echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
