@@ -8,8 +8,11 @@ branding:
 
 inputs:
   cache-name:
-    description: 'Name used as part of the cache keys'
+    description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
     default: 'julia-cache'
+  include-matrix:
+    description: 'Whether to include the matrix values when constructing the cache key'
+    default: 'true'
   cache-artifacts:
     description: 'Whether to cache ~/.julia/artifacts/'
     default: 'true'
@@ -17,13 +20,19 @@ inputs:
     description: 'Whether to cache ~/.julia/packages/'
     default: 'true'
   cache-registries:
-    description: 'Whether to cache ~/.julia/registries/'
+    description: 'Whether to cache ~/.julia/registries/. This is off by default to ensure CI gets latest versions'
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache ~/.julia/compiled. USE WITH CAUTION! See https://github.com/julia-actions/cache/issues/11 for caveats.'
-    default: 'false'
+    description: 'Whether to cache ~/.julia/compiled/'
+    default: 'true'
   cache-scratchspaces:
     description: 'Whether to cache ~/.julia/scratchspaces/'
+    default: 'true'
+  cache-logs:
+    description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down'
+    default: 'true'
+  delete-old-caches:
+    description: 'Whether to delete old caches for the given key'
     default: 'true'
 
 outputs:
@@ -43,18 +52,52 @@ runs:
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
         echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
-        echo "precompilation-cache-path=$PCC_PATH" >> $GITHUB_OUTPUT
+        echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="~/.julia/scratchspaces"
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
+        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
+        echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
-    - uses: actions/cache@704facf57e6136b1bc63b828d79edcd491f0ee84
+      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have a unique cache key.
+      # The underscore at the end of the restore key demarks the end of the restore section. Without this
+      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those
+      # with a matrix.
+    - id: keys
+      run: |
+        MATRIX_STRING="${{ join(matrix.*, '-') }}"
+        [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
+        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}_"
+        echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
+        echo "key=${RESTORE_KEY}${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+      shell: bash
+
+    - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
       with:
-        path: "${{ format('{0}\n{1}\n{2}\n{3}\n{4}', steps.paths.outputs.artifacts-path, steps.paths.outputs.packages-path, steps.paths.outputs.registries-path, steps.paths.outputs.precompilation-cache-path, steps.paths.outputs.scratchspaces-path) }}"
-        key: ${{ runner.os }}-${{ inputs.cache-name }}-${{ hashFiles('**/Project.toml') }}
-        restore-keys: |
-          ${{ runner.os }}-${{ inputs.cache-name }}-
+        path: |
+          ${{ steps.paths.outputs.artifacts-path }}
+          ${{ steps.paths.outputs.packages-path }}
+          ${{ steps.paths.outputs.registries-path }}
+          ${{ steps.paths.outputs.scratchspaces-path }}
+          ${{ steps.paths.outputs.compiled-path }}
+          ${{ steps.paths.outputs.logs-path }}
+
+        key: ${{ steps.keys.outputs.key }}
+        restore-keys: ${{ steps.keys.outputs.restore-key }}
+        enableCrossOsArchive: false
+
+    # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
+    # that match the restore key just before saving the new cache
+    - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
+      if: ${{ inputs.delete-old-caches == 'true' }}
+      with:
+        # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
+        # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
+        main: du -shc ~/.julia/* || true
+        post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
+      env:
+        GH_TOKEN: ${{ github.token }}
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
