@@ -50,6 +50,26 @@ jobs:
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
 
+  # Do tests with no matrix also given the matrix is auto-included in cache key
+  test-save-nomatrix:
+    needs: generate-key
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Save cache
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+    - name: Check no artifacts dir
+      shell: 'julia --color=yes {0}'
+      run: |
+        dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isdir(dir)
+    - name: Install a small binary
+      shell: 'julia --color=yes {0}'
+      run: 'using Pkg; Pkg.add("pandoc_jll")'
+
   test-restore:
     needs: [generate-key, test-save]
     strategy:
@@ -86,4 +106,35 @@ jobs:
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
 
+  test-restore-nomatrix:
+    needs: [generate-key, test-save-nomatrix]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Restore cache
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+    - name: Test cache-hit output
+      shell: 'julia --color=yes {0}'
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "true"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check existance or emptiness of affected dirs
+      shell: 'julia --color=yes {0}'
+      run: |
+        # These dirs should exist as they've been cached
+        artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isempty(readdir(artifacts_dir))
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isempty(readdir(packages_dir))
+        compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
+        @assert !isempty(readdir(compiled_dir))
+        scratchspaces_dir = joinpath(first(DEPOT_PATH), "scratchspaces")
+        @assert !isempty(readdir(scratchspaces_dir))
+        logs_dir = joinpath(first(DEPOT_PATH), "logs")
+        @assert !isempty(readdir(logs_dir))
 
