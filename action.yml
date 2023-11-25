@@ -65,7 +65,7 @@ runs:
       # with a matrix.
     - id: keys
       run: |
-        MATRIX_STRING="${{ join(matrix.*, '-') }}"
+        [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
         [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
         RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}_"
         echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
