@@ -60,7 +60,7 @@ and precompiling them.
 
 The cache key that the cache will be saved as is based on:
 - The `cache-name` input
-- All variables in the `matrix`
+- All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
 - The `runner.os` (may be in the matrix too, but included for safety)
 - The run id
 - The run attempt number
@@ -73,19 +73,19 @@ The cache key that the cache will be saved as is based on:
 
 This action automatically deletes old caches that match the first 4 fields of the above key:
 - The `cache-name` input
-- All variables in the `matrix`
+- All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
 - The `runner.os` (may be in the matrix too, but included for safety)
 
 Which means your caches files will not grow needlessly. Github also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
 
-To disable deletion set input `delete-old-caches` to `false`.
+To disable deletion set input `delete-old-caches: 'false'`.
 
 ### Cache Garbage Collection
 
 Caches are restored and re-saved after every run, retaining the state of the depot throughout runs.
-Their size will be regulated like a local depot automatically by the automatic `Pkg.gc()` functionality that clears out
-old content, which is made possible because the `/log` contents are cached.
+Their size will be regulated like a local depot automatically by the automatic `Pkg.gc()` functionality that
+clears out old content, which is made possible because the `/log` contents are cached.
 
 ## Third Party Notice
 
