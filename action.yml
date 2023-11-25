@@ -34,6 +34,9 @@ inputs:
   delete-old-caches:
     description: 'Whether to delete old caches for the given key'
     default: 'true'
+  token:
+    description: 'A github PAT. Requires `repo` scope to enable the deletion of old caches'
+    default: '${{ github.token }}'
 
 outputs:
   cache-hit:
@@ -101,7 +104,7 @@ runs:
         main: echo ""
         post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.token }}
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT

@@ -34,12 +34,8 @@ function handle_caches()
                 println("Failed to delete $(length(failed)) existing caches for restore key `$restore_key`")
                 println.(failed)
                 @info """
-                    To delete caches your job may need permissions:
-                    ```
-                    permissions:
-                        contents: write
-                    ```
-                    See https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs
+                    To delete caches you need to provide a token with `repo` scope via the `token` input option.
+                    See https://cli.github.com/manual/gh_cache_delete
                     """
             end
             if !isempty(caches)
