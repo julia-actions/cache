@@ -37,8 +37,8 @@ function handle_caches()
 end
 
 try
-    # This deletes anything known to be unused immediately
-    Pkg.gc(collect_delay=Second(0))
+    # do a gc with the standard 7-day delay
+    Pkg.gc()
     handle_caches()
 catch e
     @error "An error occurred while managing existing caches" e
