@@ -87,6 +87,10 @@ runs:
         restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
 
+    - name: list restored depot directory sizes
+      run: du -shc ~/.julia/* || true
+      shell: bash
+
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
     # that match the restore key just before saving the new cache
     - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
@@ -94,7 +98,7 @@ runs:
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
-        main: du -shc ~/.julia/* || true
+        main: echo ""
         post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ github.token }}
