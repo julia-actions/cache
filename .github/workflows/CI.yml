@@ -7,13 +7,11 @@ on:
     paths:
       - 'action.yml'
       - 'handle_caches.jl'
-      - 'with-post-step/**'
       - '.github/**'
   pull_request:
     paths:
       - 'action.yml'
       - 'handle_caches.jl'
-      - 'with-post-step/**'
       - '.github/**'
 
 jobs:

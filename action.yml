@@ -88,7 +88,7 @@ runs:
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
     # that match the restore key just before saving the new cache
-    - uses: julia-actions/cache/with-post-step@5d5ff4e210fbccb3e875c042dd7c8e6f9c31e1f0
+    - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
       if: ${{ inputs.delete-old-caches == 'true' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
