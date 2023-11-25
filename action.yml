@@ -58,14 +58,16 @@ runs:
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
-      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have unique cache keys
-      # The underscore at the end of the restore key helps demark the end of the restore section. Without this
-      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those with a matrix.
+
+      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have a unique cache key.
+      # The underscore at the end of the restore key demarks the end of the restore section. Without this
+      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those
+      # with a matrix.
     - id: keys
       run: |
         [ "${{ inputs.include-matrix }}" = "true" ] && MATRIX_STRING='${{ toJSON(matrix) }}' | jq -r 'if . then to_entries | map("\(.value)") | join("-") else "" end'
-        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        echo 'restore-key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_' >> $GITHUB_OUTPUT
+        echo 'key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_${{ github.run_id }}-${{ github.run_attempt }}' >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
