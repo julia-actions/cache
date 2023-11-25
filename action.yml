@@ -66,8 +66,9 @@ runs:
     - id: keys
       run: |
         [ "${{ inputs.include-matrix }}" = "true" ] && MATRIX_STRING='${{ toJSON(matrix) }}' | jq -r 'if . then to_entries | map("\(.value)") | join("-") else "" end'
-        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_"
+        echo "restore-key=$RESTORE_KEY" >> $GITHUB_OUTPUT
+        echo "key=$RESTORE_KEY${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
