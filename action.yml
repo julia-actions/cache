@@ -8,8 +8,11 @@ branding:
 
 inputs:
   cache-name:
-    description: 'The cache key prefix. The key body automatically includes matrix vars `version/julia-version`, `arch` and the OS. Include any other parameters/details to ensure one unique cache key per concurrent job type.'
+    description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
     default: 'julia-cache'
+  include-matrix:
+    description: 'Whether to include the matrix when constructing the cache key'
+    default: 'true'
   cache-artifacts:
     description: 'Whether to cache ~/.julia/artifacts/'
     default: 'true'
@@ -54,29 +57,27 @@ runs:
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
-
-        echo '${{ toJSON(matrix) }}' | jq -r 'if . then to_entries | map("\(.value)") | "matrix-string=" + join("-") else "matrix-string=" end' >> $GITHUB_OUTPUT
       shell: bash
-      # matrix-string is a string join of all matrix variables that helps concurrent runs have unique cache keys
-      # TODO: Figure out if its possible to render `matrix-string` and the keys in the same run without duplication
+      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have unique cache keys
       # The underscore at the end of the restore key helps demark the end of the restore section. Without this
       # a runner without a matrix has a restore key that will cause impropper clearing of caches from those with a matrix.
     - id: keys
       run: |
-        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}_" >> $GITHUB_OUTPUT
-        echo "key=${{ inputs.cache-name }}-${{ runner.os }}-${{ steps.vars.outputs.matrix-string }}_${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        [ "${{ inputs.include-matrix }}" = "true" ] && MATRIX_STRING='${{ toJSON(matrix) }}' | jq -r 'if . then to_entries | map("\(.value)") | join("-") else "" end'
+        echo "restore-key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_" >> $GITHUB_OUTPUT
+        echo "key=${{ inputs.cache-name }}-${{ runner.os }}$MATRIX_STRING_${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
       with:
         path: |
-          ${{ steps.vars.outputs.artifacts-path }}
-          ${{ steps.vars.outputs.packages-path }}
-          ${{ steps.vars.outputs.registries-path }}
-          ${{ steps.vars.outputs.scratchspaces-path }}
-          ${{ steps.vars.outputs.compiled-path }}
-          ${{ steps.vars.outputs.logs-path }}
+          ${{ steps.paths.outputs.artifacts-path }}
+          ${{ steps.paths.outputs.packages-path }}
+          ${{ steps.paths.outputs.registries-path }}
+          ${{ steps.paths.outputs.scratchspaces-path }}
+          ${{ steps.paths.outputs.compiled-path }}
+          ${{ steps.paths.outputs.logs-path }}
 
         key: ${{ steps.keys.outputs.key }}
         restore-keys: ${{ steps.keys.outputs.restore-key }}
