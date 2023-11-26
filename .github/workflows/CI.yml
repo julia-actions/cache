@@ -14,6 +14,11 @@ on:
       - 'handle_caches.jl'
       - '.github/**'
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   generate-key:
     runs-on: ubuntu-latest
