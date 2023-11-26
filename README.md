@@ -39,7 +39,7 @@ However note that caching the registries may mean that the registry will not be 
 
 ### Optional Inputs
 
-- `cache-name` - The cache key prefix. Defaults to `julia-cache`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+- `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
 - `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `true`.
 - `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `true`.
