@@ -11,6 +11,11 @@ name: CI
 
 on: [push, pull_request]
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -79,6 +84,18 @@ This action automatically deletes old caches that match the first 4 fields of th
 
 Which means your caches files will not grow needlessly. Github also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
+
+> [!NOTE]
+> To allow deletion of caches you will likely need to grant the following to the default
+> `GITHUB_TOKEN` by adding this to your yml:
+> ```
+> permissions:
+>     actions: write
+>     contents: read
+> ```
+> (Note this won't work for fork PRs but should once merged)
+> Or provide a token with `repo` scope via the `token` input option.
+> See https://cli.github.com/manual/gh_cache_delete
 
 To disable deletion set input `delete-old-caches: 'false'`.
 
