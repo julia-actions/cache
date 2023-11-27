@@ -11,6 +11,11 @@ name: CI
 
 on: [push, pull_request]
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
@@ -34,7 +39,7 @@ However note that caching the registries may mean that the registry will not be 
 
 ### Optional Inputs
 
-- `cache-name` - The cache key prefix. Defaults to `julia-cache`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+- `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
 - `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `true`.
 - `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `true`.
@@ -43,6 +48,7 @@ However note that caching the registries may mean that the registry will not be 
 - `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
 - `cache-log` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`
+- `token` - A github PAT. Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
 ### Outputs
 
@@ -78,6 +84,18 @@ This action automatically deletes old caches that match the first 4 fields of th
 
 Which means your caches files will not grow needlessly. Github also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
+
+> [!NOTE]
+> To allow deletion of caches you will likely need to grant the following to the default
+> `GITHUB_TOKEN` by adding this to your yml:
+> ```
+> permissions:
+>     actions: write
+>     contents: read
+> ```
+> (Note this won't work for fork PRs but should once merged)
+> Or provide a token with `repo` scope via the `token` input option.
+> See https://cli.github.com/manual/gh_cache_delete
 
 To disable deletion set input `delete-old-caches: 'false'`.
 

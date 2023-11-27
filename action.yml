@@ -9,7 +9,7 @@ branding:
 inputs:
   cache-name:
     description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
-    default: 'julia-cache'
+    default: 'julia-cache-${{ github.workflow }}-${{ github.job }}'
   include-matrix:
     description: 'Whether to include the matrix values when constructing the cache key'
     default: 'true'
@@ -34,6 +34,9 @@ inputs:
   delete-old-caches:
     description: 'Whether to delete old caches for the given key'
     default: 'true'
+  token:
+    description: 'A github PAT. Requires `repo` scope to enable the deletion of old caches'
+    default: '${{ github.token }}'
 
 outputs:
   cache-hit:
@@ -65,7 +68,7 @@ runs:
       # with a matrix.
     - id: keys
       run: |
-        MATRIX_STRING="${{ join(matrix.*, '-') }}"
+        [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
         [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
         RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}_"
         echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
@@ -87,6 +90,10 @@ runs:
         restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
 
+    - name: list restored depot directory sizes
+      run: du -shc ~/.julia/* || true
+      shell: bash
+
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
     # that match the restore key just before saving the new cache
     - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
@@ -94,10 +101,10 @@ runs:
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
-        main: du -shc ~/.julia/* || true
+        main: echo ""
         post: julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
-        GH_TOKEN: ${{ github.token }}
+        GH_TOKEN: ${{ inputs.token }}
 
     - id: hit
       run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
