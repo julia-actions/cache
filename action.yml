@@ -102,7 +102,7 @@ runs:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
         main: echo ""
-        post: julia ${{ env.GITHUB_ACTION_PATH }}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
+        post: julia ${GITHUB_ACTION_PATH}/handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
