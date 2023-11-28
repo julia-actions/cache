@@ -112,7 +112,7 @@ runs:
     - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
       if: ${{ inputs.delete-old-caches == 'true' && runner.OS == 'Windows' }}
       with:
-        main: $PSVersionTable.PSVersion
+        main: echo $0
         post: Set-Location -Path $env:GITHUB_ACTION_PATH ; julia handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
