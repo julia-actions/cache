@@ -113,7 +113,7 @@ runs:
       if: ${{ inputs.delete-old-caches == 'true' && runner.OS == 'Windows' }}
       with:
         main: echo ""
-        post: $scriptPath = $env:GITHUB_ACTION_PATH; Set-Location -Path $scriptPath ; julia handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
+        post: Set-Location -Path $env:GITHUB_ACTION_PATH ; julia handle_caches.jl "${{ github.repository }}" "rm" "${{ steps.keys.outputs.restore-key }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
