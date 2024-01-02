@@ -13,23 +13,26 @@ inputs:
   include-matrix:
     description: 'Whether to include the matrix values when constructing the cache key.'
     default: 'true'
+  user-depot:
+    description: 'Path to the Julia user depot where cached data will be saved to and restored from.'
+    default: '~/.julia'
   cache-artifacts:
-    description: 'Whether to cache ~/.julia/artifacts/.'
+    description: 'Whether to cache the depot's `artifacts` directory.'
     default: 'true'
   cache-packages:
-    description: 'Whether to cache ~/.julia/packages/.'
+    description: 'Whether to cache the depot's `packages` directory.'
     default: 'true'
   cache-registries:
-    description: 'Whether to cache ~/.julia/registries/. This is off by default to ensure CI gets latest versions.'
+    description: 'Whether to cache the depot's `registries` directory. This is off by default to ensure CI gets latest versions.'
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache ~/.julia/compiled/.'
+    description: 'Whether to cache the depot's `compiled` directory.'
     default: 'true'
   cache-scratchspaces:
-    description: 'Whether to cache ~/.julia/scratchspaces/.'
+    description: 'Whether to cache the depot's `scratchspaces` directory.'
     default: 'true'
   cache-logs:
-    description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down.'
+    description: 'Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.'
     default: 'true'
   delete-old-caches:
     description: 'Whether to delete old caches for the given key.'
@@ -48,17 +51,17 @@ runs:
   steps:
     - id: paths
       run: |
-        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
+        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="${{ inputs.user-depot }}/artifacts"
         echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="~/.julia/packages"
+        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${{ inputs.user-depot }}/packages"
         echo "packages-path=$P_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="~/.julia/registries"
+        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="${{ inputs.user-depot }}/registries"
         echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="~/.julia/compiled"
+        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="${{ inputs.user-depot }}/compiled"
         echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="~/.julia/scratchspaces"
+        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="${{ inputs.user-depot }}/scratchspaces"
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="~/.julia/logs"
+        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="${{ inputs.user-depot }}/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
@@ -91,7 +94,7 @@ runs:
         enableCrossOsArchive: false
 
     - name: list restored depot directory sizes
-      run: du -shc ~/.julia/* || true
+      run: du -shc ${{ inputs.user-depot }}/* || true
       shell: bash
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
