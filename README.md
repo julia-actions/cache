@@ -47,7 +47,7 @@ However note that caching the registries may mean that the registry will not be 
 - `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
 - `cache-logs` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
-- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`
+- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A github PAT. Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
 ### Outputs
