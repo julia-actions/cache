@@ -48,7 +48,7 @@ However note that caching the registries may mean that the registry will not be 
 - `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
 - `cache-logs` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
-- `token` - A github PAT. Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
+- `token` - A GitHub PAT. Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
 ### Outputs
 
@@ -82,7 +82,7 @@ This action automatically deletes old caches that match the first 4 fields of th
 - All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
 - The `runner.os` (may be in the matrix too, but included for safety)
 
-Which means your caches files will not grow needlessly. Github also deletes cache files after
+Which means your caches files will not grow needlessly. GitHub also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
 
 > [!NOTE]

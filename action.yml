@@ -35,7 +35,7 @@ inputs:
     description: 'Whether to delete old caches for the given key.'
     default: 'true'
   token:
-    description: 'A github PAT. Requires `repo` scope to enable the deletion of old caches.'
+    description: 'A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.'
     default: '${{ github.token }}'
 
 outputs:
