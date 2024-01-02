@@ -88,10 +88,10 @@ Which means your caches files will not grow needlessly. GitHub also deletes cach
 > [!NOTE]
 > To allow deletion of caches you will likely need to grant the following to the default
 > `GITHUB_TOKEN` by adding this to your yml:
-> ```
+> ```yaml
 > permissions:
->     actions: write
->     contents: read
+>   actions: write
+>   contents: read
 > ```
 > (Note this won't work for fork PRs but should once merged)
 > Or provide a token with `repo` scope via the `token` input option.
