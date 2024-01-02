@@ -8,42 +8,44 @@ branding:
 
 inputs:
   cache-name:
-    description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
-    default: 'julia-cache-${{ github.workflow }}-${{ github.job }}'
+    description: >-
+      The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS.
+      Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+    default: julia-cache-${{ github.workflow }}-${{ github.job }}
   include-matrix:
-    description: 'Whether to include the matrix values when constructing the cache key.'
+    description: Whether to include the matrix values when constructing the cache key.
     default: 'true'
   user-depot:
-    description: 'Path to the Julia user depot where cached data will be saved to and restored from.'
-    default: '~/.julia'
+    description: Path to the Julia user depot where cached data will be saved to and restored from.
+    default: ~/.julia
   cache-artifacts:
-    description: 'Whether to cache the depot's `artifacts` directory.'
+    description: Whether to cache the depot's `artifacts` directory.
     default: 'true'
   cache-packages:
-    description: 'Whether to cache the depot's `packages` directory.'
+    description: Whether to cache the depot's `packages` directory.
     default: 'true'
   cache-registries:
-    description: 'Whether to cache the depot's `registries` directory. This is off by default to ensure CI gets latest versions.'
+    description: Whether to cache the depot's `registries` directory. This is off by default to ensure CI gets latest versions.
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache the depot's `compiled` directory.'
+    description: Whether to cache the depot's `compiled` directory.
     default: 'true'
   cache-scratchspaces:
-    description: 'Whether to cache the depot's `scratchspaces` directory.'
+    description: Whether to cache the depot's `scratchspaces` directory.
     default: 'true'
   cache-logs:
-    description: 'Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.'
+    description: Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.
     default: 'true'
   delete-old-caches:
-    description: 'Whether to delete old caches for the given key.'
+    description: Whether to delete old caches for the given key.
     default: 'true'
   token:
-    description: 'A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.'
-    default: '${{ github.token }}'
+    description: A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.
+    default: ${{ github.token }}
 
 outputs:
   cache-hit:
-    description: 'A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache'
+    description: A boolean value to indicate an exact match was found for the primary key. Returns "" when the key is new. Forwarded from actions/cache.
     value: ${{ steps.hit.outputs.cache-hit }}
 
 runs:
