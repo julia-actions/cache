@@ -94,6 +94,7 @@ runs:
         enableCrossOsArchive: false
 
     - name: list restored depot directory sizes
+      if: ${{ steps.cache.outputs.cache-hit == 'true' }}
       run: du -shc ${{ inputs.user-depot }}/* || true
       shell: bash
 
