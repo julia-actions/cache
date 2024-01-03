@@ -62,17 +62,17 @@ runs:
             depot="~/.julia"
         fi
         echo "depot=$depot" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="${{ inputs.depot }}/artifacts"
+        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="${depot}/artifacts"
         echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${{ inputs.depot }}/packages"
+        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${depot}/packages"
         echo "packages-path=$P_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="${{ inputs.depot }}/registries"
+        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="${depot}/registries"
         echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="${{ inputs.depot }}/compiled"
+        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="${depot}/compiled"
         echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="${{ inputs.depot }}/scratchspaces"
+        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="${depot}/scratchspaces"
         echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="${{ inputs.depot }}/logs"
+        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="${depot}/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
       env:
@@ -86,7 +86,7 @@ runs:
       run: |
         [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
         [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
-        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}-${{ inputs.depot }}_"
+        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}-${{ steps.paths.outputs.depot }}_"
         echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
         echo "key=${RESTORE_KEY}${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
@@ -108,7 +108,7 @@ runs:
 
     - name: list restored depot directory sizes
       if: ${{ steps.cache.outputs.cache-hit == 'true' }}
-      run: du -shc ${{ inputs.depot }}/* || true
+      run: du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
