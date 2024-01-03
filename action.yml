@@ -49,7 +49,7 @@ runs:
     - name: Install jq
       # Skip installation on GitHub-hosted runners:
       # https://github.com/orgs/community/discussions/48359#discussioncomment-5323864
-      if: ${{ !startsWith(runner.name, "GitHub Actions") }}
+      if: ${{ !startsWith(runner.name, 'GitHub Actions') }}
       uses: dcarbone/install-jq-action@v2.1.0
       with:
         force: false  # Skip install when an existing `jq` is present
