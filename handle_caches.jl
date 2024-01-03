@@ -13,7 +13,7 @@ function handle_caches()
         for _ in 1:5 # limit to avoid accidental rate limiting
             hits = split(strip(read(`gh cache list --limit 100 --repo $repo`, String)), keepempty=false)
             search_again = length(hits) == 100
-            filter!(contains(restore_key), hits)
+            filter!(startswith(restore_key), hits)
             isempty(hits) && break
             # We can delete everything that matches the restore key because the new cache is saved later.
             for c in hits
