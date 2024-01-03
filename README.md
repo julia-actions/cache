@@ -41,7 +41,7 @@ However note that caching the registries may mean that the registry will not be 
 
 - `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
-- `depot` - Path to the Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) where cached data will be saved to and restored from. Defaults to `~/.julia`.
+- `depot` - Path to a Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) directory where cached data will be saved to and restored from. Defaults to `~/.julia`.
 - `cache-artifacts` - Whether to cache the depot's `artifacts` directory. Defaults to `true`.
 - `cache-packages` - Whether to cache the depot's `packages` directory. Defaults to `true`.
 - `cache-registries` - Whether to cache the depot's `registries` directory. Defaults to `false`. Disabled to ensure CI gets latest versions.

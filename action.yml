@@ -16,7 +16,7 @@ inputs:
     description: Whether to include the matrix values when constructing the cache key.
     default: 'true'
   depot:
-    description: Path to the Julia depot where cached data will be saved to and restored from.
+    description: Path to a Julia depot directory where cached data will be saved to and restored from.
     default: ~/.julia
   cache-artifacts:
     description: Whether to cache the depot's `artifacts` directory.
