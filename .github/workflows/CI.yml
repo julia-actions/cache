@@ -39,6 +39,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Save cache
@@ -82,6 +84,8 @@ jobs:
         os: [ubuntu-latest, windows-latest, macOS-latest]
       fail-fast: false
     runs-on: ${{ matrix.os }}
+    env:
+      JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Restore cache

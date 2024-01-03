@@ -17,7 +17,7 @@ inputs:
     default: 'true'
   depot:
     description: Path to a Julia depot directory where cached data will be saved to and restored from.
-    default: ~/.julia
+    default: ''
   cache-artifacts:
     description: Whether to cache the depot's `artifacts` directory.
     default: 'true'
@@ -53,6 +53,15 @@ runs:
   steps:
     - id: paths
       run: |
+        if [ -n "${{ inputs.depot }}" ]; then
+            depot="${{ inputs.depot }}"
+        elif [ -n "$JULIA_DEPOT_PATH" ]; then
+            # Use the first depot path
+            depot=$(echo $JULIA_DEPOT_PATH | cut -d$PATH_DELIMITER -f1)
+        else
+            depot="~/.julia"
+        fi
+        echo "depot=$depot" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="${{ inputs.depot }}/artifacts"
         echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${{ inputs.depot }}/packages"
@@ -66,6 +75,8 @@ runs:
         [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="${{ inputs.depot }}/logs"
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
+      env:
+        PATH_DELIMITER: ${{ runner.OS == 'Windows' && ';' || ':' }}
 
       # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have a unique cache key.
       # The underscore at the end of the restore key demarks the end of the restore section. Without this
