@@ -11,31 +11,31 @@ inputs:
     description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
     default: 'julia-cache-${{ github.workflow }}-${{ github.job }}'
   include-matrix:
-    description: 'Whether to include the matrix values when constructing the cache key'
+    description: 'Whether to include the matrix values when constructing the cache key.'
     default: 'true'
   cache-artifacts:
-    description: 'Whether to cache ~/.julia/artifacts/'
+    description: 'Whether to cache ~/.julia/artifacts/.'
     default: 'true'
   cache-packages:
-    description: 'Whether to cache ~/.julia/packages/'
+    description: 'Whether to cache ~/.julia/packages/.'
     default: 'true'
   cache-registries:
-    description: 'Whether to cache ~/.julia/registries/. This is off by default to ensure CI gets latest versions'
+    description: 'Whether to cache ~/.julia/registries/. This is off by default to ensure CI gets latest versions.'
     default: 'false'
   cache-compiled:
-    description: 'Whether to cache ~/.julia/compiled/'
+    description: 'Whether to cache ~/.julia/compiled/.'
     default: 'true'
   cache-scratchspaces:
-    description: 'Whether to cache ~/.julia/scratchspaces/'
+    description: 'Whether to cache ~/.julia/scratchspaces/.'
     default: 'true'
   cache-logs:
-    description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down'
+    description: 'Whether to cache ~/.julia/logs/. This helps automatic Pkg.gc() keep the cache size down.'
     default: 'true'
   delete-old-caches:
-    description: 'Whether to delete old caches for the given key'
+    description: 'Whether to delete old caches for the given key.'
     default: 'true'
   token:
-    description: 'A github PAT. Requires `repo` scope to enable the deletion of old caches'
+    description: 'A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.'
     default: '${{ github.token }}'
 
 outputs:

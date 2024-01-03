@@ -47,8 +47,8 @@ However note that caching the registries may mean that the registry will not be 
 - `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
 - `cache-logs` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
-- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`
-- `token` - A github PAT. Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
+- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
+- `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
 ### Outputs
 
@@ -82,16 +82,16 @@ This action automatically deletes old caches that match the first 4 fields of th
 - All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
 - The `runner.os` (may be in the matrix too, but included for safety)
 
-Which means your caches files will not grow needlessly. Github also deletes cache files after
+Which means your caches files will not grow needlessly. GitHub also deletes cache files after
 [90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
 
 > [!NOTE]
-> To allow deletion of caches you will likely need to grant the following to the default
-> `GITHUB_TOKEN` by adding this to your yml:
-> ```
+> To allow deletion of caches you will likely need to [grant the following permissions](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs)
+> to the `GITHUB_TOKEN` by adding this to your GitHub actions workflow:
+> ```yaml
 > permissions:
->     actions: write
->     contents: read
+>   actions: write
+>   contents: read
 > ```
 > (Note this won't work for fork PRs but should once merged)
 > Or provide a token with `repo` scope via the `token` input option.
