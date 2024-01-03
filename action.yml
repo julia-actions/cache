@@ -65,6 +65,7 @@ runs:
       # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
     - id: keys
       run: |
+        echo "MATRIX_JSON=$MATRIX_JSON"
         if [ "${{ inputs.include-matrix }}" == "true" ]; then
           matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | ";" + .')
         fi
