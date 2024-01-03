@@ -9,7 +9,7 @@ branding:
 inputs:
   cache-name:
     description: 'The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.'
-    default: 'julia-cache-${{ github.workflow }}-${{ github.job }}'
+    default: 'julia-cache;workflow=${{ github.workflow }};job=${{ github.job }}'
   include-matrix:
     description: 'Whether to include the matrix values when constructing the cache key.'
     default: 'true'
@@ -67,9 +67,9 @@ runs:
       run: |
         echo "MATRIX_JSON=$MATRIX_JSON"
         if [ "${{ inputs.include-matrix }}" == "true" ]; then
-          matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | ";" + .')
+          matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
         fi
-        restore_key="${{ inputs.cache-name }};workflow=${{ github.workflow }};job=${{ github.job }};os=${{ runner.os }}${matrix_key};"
+        restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
         key="${restore_key}run_id=${{ github.run_id }};run_attempt=${{ github.run_attempt }}"
         echo "restore-key=${restore_key}" >> $GITHUB_OUTPUT
         echo "key=${key}" >> $GITHUB_OUTPUT
