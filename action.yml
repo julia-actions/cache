@@ -46,6 +46,11 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install jq
+      uses: dcarbone/install-jq-action@v2
+      with:
+        force: true
+
     - id: paths
       run: |
         [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="~/.julia/artifacts"
