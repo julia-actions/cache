@@ -75,7 +75,7 @@ runs:
       run: |
         [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
         [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
-        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}_"
+        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}-${{ inputs.depot }}_"
         echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
         echo "key=${RESTORE_KEY}${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
       shell: bash
