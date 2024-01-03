@@ -62,11 +62,12 @@ runs:
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
-      # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
-    - id: keys
+    - name: Generate Keys
+      id: keys
       run: |
-        echo "MATRIX_JSON=$MATRIX_JSON"
-        if [ "${{ inputs.include-matrix }}" == "true" ]; then
+        # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
+        # When `matrix` isn't set for the job then `MATRIX_JSON=null`.
+        if [ "${{ inputs.include-matrix }}" == "true" ] && [ "$MATRIX_JSON" != "null" ]; then
           matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
         fi
         restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
