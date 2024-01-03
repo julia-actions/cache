@@ -62,18 +62,19 @@ runs:
         echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
       shell: bash
 
-      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have a unique cache key.
-      # The underscore at the end of the restore key demarks the end of the restore section. Without this
-      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those
-      # with a matrix.
+      # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
     - id: keys
       run: |
-        [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
-        [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
-        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}_"
-        echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
-        echo "key=${RESTORE_KEY}${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        if [ "${{ inputs.include-matrix }}" == "true" ]; then
+          matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | ";" + .)
+        fi
+        restore_key="${{ inputs.cache-name }};workflow=${{ github.workflow }};job=${{ github.job }};os=${{ runner.os }}${matrix_key};"
+        key="${restore_key}run_id=${{ github.run_id }};run_attempt=${{ github.run_attempt }}"
+        echo "restore-key=${restore_key}" >> $GITHUB_OUTPUT
+        echo "key=${key}" >> $GITHUB_OUTPUT
       shell: bash
+      env:
+        MATRIX_JSON: ${{ toJSON(matrix) }}
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
