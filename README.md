@@ -41,12 +41,13 @@ However note that caching the registries may mean that the registry will not be 
 
 - `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
-- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Defaults to `true`.
-- `cache-packages` - Whether to cache `~/.julia/packages/`. Defaults to `true`.
-- `cache-registries` - Whether to cache `~/.julia/registries/`. Defaults to `false`. Disabled to ensure CI gets latest versions.
-- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Defaults to `true`.
-- `cache-scratchspaces` - Whether to cache `~/.julia/scratchspaces/`. Defaults to `true`.
-- `cache-logs` - Whether to cache `~/.julia/logs/`. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `depot` - Path to a Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) directory where cached data will be saved to and restored from. Defaults to the first depot in [`JULIA_DEPOT_PATH`](https://docs.julialang.org/en/v1/manual/environment-variables/#JULIA_DEPOT_PATH) if specified. Otherwise, defaults to `~/.julia`.
+- `cache-artifacts` - Whether to cache the depot's `artifacts` directory. Defaults to `true`.
+- `cache-packages` - Whether to cache the depot's `packages` directory. Defaults to `true`.
+- `cache-registries` - Whether to cache the depot's `registries` directory. Defaults to `false`. Disabled to ensure CI gets latest versions.
+- `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
+- `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
+- `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
