@@ -1,6 +1,6 @@
 # julia-actions/cache Action
 
-A shortcut action to cache Julia artifacts, packages and (optionally) registries to reduce GitHub Actions running time.
+A shortcut action to cache Julia depot contents to reduce GitHub Actions running time.
 
 ## Usage
 
@@ -11,37 +11,92 @@ name: CI
 
 on: [push, pull_request]
 
+# needed to allow julia-actions/cache to delete old caches that it has created
+permissions:
+  actions: write
+  contents: read
+
 jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v2
+    - uses: actions/checkout@v3
     - uses: julia-actions/setup-julia@v1
     - uses: julia-actions/cache@v1
     - uses: julia-actions/julia-buildpkg@v1
     - uses: julia-actions/julia-runtest@v1
 ```
 
-By default, this caches the files in `~/.julia/artifacts/`,  `~/.julia/packages/` and `~/.julia/registries`.
+By default all depot directories called out below are cached.
 
-### Inputs
+### Optional Inputs
 
-- `cache-name` - Name used as part of the cache keys
-- `cache-artifacts` - Whether to cache `~/.julia/artifacts/`. Enabled by default.
-- `cache-packages` - Whether to cache `~/.julia/packages/`. Enabled by default.
-- `cache-registries` - Whether to cache `~/.julia/registries/`. Enabled by default.
-- `cache-compiled` - Whether to cache `~/.julia/compiled/`. Disabled by default. **USE ONLY IF YOU KNOW WHAT YOU'RE DOING!** See [#11](https://github.com/julia-actions/cache/issues/11).
+- `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+- `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
+- `depot` - Path to a Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) directory where cached data will be saved to and restored from. Defaults to the first depot in [`JULIA_DEPOT_PATH`](https://docs.julialang.org/en/v1/manual/environment-variables/#JULIA_DEPOT_PATH) if specified. Otherwise, defaults to `~/.julia`.
+- `cache-artifacts` - Whether to cache the depot's `artifacts` directory. Defaults to `true`.
+- `cache-packages` - Whether to cache the depot's `packages` directory. Defaults to `true`.
+- `cache-registries` - Whether to cache the depot's `registries` directory. Defaults to `true`.
+- `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
+- `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
+- `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
+- `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
 ### Outputs
 
 - `cache-hit` - A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache.
 
-## How it works
+## How It Works
 
 This action is a wrapper around <https://github.com/actions/cache>.
 In summary, this action stores the files in the aforementioned paths in one compressed file when running for the first time.
-This cached file is then restored upon the second run.
-The benefit of this is that downloading one big file is quicker than downloading many different files from many different locations.
+This cached file is then restored upon the second run, and afterwards resaved under a new key, and the previous cache deleted.
+The benefit of caching is that downloading one big file is quicker than downloading many different files from many different locations
+and precompiling them.
+
+### Cache keys
+
+The cache key that the cache will be saved as is based on:
+- The `cache-name` input
+- All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
+- The `runner.os` (may be in the matrix too, but included for safety)
+- The run id
+- The run attempt number
+
+> [!NOTE]
+> If in your workflow if you do not use a matrix for concurrency you should make `cache-name` such that it is unique for
+> concurrent jobs, otherwise caching may not be effective.
+
+### Cache Retention
+
+This action automatically deletes old caches that match the first 4 fields of the above key:
+- The `cache-name` input
+- All variables in the `matrix` (unless disabled via `include-matrix: 'false'`)
+- The `runner.os` (may be in the matrix too, but included for safety)
+
+Which means your caches files will not grow needlessly. GitHub also deletes cache files after
+[90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
+
+> [!NOTE]
+> To allow deletion of caches you will likely need to [grant the following permissions](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs)
+> to the `GITHUB_TOKEN` by adding this to your GitHub actions workflow:
+> ```yaml
+> permissions:
+>   actions: write
+>   contents: read
+> ```
+> (Note this won't work for fork PRs but should once merged)
+> Or provide a token with `repo` scope via the `token` input option.
+> See https://cli.github.com/manual/gh_cache_delete
+
+To disable deletion set input `delete-old-caches: 'false'`.
+
+### Cache Garbage Collection
+
+Caches are restored and re-saved after every run, retaining the state of the depot throughout runs.
+Their size will be regulated like a local depot automatically by the automatic `Pkg.gc()` functionality that
+clears out old content, which is made possible because the `/log` contents are cached.
 
 ## Third Party Notice
 
