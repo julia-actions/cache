@@ -27,15 +27,7 @@ jobs:
     - uses: julia-actions/julia-runtest@v1
 ```
 
-By default the majority of the depot is cached. To also cache `~/.julia/registries/`, use
-
-```yaml
-    - uses: julia-actions/cache@v1
-      with:
-        cache-registries: "true"
-```
-
-However note that caching the registries may mean that the registry will not be updated each run.
+By default all depot directories called out below are cached.
 
 ### Optional Inputs
 
@@ -44,7 +36,7 @@ However note that caching the registries may mean that the registry will not be 
 - `depot` - Path to a Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) directory where cached data will be saved to and restored from. Defaults to the first depot in [`JULIA_DEPOT_PATH`](https://docs.julialang.org/en/v1/manual/environment-variables/#JULIA_DEPOT_PATH) if specified. Otherwise, defaults to `~/.julia`.
 - `cache-artifacts` - Whether to cache the depot's `artifacts` directory. Defaults to `true`.
 - `cache-packages` - Whether to cache the depot's `packages` directory. Defaults to `true`.
-- `cache-registries` - Whether to cache the depot's `registries` directory. Defaults to `false`. Disabled to ensure CI gets latest versions.
+- `cache-registries` - Whether to cache the depot's `registries` directory. Defaults to `true`.
 - `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
 - `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.

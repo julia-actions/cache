@@ -25,8 +25,8 @@ inputs:
     description: Whether to cache the depot's `packages` directory.
     default: 'true'
   cache-registries:
-    description: Whether to cache the depot's `registries` directory. This is off by default to ensure CI gets latest versions.
-    default: 'false'
+    description: Whether to cache the depot's `registries` directory.
+    default: 'true'
   cache-compiled:
     description: Whether to cache the depot's `compiled` directory.
     default: 'true'
