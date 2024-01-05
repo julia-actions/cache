@@ -9,7 +9,7 @@ branding:
 inputs:
   cache-name:
     description: >-
-      The cache key prefix. The key body automatically includes the OS and, unless disabled, the matrix vars
+      The cache key prefix. The key body automatically includes the OS and, unless disabled, the matrix vars.
       Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
     default: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }}
   include-matrix:
