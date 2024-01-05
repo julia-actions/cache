@@ -36,7 +36,13 @@ jobs:
     needs: generate-key
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        dep:
+          - name: pandoc_jll
+            version: "3"
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
@@ -55,7 +61,7 @@ jobs:
         @assert !isdir(dir)
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
-      run: 'using Pkg; Pkg.add("pandoc_jll")'
+      run: 'using Pkg; Pkg.add(PackageSpec(name="${{ matrix.dep.name }}", version="${{ matrix.dep.version }}"))'
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
   test-save-nomatrix:
@@ -81,7 +87,13 @@ jobs:
     needs: [generate-key, test-save]
     strategy:
       matrix:
-        os: [ubuntu-latest, windows-latest, macOS-latest]
+        dep:
+          - name: pandoc_jll
+            version: "3"
+        os:
+          - ubuntu-latest
+          - windows-latest
+          - macOS-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:

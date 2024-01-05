@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v3
+    - uses: actions/checkout@v4
     - uses: julia-actions/setup-julia@v1
     - uses: julia-actions/cache@v1
     - uses: julia-actions/julia-buildpkg@v1
@@ -31,7 +31,7 @@ By default all depot directories called out below are cached.
 
 ### Optional Inputs
 
-- `cache-name` - The cache key prefix. Defaults to `julia-cache-${{ github.workflow }}-${{ github.job }}`. The key body automatically includes matrix vars and the OS. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
+- `cache-name` - The cache key prefix. Defaults to `julia-cache;workflow=${{ github.workflow }};job=${{ github.job }}`. The key body automatically includes the OS and, unless disabled with `include-matrix`, the matrix vars. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
 - `include-matrix` - Whether to include the matrix values when constructing the cache key. Defaults to `true`.
 - `depot` - Path to a Julia [depot](https://pkgdocs.julialang.org/v1/glossary/) directory where cached data will be saved to and restored from. Defaults to the first depot in [`JULIA_DEPOT_PATH`](https://docs.julialang.org/en/v1/manual/environment-variables/#JULIA_DEPOT_PATH) if specified. Otherwise, defaults to `~/.julia`.
 - `cache-artifacts` - Whether to cache the depot's `artifacts` directory. Defaults to `true`.

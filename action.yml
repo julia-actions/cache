@@ -9,9 +9,9 @@ branding:
 inputs:
   cache-name:
     description: >-
-      The cache key prefix. Unless disabled the key body automatically includes matrix vars, and the OS.
+      The cache key prefix. The key body automatically includes the OS and, unless disabled, the matrix vars.
       Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
-    default: julia-cache-${{ github.workflow }}-${{ github.job }}
+    default: julia-cache;workflow=${{ github.workflow }};job=${{ github.job }}
   include-matrix:
     description: Whether to include the matrix values when constructing the cache key.
     default: 'true'
@@ -51,6 +51,14 @@ outputs:
 runs:
   using: 'composite'
   steps:
+    - name: Install jq
+      # Skip installation on GitHub-hosted runners:
+      # https://github.com/orgs/community/discussions/48359#discussioncomment-5323864
+      if: ${{ !startsWith(runner.name, 'GitHub Actions') }}
+      uses: dcarbone/install-jq-action@v2.1.0
+      with:
+        force: false  # Skip install when an existing `jq` is present
+
     - id: paths
       run: |
         if [ -n "${{ inputs.depot }}" ]; then
@@ -78,18 +86,21 @@ runs:
       env:
         PATH_DELIMITER: ${{ runner.OS == 'Windows' && ';' || ':' }}
 
-      # MATRIX_STRING is a join of all matrix variables that helps concurrent runs have a unique cache key.
-      # The underscore at the end of the restore key demarks the end of the restore section. Without this
-      # a runner without a matrix has a restore key that will cause impropper clearing of caches from those
-      # with a matrix.
-    - id: keys
+    - name: Generate Keys
+      id: keys
       run: |
-        [ "${{ inputs.include-matrix }}" == "true" ] && MATRIX_STRING="${{ join(matrix.*, '-') }}"
-        [ -n "$MATRIX_STRING" ] && MATRIX_STRING="-${MATRIX_STRING}"
-        RESTORE_KEY="${{ inputs.cache-name }}-${{ runner.os }}${MATRIX_STRING}-${{ steps.paths.outputs.depot }}_"
-        echo "restore-key=${RESTORE_KEY}" >> $GITHUB_OUTPUT
-        echo "key=${RESTORE_KEY}${{ github.run_id }}-${{ github.run_attempt }}" >> $GITHUB_OUTPUT
+        # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
+        # When `matrix` isn't set for the job then `MATRIX_JSON=null`.
+        if [ "${{ inputs.include-matrix }}" == "true" ] && [ "$MATRIX_JSON" != "null" ]; then
+          matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
+        fi
+        restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
+        key="${restore_key}run_id=${{ github.run_id }};run_attempt=${{ github.run_attempt }}"
+        echo "restore-key=${restore_key}" >> $GITHUB_OUTPUT
+        echo "key=${key}" >> $GITHUB_OUTPUT
       shell: bash
+      env:
+        MATRIX_JSON: ${{ toJSON(matrix) }}
 
     - uses: actions/cache@4d4ae6ae148a43d0fd1eda1800170683e9882738
       id: cache
