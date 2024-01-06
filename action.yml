@@ -117,9 +117,12 @@ runs:
         restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
 
-    - name: list restored depot directory sizes
-      if: ${{ steps.cache.outputs.cache-hit == 'true' }}
-      run: du -shc ${{ steps.paths.outputs.depot }}/* || true
+    # if it wasn't restored make the depot anyway as a signal that this action ran
+    # for other julia actions to check, like https://github.com/julia-actions/julia-buildpkg/pull/41
+    - name: make depot if not restored, then list depot directory sizes
+      run: |
+        mkdir -p ${{ steps.paths.outputs.depot }}
+        du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
     # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
