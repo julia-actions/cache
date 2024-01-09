@@ -91,6 +91,7 @@ jobs:
         dep:
           - name: pandoc_jll
             version: "3"
+            invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
         os:
           - ubuntu-latest
           - windows-latest
