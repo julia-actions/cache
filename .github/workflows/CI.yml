@@ -29,8 +29,8 @@ jobs:
       id: name
       run: |
         # cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
-        cache_name=ee1ce4814552ac3e0bd050ec6afb2fde0f1d8890d967f27b065c662558aa2d29
-        echo "cache-name=cache_name" | tee -a "$GITHUB_OUTPUT"
+        cache_name=f3302374ddfbc7f449eae16dc6f6042c88cc663ae5cecfd099b020082d20a05f
+        echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
 
   test-save:
     needs: generate-key
