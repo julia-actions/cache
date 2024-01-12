@@ -3,11 +3,12 @@ function handle_caches()
     subcommand = ARGS[1]
 
     if subcommand == "list"
-        repo, = ARGS[2:end]
+        repo = ARGS[2]
         println("Listing existing caches")
         run(`gh cache list --limit 100 --repo $repo`)
     elseif subcommand == "rm"
-        repo, restore_key, ref = ARGS[2:end]
+        repo, restore_key, ref = ARGS[2:4]
+        allow_failure = ARGS[5] == "true"
 
         endpoint = "/repos/$repo/actions/caches"
         page = 1
@@ -52,6 +53,7 @@ function handle_caches()
                     Or provide a token with `repo` scope via the `token` input option.
                     See https://cli.github.com/manual/gh_cache_delete
                     """
+                allow_failure || exit(1)
             end
             if !isempty(deletions)
                 println("Deleted $(length(deletions)) caches on ref `$ref` matching restore key `$restore_key`")

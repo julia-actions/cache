@@ -127,21 +127,21 @@ runs:
 
     # Not windows
     - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
-      if: ${{ inputs.delete-old-caches == 'true' && runner.OS != 'Windows' }}
+      if: ${{ inputs.delete-old-caches != 'false' && runner.OS != 'Windows' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
         main: echo ""
-        post: julia $GITHUB_ACTION_PATH/handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}"
+        post: julia $GITHUB_ACTION_PATH/handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches == 'required' }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
     # Windows (because this action uses command prompt on windows)
     - uses: pyTooling/Actions/with-post-step@adef08d3bdef092282614f3b683897cefae82ee3
-      if: ${{ inputs.delete-old-caches == 'true' && runner.OS == 'Windows' }}
+      if: ${{ inputs.delete-old-caches != 'false' && runner.OS == 'Windows' }}
       with:
         main: echo ""
-        post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}"
+        post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches == 'required' }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
