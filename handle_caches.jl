@@ -14,24 +14,24 @@ function handle_caches()
         page = 1
         per_page = 100
         escaped_restore_key = replace(restore_key, "\"" => "\\\"")
-        query = ".actions_caches[] | select(.key | startswith(\"$escaped_restore_key\")) | .id"
+        query = ".actions_caches[] | select(.key | startswith(\"$escaped_restore_key\")) | .key"
 
         deletions = String[]
         failures = String[]
         while 1 <= page <= 5 # limit to avoid accidental rate limiting
             cmd = `gh api -X GET $endpoint -F ref=$ref -F per_page=$per_page -F page=$page --jq $query`
-            ids = split(read(cmd, String); keepempty=false)
-            page = length(ids) == per_page ? page + 1 : -1
+            cache_keys = split(read(cmd, String); keepempty=false)
+            page = length(cache_keys) == per_page ? page + 1 : -1
 
             # We can delete all cache entries on this branch that matches the restore key
             # because the new cache is saved later.
-            for id in ids
+            for key in cache_keys
                 try
-                    run(`gh cache delete $id --repo $repo`)
-                    push!(deletions, id)
+                    run(`gh api -X DELETE $endpoint -F key=$key -F ref=$ref`)
+                    push!(deletions, key)
                 catch e
                     @error e
-                    push!(failures, id)
+                    push!(failures, key)
                 end
             end
         end
