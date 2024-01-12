@@ -109,7 +109,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
-        delete-old-caches: required
+        delete-old-caches: false  # Attempting to delete the cache created in the same workflow run will fail
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
@@ -145,7 +145,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
-        delete-old-caches: required
+        delete-old-caches: false  # Attempting to delete the cache created in the same workflow run will fail
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
