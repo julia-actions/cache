@@ -10,7 +10,6 @@ function handle_caches()
         repo, restore_key, ref = ARGS[2:end]
 
         endpoint = "/repos/$repo/actions/caches"
-        ref = "refs/pull/357/merge"
         page = 1
         per_page = 100
         escaped_restore_key = replace(restore_key, "\"" => "\\\"")
