@@ -91,7 +91,8 @@ jobs:
   test-restore:
     needs: [generate-key, test-save]
     permissions:
-      actions: write  # Needed for triggering `workflow_dispatch`
+      actions: write
+      contents: read
     runs-on: ubuntu-latest
     env:
       CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-matrix
@@ -107,7 +108,8 @@ jobs:
   test-restore-nomatrix:
     needs: [generate-key, test-save-nomatrix]
     permissions:
-      actions: write  # Needed for triggering `workflow_dispatch`
+      actions: write
+      contents: read
     runs-on: ubuntu-latest
     env:
       CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
