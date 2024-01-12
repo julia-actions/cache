@@ -95,6 +95,9 @@ runs:
           matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
         fi
         restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
+        # URL encode any restricted characters:
+        # https://github.com/actions/toolkit/blob/5430c5d84832076372990c7c27f900878ff66dc9/packages/cache/src/cache.ts#L38-L43
+        restore_key=$(sed 's/,/%2C/g' <<<"${restore_key}")
         key="${restore_key}run_id=${{ github.run_id }};run_attempt=${{ github.run_attempt }}"
         echo "restore-key=${restore_key}" >> $GITHUB_OUTPUT
         echo "key=${key}" >> $GITHUB_OUTPUT
