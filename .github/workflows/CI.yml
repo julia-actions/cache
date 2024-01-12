@@ -101,7 +101,7 @@ jobs:
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
       with:
-        workflow: CI-Restore.yml
+        workflow: CI Restore
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
         inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
 
@@ -118,6 +118,6 @@ jobs:
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
       with:
-        workflow: CI-Restore-No-Matrix.yml
+        workflow: CI Restore (no matrix)
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
         inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
