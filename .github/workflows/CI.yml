@@ -85,6 +85,9 @@ jobs:
 
   test-restore:
     needs: [generate-key, test-save]
+    permissions:
+      actions: write
+      contents: read
     strategy:
       matrix:
         dep:
@@ -129,6 +132,9 @@ jobs:
 
   test-restore-nomatrix:
     needs: [generate-key, test-save-nomatrix]
+    permissions:
+      actions: write
+      contents: read
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
