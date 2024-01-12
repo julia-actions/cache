@@ -46,13 +46,14 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
+      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-matrix
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Save cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
+        cache-name: ${{ env.CACHE_NAME }}
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -62,18 +63,27 @@ jobs:
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add(PackageSpec(name="${{ matrix.dep.name }}", version="${{ matrix.dep.version }}"))'
+    # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
+    - name: Restore Cache
+      uses: benc-uk/workflow-dispatch@v1
+      with:
+        workflow: CI-Restore.yml
+        ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
+        inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
   test-save-nomatrix:
     needs: generate-key
     runs-on: ubuntu-latest
+    env:
+      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Save cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+        cache-name: ${{ env.CACHE_NAME }}
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -83,88 +93,10 @@ jobs:
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
-
-  test-restore:
-    needs: [generate-key, test-save]
-    permissions:
-      actions: write
-      contents: read
-    strategy:
-      matrix:
-        dep:
-          - name: pandoc_jll
-            version: "3"
-        os:
-          - ubuntu-latest
-          - windows-latest
-          - macOS-latest
-      fail-fast: false
-    runs-on: ${{ matrix.os }}
-    env:
-      JULIA_DEPOT_PATH: /tmp/julia-depot
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - name: Restore cache
-      id: cache
-      uses: ./
+    # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
+    - name: Restore Cache
+      uses: benc-uk/workflow-dispatch@v1
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
-        delete-old-caches: false  # Attempting to delete the cache created in the same workflow run will fail
-    - name: Test cache-hit output
-      shell: 'julia --color=yes {0}'
-      run: |
-        @show ENV["cache-hit"]
-        @assert ENV["cache-hit"] == "true"
-      env:
-        cache-hit: ${{ steps.cache.outputs.cache-hit }}
-    - name: Check existance or emptiness of affected dirs
-      shell: 'julia --color=yes {0}'
-      run: |
-        # These dirs should exist as they've been cached
-        artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isempty(readdir(artifacts_dir))
-        packages_dir = joinpath(first(DEPOT_PATH), "packages")
-        @assert !isempty(readdir(packages_dir))
-        compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
-        @assert !isempty(readdir(compiled_dir))
-        scratchspaces_dir = joinpath(first(DEPOT_PATH), "scratchspaces")
-        @assert !isempty(readdir(scratchspaces_dir))
-        logs_dir = joinpath(first(DEPOT_PATH), "logs")
-        @assert !isempty(readdir(logs_dir))
-
-  test-restore-nomatrix:
-    needs: [generate-key, test-save-nomatrix]
-    permissions:
-      actions: write
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - name: Restore cache
-      id: cache
-      uses: ./
-      with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
-        delete-old-caches: false  # Attempting to delete the cache created in the same workflow run will fail
-    - name: Test cache-hit output
-      shell: 'julia --color=yes {0}'
-      run: |
-        @show ENV["cache-hit"]
-        @assert ENV["cache-hit"] == "true"
-      env:
-        cache-hit: ${{ steps.cache.outputs.cache-hit }}
-    - name: Check existance or emptiness of affected dirs
-      shell: 'julia --color=yes {0}'
-      run: |
-        # These dirs should exist as they've been cached
-        artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isempty(readdir(artifacts_dir))
-        packages_dir = joinpath(first(DEPOT_PATH), "packages")
-        @assert !isempty(readdir(packages_dir))
-        compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
-        @assert !isempty(readdir(compiled_dir))
-        scratchspaces_dir = joinpath(first(DEPOT_PATH), "scratchspaces")
-        @assert !isempty(readdir(scratchspaces_dir))
-        logs_dir = joinpath(first(DEPOT_PATH), "logs")
-        @assert !isempty(readdir(logs_dir))
-
+        workflow: CI-Restore-No-Matrix.yml
+        ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
+        inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'

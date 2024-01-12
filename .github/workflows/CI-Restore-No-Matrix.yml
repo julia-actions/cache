@@ -1,0 +1,43 @@
+name: CI Restore (no matrix)
+on:
+  workflow_dispatch:
+    inputs:
+      cache-name:
+        required: true
+        type: string
+jobs:
+  test:
+    permissions:
+      actions: write
+      contents: read
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Restore cache
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ input.cache-name }}
+        delete-old-caches: required
+    - name: Test cache-hit output
+      shell: 'julia --color=yes {0}'
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "true"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check existance or emptiness of affected dirs
+      shell: 'julia --color=yes {0}'
+      run: |
+        # These dirs should exist as they've been cached
+        artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isempty(readdir(artifacts_dir))
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isempty(readdir(packages_dir))
+        compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
+        @assert !isempty(readdir(compiled_dir))
+        scratchspaces_dir = joinpath(first(DEPOT_PATH), "scratchspaces")
+        @assert !isempty(readdir(scratchspaces_dir))
+        logs_dir = joinpath(first(DEPOT_PATH), "logs")
+        @assert !isempty(readdir(logs_dir))
+
