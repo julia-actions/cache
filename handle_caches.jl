@@ -27,7 +27,7 @@ function handle_caches()
             # because the new cache is saved later.
             for id in ids
                 try
-                    run(`gh api -X DELETE $repo/$id`)
+                    run(`gh api -X DELETE $endpoint/$id`)
                     push!(deletions, id)
                 catch e
                     @error e
