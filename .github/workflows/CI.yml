@@ -105,7 +105,7 @@ jobs:
         inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
 
   test-restore-nomatrix:
-    needs: [generate-key, test-save]
+    needs: [generate-key, test-save-nomatrix]
     permissions:
       actions: write  # Needed for triggering `workflow_dispatch`
     runs-on: ubuntu-latest
