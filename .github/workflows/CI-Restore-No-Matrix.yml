@@ -3,7 +3,7 @@ on:
   pull_request:
   workflow_dispatch:
     inputs:
-      cache-name:
+      cache_name:
         required: true
         type: string
 jobs:
@@ -18,7 +18,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ inputs.cache-name }}
+        cache-name: ${{ inputs.cache_name }}
         delete-old-caches: required
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'

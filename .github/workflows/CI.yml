@@ -47,14 +47,13 @@ jobs:
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
-      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-matrix
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Save cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ env.CACHE_NAME }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -69,15 +68,13 @@ jobs:
   test-save-nomatrix:
     needs: generate-key
     runs-on: ubuntu-latest
-    env:
-      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
     - name: Save cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ env.CACHE_NAME }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -94,8 +91,6 @@ jobs:
       actions: write
       contents: read
     runs-on: ubuntu-latest
-    env:
-      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-matrix
     steps:
     # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
     - name: Restore Cache
@@ -103,7 +98,7 @@ jobs:
       with:
         workflow: CI Restore
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
-        inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
+        inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-matrix"}'
 
   test-restore-nomatrix:
     needs: [generate-key, test-save-nomatrix]
@@ -111,8 +106,6 @@ jobs:
       actions: write
       contents: read
     runs-on: ubuntu-latest
-    env:
-      CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
     steps:
     # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
     - name: Restore Cache
@@ -120,4 +113,4 @@ jobs:
       with:
         workflow: CI Restore (no matrix)
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
-        inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
+        inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-nomatrix"}'
