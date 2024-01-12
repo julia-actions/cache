@@ -25,12 +25,11 @@ jobs:
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
-    - name: Generate random file
-      shell: 'julia --color=yes {0}'
-      run: 'write("random.txt", string(rand(10)))'
-    - name: Set cache-name as output
+    - name: Generate random cache-name
       id: name
-      run: echo "cache-name=${{ hashFiles('random.txt') }}" >> $GITHUB_OUTPUT
+      run: |
+        cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
+        echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
 
   test-save:
     needs: generate-key
