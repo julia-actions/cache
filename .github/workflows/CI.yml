@@ -92,8 +92,10 @@ jobs:
     needs: [generate-key, test-save]
     permissions:
       actions: write  # Needed for triggering `workflow_dispatch`
+    runs-on: ubuntu-latest
     env:
       CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-matrix
+    steps:
     # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
@@ -106,8 +108,10 @@ jobs:
     needs: [generate-key, test-save]
     permissions:
       actions: write  # Needed for triggering `workflow_dispatch`
+    runs-on: ubuntu-latest
     env:
       CACHE_NAME: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+    steps:
     # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
