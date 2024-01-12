@@ -43,11 +43,11 @@ function handle_caches()
                 println.(failures)
                 @info """
                     To delete caches you need to grant the following to the default `GITHUB_TOKEN` by adding
-                    this to your yml:
+                    this to your workflow:
                     ```
                     permissions:
-                        actions: write
-                        contents: read
+                      actions: write
+                      contents: read
                     ```
                     (Note this won't work for fork PRs but should once merged)
                     Or provide a token with `repo` scope via the `token` input option.
