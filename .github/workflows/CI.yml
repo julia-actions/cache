@@ -54,6 +54,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
@@ -74,6 +75,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
@@ -108,6 +110,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        delete-old-caches: required
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
@@ -143,6 +146,7 @@ jobs:
       uses: ./
       with:
         cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        delete-old-caches: required
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
