@@ -18,7 +18,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: 12f9b0afcb921007fb65f0c06859513df40ac962c6ef89271d77f0566847e586-nomatrix
+        cache-name: ${{ github.sha }}-nomatrix
         delete-old-caches: required
     # - name: Test cache-hit output
     #   shell: 'julia --color=yes {0}'
