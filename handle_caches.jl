@@ -20,14 +20,16 @@ function handle_caches()
         failures = String[]
         while 1 <= page <= 5 # limit to avoid accidental rate limiting
             cmd = `gh api -X GET $endpoint -F ref=$ref -F per_page=$per_page -F page=$page --jq $query`
-            ids = split(read(cmd, String); keepempty=false)
+            output = read(cmd, String)
+            ids = split(output; keepempty=false)
+            @show output ids
             page = length(ids) == per_page ? page + 1 : -1
 
             # We can delete all cache entries on this branch that matches the restore key
             # because the new cache is saved later.
             for id in ids
                 try
-                    run(`gh api -X DELETE $endpoint/$id`)
+                    run(`gh cache delete $id --repo $repo`)
                     push!(deletions, id)
                 catch e
                     @error e
