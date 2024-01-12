@@ -30,7 +30,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ input.cache-name }}
+        cache-name: ${{ inputs.cache-name }}
         delete-old-caches: required
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
