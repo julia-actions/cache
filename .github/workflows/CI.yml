@@ -52,7 +52,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -73,7 +73,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
@@ -108,7 +108,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
         # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
         delete-old-caches: ${{ github.event.pull_request.head.repo.full_name != 'julia-actions/cache' && 'false' || 'required' }}
     - name: Test cache-hit output
@@ -145,7 +145,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
         # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
         delete-old-caches: ${{ github.event.pull_request.head.repo.full_name != 'julia-actions/cache' && 'false' || 'required' }}
     - name: Test cache-hit output
