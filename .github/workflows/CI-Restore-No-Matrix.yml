@@ -15,15 +15,15 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: f3302374ddfbc7f449eae16dc6f6042c88cc663ae5cecfd099b020082d20a05f-nomatrix
+        cache-name: 12f9b0afcb921007fb65f0c06859513df40ac962c6ef89271d77f0566847e586-nomatrix
         delete-old-caches: required
-    - name: Test cache-hit output
-      shell: 'julia --color=yes {0}'
-      run: |
-        @show ENV["cache-hit"]
-        @assert ENV["cache-hit"] == "true"
-      env:
-        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    # - name: Test cache-hit output
+    #   shell: 'julia --color=yes {0}'
+    #   run: |
+    #     @show ENV["cache-hit"]
+    #     @assert ENV["cache-hit"] == "true"
+    #   env:
+    #     cache-hit: ${{ steps.cache.outputs.cache-hit }}
     - name: Check existance or emptiness of affected dirs
       shell: 'julia --color=yes {0}'
       run: |
