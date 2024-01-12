@@ -101,7 +101,6 @@ jobs:
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
       with:
-        repo: omus/cache  # Temporary
         workflow: CI Restore
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
         inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
@@ -119,7 +118,6 @@ jobs:
     - name: Restore Cache
       uses: benc-uk/workflow-dispatch@v1
       with:
-        repo: omus/cache  # Temporary
         workflow: CI Restore (no matrix)
         ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
         inputs: '{"cache-name": "${{ env.CACHE_NAME }}"}'
