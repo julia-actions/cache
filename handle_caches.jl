@@ -1,38 +1,45 @@
 using Pkg, Dates
 function handle_caches()
-    repo = ARGS[1]
-    func = ARGS[2]
-    restore_key = get(ARGS, 3, "")
+    subcommand = ARGS[1]
 
-    if func == "list"
+    if subcommand == "list"
+        repo, = ARGS[2:end]
         println("Listing existing caches")
         run(`gh cache list --limit 100 --repo $repo`)
-    elseif func == "rm"
-        caches = String[]
-        failed = String[]
-        for _ in 1:5 # limit to avoid accidental rate limiting
-            hits = split(strip(read(`gh cache list --limit 100 --repo $repo`, String)), keepempty=false)
-            search_again = length(hits) == 100
-            filter!(startswith(restore_key), hits)
-            isempty(hits) && break
-            # We can delete everything that matches the restore key because the new cache is saved later.
-            for c in hits
+    elseif subcommand == "rm"
+        repo, restore_key, ref = ARGS[2:end]
+
+        endpoint = "/repos/$repo/actions/caches"
+        page = 1
+        per_page = 100
+        escaped_restore_key = replace(restore_key, "\"" => "\\\"")
+        query = ".actions_caches[] | select(.key | startswith(\"$escaped_restore_key\")) | .id"
+
+        deletions = String[]
+        failures = String[]
+        while 1 <= page <= 5 # limit to avoid accidental rate limiting
+            cmd = `gh api -X GET $endpoint -F ref=$ref -F per_page=$per_page -F page=$page --jq $query`
+            ids = split(read(cmd, String); keepempty=false)
+            page = length(ids) == per_page ? page + 1 : -1
+
+            # We can delete all cache entries on this branch that matches the restore key
+            # because the new cache is saved later.
+            for id in ids
                 try
-                    run(`gh cache delete $(split(c)[1]) --repo $repo`)
-                    push!(caches, c)
+                    run(`gh cache delete $id --repo $repo`)
+                    push!(deletions, id)
                 catch e
                     @error e
-                    push!(failed, c)
+                    push!(failures, id)
                 end
             end
-            search_again || break
         end
-        if isempty(failed) && isempty(caches)
-            println("No existing caches found for restore key `$restore_key`")
+        if isempty(failures) && isempty(deletions)
+            println("No existing caches found on ref `$ref` matching restore key `$restore_key`")
         else
-            if !isempty(failed)
-                println("Failed to delete $(length(failed)) existing caches for restore key `$restore_key`")
-                println.(failed)
+            if !isempty(failures)
+                println("Failed to delete $(length(failures)) existing caches on ref `$ref` matching restore key `$restore_key`")
+                println.(failures)
                 @info """
                     To delete caches you need to grant the following to the default `GITHUB_TOKEN` by adding
                     this to your yml:
@@ -46,13 +53,13 @@ function handle_caches()
                     See https://cli.github.com/manual/gh_cache_delete
                     """
             end
-            if !isempty(caches)
-                println("$(length(caches)) existing caches deleted that match restore key `$restore_key`:")
-                println.(caches)
+            if !isempty(deletions)
+                println("Deleted $(length(deletions)) caches on ref `$ref` matching restore key `$restore_key`")
+                println.(deletions)
             end
         end
     else
-        throw(ArgumentError("Unexpected second argument: $func"))
+        throw(ArgumentError("Unexpected subcommand: $subcommand"))
     end
 end
 
