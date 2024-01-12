@@ -25,7 +25,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
-    - name: Generate random file
+    - name: Generate random cache-name
       id: name
       run: |
         cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
