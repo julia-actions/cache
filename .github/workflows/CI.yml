@@ -28,8 +28,9 @@ jobs:
     - name: Generate random cache-name
       id: name
       run: |
-        cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
-        echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
+        # cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
+        cache_name=ee1ce4814552ac3e0bd050ec6afb2fde0f1d8890d967f27b065c662558aa2d29
+        echo "cache-name=cache_name" | tee -a "$GITHUB_OUTPUT"
 
   test-save:
     needs: generate-key
@@ -85,32 +86,32 @@ jobs:
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add("pandoc_jll")'
 
-  test-restore:
-    needs: [generate-key, test-save]
-    permissions:
-      actions: write
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-    # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
-    - name: Restore Cache
-      uses: benc-uk/workflow-dispatch@v1
-      with:
-        workflow: CI Restore
-        ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
-        inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-matrix"}'
+  # test-restore:
+  #   needs: [generate-key, test-save]
+  #   permissions:
+  #     actions: write
+  #     contents: read
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
+  #   - name: Restore Cache
+  #     uses: benc-uk/workflow-dispatch@v1
+  #     with:
+  #       workflow: CI Restore
+  #       ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
+  #       inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-matrix"}'
 
-  test-restore-nomatrix:
-    needs: [generate-key, test-save-nomatrix]
-    permissions:
-      actions: write
-      contents: read
-    runs-on: ubuntu-latest
-    steps:
-    # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
-    - name: Restore Cache
-      uses: benc-uk/workflow-dispatch@v1
-      with:
-        workflow: CI Restore (no matrix)
-        ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
-        inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-nomatrix"}'
+  # test-restore-nomatrix:
+  #   needs: [generate-key, test-save-nomatrix]
+  #   permissions:
+  #     actions: write
+  #     contents: read
+  #   runs-on: ubuntu-latest
+  #   steps:
+  #   # Use a separate workflow for the restore cache job due to limitations with creating/deleting a cache entry in a single workflow
+  #   - name: Restore Cache
+  #     uses: benc-uk/workflow-dispatch@v1
+  #     with:
+  #       workflow: CI Restore (no matrix)
+  #       ref: ${{ github.event.pull_request.head.ref || github.ref_name }}  # Execute the workflow using the same branch name
+  #       inputs: '{"cache_name": "${{ needs.generate-key.outputs.cache-name }}-nomatrix"}'

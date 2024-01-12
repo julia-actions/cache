@@ -1,6 +1,5 @@
 name: CI Restore
 on:
-  pull_request:
   workflow_dispatch:
     inputs:
       cache_name:

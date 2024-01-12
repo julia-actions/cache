@@ -1,11 +1,6 @@
 name: CI Restore (no matrix)
 on:
   pull_request:
-  workflow_dispatch:
-    inputs:
-      cache_name:
-        required: true
-        type: string
 jobs:
   test:
     permissions:
@@ -14,11 +9,13 @@ jobs:
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - run: |
+        sleep 180
     - name: Restore cache
       id: cache
       uses: ./
       with:
-        cache-name: ${{ inputs.cache_name }}
+        cache-name: ee1ce4814552ac3e0bd050ec6afb2fde0f1d8890d967f27b065c662558aa2d29-nomatrix
         delete-old-caches: required
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
