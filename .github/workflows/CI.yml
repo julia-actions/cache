@@ -44,16 +44,24 @@ jobs:
           - name: pandoc_jll
             version: "3"
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
+        version:
+          - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+        include:
+          - version: "1.0"
+            os: ubuntu-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - uses: julia-actions/setup-julia@v1
+      with:
+        version: ${{ matrix.version }}
     - name: Save cache
       id: cache
       uses: ./
@@ -98,16 +106,24 @@ jobs:
           - name: pandoc_jll
             version: "3"
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
+        version:
+          - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+        include:
+          - version: "1.0"
+            os: ubuntu-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - uses: julia-actions/setup-julia@v1
+      with:
+        version: ${{ matrix.version }}
     - name: Restore cache
       id: cache
       uses: ./
