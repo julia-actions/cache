@@ -167,7 +167,7 @@ jobs:
         @assert !isempty(readdir(logs_dir))
 
   test-save-cloned-registry:
-    needs: [generate-key, test-save-cloned-registry]
+    needs: [generate-key]
     runs-on: ubuntu-latest
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
