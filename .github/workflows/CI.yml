@@ -157,7 +157,11 @@ jobs:
       run: |
         # These dirs should exist as they've been cached
         artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isempty(readdir(artifacts_dir))
+        if VERSION >= v"1.3-"
+            @assert !isempty(readdir(artifacts_dir))
+        else
+            @assert !isdir(artifacts_dir)
+        end
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert !isempty(readdir(packages_dir))
         compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
