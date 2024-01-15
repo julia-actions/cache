@@ -156,7 +156,7 @@ jobs:
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
   test-save-nomatrix:
-    needs: generate-key
+    needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
