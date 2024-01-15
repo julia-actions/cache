@@ -80,7 +80,7 @@ jobs:
         else
             Pkg.add(PackageSpec(name="Scratch", version="1"))
             using Scratch
-            @get_scratch!("test")
+            get_scratch!("test")
         end
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
@@ -109,7 +109,7 @@ jobs:
         else
             Pkg.add(PackageSpec(name="Scratch", version="1"))
             using Scratch
-            @get_scratch!("test")
+            get_scratch!("test")
         end
 
   test-restore:
