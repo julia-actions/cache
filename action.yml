@@ -75,7 +75,13 @@ runs:
         [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${depot}/packages"
         echo "packages-path=$P_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="${depot}/registries"
-        echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
+        if [ "${{ inputs.cache-registries }}" = "true" ]; then
+            if [ ! -d "$R_PATH" ]; then
+                echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
+            else
+                echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` preceeds any workflow steps which add registries."
+            fi
+        fi
         [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="${depot}/compiled"
         echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
         [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="${depot}/scratchspaces"
