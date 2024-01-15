@@ -45,12 +45,16 @@ jobs:
             version: "3"
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
         version:
+          - "1.0"
           - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
-        include:
+        exclude:
+          # Test Julia "1.0" on Linux only
+          - version: "1.0"
+            os: windows-latest
           - version: "1.0"
             os: ubuntu-latest
       fail-fast: false
@@ -107,12 +111,16 @@ jobs:
             version: "3"
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
         version:
+          - "1.0"
           - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
-        include:
+        exclude:
+          # Test Julia "1.0" on Linux only
+          - version: "1.0"
+            os: windows-latest
           - version: "1.0"
             os: ubuntu-latest
       fail-fast: false
