@@ -55,7 +55,7 @@ jobs:
       id: cache-name
       shell: bash
       run: |
-        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-matrix" >>"$GITHUB_OUTPUT"
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
     - name: Save cache
       id: cache
       uses: ./
@@ -82,7 +82,7 @@ jobs:
     - name: Set cache-name
       id: cache-name
       run: |
-        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-nomatrix" >>"$GITHUB_OUTPUT"
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
     - name: Save cache
       id: cache
       uses: ./
