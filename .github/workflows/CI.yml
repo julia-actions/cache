@@ -71,33 +71,6 @@ jobs:
       shell: 'julia --color=yes {0}'
       run: 'using Pkg; Pkg.add(PackageSpec(name="${{ matrix.dep.name }}", version="${{ matrix.dep.version }}"))'
 
-  # Do tests with no matrix also given the matrix is auto-included in cache key
-  test-save-nomatrix:
-    needs: generate-prefix
-    runs-on: ubuntu-latest
-    outputs:
-      cache-name: ${{ steps.cache-name.outputs.cache-name }}
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - name: Set cache-name
-      id: cache-name
-      run: |
-        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
-    - name: Save cache
-      id: cache
-      uses: ./
-      with:
-        cache-name: ${{ steps.cache-name.outputs.cache-name }}
-        delete-old-caches: required
-    - name: Check no artifacts dir
-      shell: 'julia --color=yes {0}'
-      run: |
-        dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isdir(dir)
-    - name: Install a small binary
-      shell: 'julia --color=yes {0}'
-      run: 'using Pkg; Pkg.add("pandoc_jll")'
-
   test-restore:
     needs: test-save
     runs-on: ${{ matrix.os }}
@@ -144,6 +117,33 @@ jobs:
         @assert !isempty(readdir(scratchspaces_dir))
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
+
+  # Do tests with no matrix also given the matrix is auto-included in cache key
+  test-save-nomatrix:
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - name: Save cache
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        delete-old-caches: required
+    - name: Check no artifacts dir
+      shell: 'julia --color=yes {0}'
+      run: |
+        dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isdir(dir)
+    - name: Install a small binary
+      shell: 'julia --color=yes {0}'
+      run: 'using Pkg; Pkg.add("pandoc_jll")'
 
   test-restore-nomatrix:
     needs: test-save-nomatrix
