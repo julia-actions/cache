@@ -32,9 +32,15 @@ jobs:
         echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
     - name: Debug old caches value
       run: |
-        echo $DELETE_OLD_CACHES
+        echo "DELETE_OLD_CACHES=$DELETE_OLD_CACHES"
+        echo "IS_FORK=$IS_FORK"
+        echo "TERNARY_TEST_1=$TERNARY_TEST_1"
+        echo "TERNARY_TEST_2=$TERNARY_TEST_2"
       env:
         DELETE_OLD_CACHES: ${{ github.event.pull_request.head.repo.full_name != 'julia-actions/cache' && 'false' || 'required' }}
+        IS_FORK: ${{ github.event.pull_request.head.repo.fork }}
+        TERNARY_TEST_1: ${{ true && 'A' || 'B' }}
+        TERNARY_TEST_2: ${{ false && 'A' || 'B' }}
 
   test-save:
     needs: generate-key
