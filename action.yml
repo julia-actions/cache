@@ -69,25 +69,32 @@ runs:
         else
             depot="~/.julia"
         fi
-        echo "depot=$depot" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-artifacts }}" = "true" ] && A_PATH="${depot}/artifacts"
-        echo "artifacts-path=$A_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-packages }}" = "true" ] && P_PATH="${depot}/packages"
-        echo "packages-path=$P_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-registries }}" = "true" ] && R_PATH="${depot}/registries"
+        echo "depot=$depot" | tee -a "$GITHUB_OUTPUT"
+
+        cache_paths=()
+        artifacts_path="${depot}/artifacts"
+        [ "${{ inputs.cache-artifacts }}" = "true" ] && cache_paths+=("$artifacts_path")
+        packages_path="${depot}/packages"
+        [ "${{ inputs.cache-packages }}" = "true" ] && cache_paths+=("$packages_path")
+        registries_path="${depot}/registries"
         if [ "${{ inputs.cache-registries }}" = "true" ]; then
-            if [ ! -d "${R_PATH/#\~/$HOME}" ]; then
-                echo "registries-path=$R_PATH" >> $GITHUB_OUTPUT
+            if [ ! -d "${registries_path/#\~/$HOME}" ]; then
+                cache_paths+=("$registries_path")
             else
                 echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` preceeds any workflow steps which add registries."
             fi
         fi
-        [ "${{ inputs.cache-compiled }}" = "true" ] && PCC_PATH="${depot}/compiled"
-        echo "compiled-path=$PCC_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && S_PATH="${depot}/scratchspaces"
-        echo "scratchspaces-path=$S_PATH" >> $GITHUB_OUTPUT
-        [ "${{ inputs.cache-logs }}" = "true" ] && L_PATH="${depot}/logs"
-        echo "logs-path=$L_PATH" >> $GITHUB_OUTPUT
+        compiled_path="${depot}/compiled"
+        [ "${{ inputs.cache-compiled }}" = "true" ] && cache_paths+=("$compiled_path")
+        scratchspaces_path="${depot}/scratchspaces"
+        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && cache_paths+=("$scratchspaces_path")
+        logs_path="${depot}/logs"
+        [ "${{ inputs.cache-logs }}" = "true" ] && cache_paths+=("$logs_path")
+        {
+            echo "cache-paths<<EOF"
+            printf "%s\n" "${cache_paths[@]}"
+            echo "EOF"
+        } | tee -a "$GITHUB_OUTPUT"
       shell: bash
       env:
         PATH_DELIMITER: ${{ runner.OS == 'Windows' && ';' || ':' }}
@@ -115,13 +122,7 @@ runs:
       id: cache
       with:
         path: |
-          ${{ steps.paths.outputs.artifacts-path }}
-          ${{ steps.paths.outputs.packages-path }}
-          ${{ steps.paths.outputs.registries-path }}
-          ${{ steps.paths.outputs.scratchspaces-path }}
-          ${{ steps.paths.outputs.compiled-path }}
-          ${{ steps.paths.outputs.logs-path }}
-
+          ${{ steps.paths.outputs.cache-paths }}
         key: ${{ steps.keys.outputs.key }}
         restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
