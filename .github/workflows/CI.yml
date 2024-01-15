@@ -194,7 +194,7 @@ jobs:
         if VERSION >= v"1.3-"
             @assert !isempty(readdir(artifacts_dir))
         else
-            @assert isempty(readdir(artifacts_dir))
+            @assert !isdir(artifacts_dir)
         end
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert !isempty(readdir(packages_dir))
