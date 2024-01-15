@@ -35,20 +35,31 @@ jobs:
     needs: generate-key
     strategy:
       matrix:
-        dep:
-          - name: pandoc_jll
-            version: "3"
+        nested:
+          - name: matrix
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
+        version:
+          - "1.0"
+          - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+        exclude:
+          # Test Julia "1.0" on Linux only
+          - version: "1.0"
+            os: windows-latest
+          - version: "1.0"
+            os: macOS-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - uses: julia-actions/setup-julia@v1
+      with:
+        version: ${{ matrix.version }}
     - name: Save cache
       id: cache
       uses: ./
@@ -62,7 +73,15 @@ jobs:
         @assert !isdir(dir)
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
-      run: 'using Pkg; Pkg.add(PackageSpec(name="${{ matrix.dep.name }}", version="${{ matrix.dep.version }}"))'
+      run: |
+        using Pkg
+        if VERSION >= v"1.3"
+            Pkg.add(PackageSpec(name="pandoc_jll", version="3"))
+        else
+            Pkg.add(PackageSpec(name="Scratch", version="1"))
+            using Scratch
+            @get_scratch!("test")
+        end
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
   test-save-nomatrix:
@@ -83,26 +102,45 @@ jobs:
         @assert !isdir(dir)
     - name: Install a small binary
       shell: 'julia --color=yes {0}'
-      run: 'using Pkg; Pkg.add("pandoc_jll")'
+      run: |
+        using Pkg
+        if VERSION >= v"1.3"
+            Pkg.add(PackageSpec(name="pandoc_jll", version="3"))
+        else
+            Pkg.add(PackageSpec(name="Scratch", version="1"))
+            using Scratch
+            @get_scratch!("test")
+        end
 
   test-restore:
     needs: [generate-key, test-save]
     strategy:
       matrix:
-        dep:
-          - name: pandoc_jll
-            version: "3"
+        nested:
+          - name: matrix
             invalid-chars: ","  # Use invalid characters in job matrix to ensure we escape them
+        version:
+          - "1.0"
+          - "1"
         os:
           - ubuntu-latest
           - windows-latest
           - macOS-latest
+        exclude:
+          # Test Julia "1.0" on Linux only
+          - version: "1.0"
+            os: windows-latest
+          - version: "1.0"
+            os: macOS-latest
       fail-fast: false
     runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - uses: julia-actions/setup-julia@v1
+      with:
+        version: ${{ matrix.version }}
     - name: Restore cache
       id: cache
       uses: ./
@@ -122,7 +160,11 @@ jobs:
       run: |
         # These dirs should exist as they've been cached
         artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isempty(readdir(artifacts_dir))
+        if VERSION >= v"1.3"
+            @assert !isempty(readdir(artifacts_dir))
+        else
+            @assert !isdir(artifacts_dir)
+        end
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert !isempty(readdir(packages_dir))
         compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
@@ -156,7 +198,11 @@ jobs:
       run: |
         # These dirs should exist as they've been cached
         artifacts_dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isempty(readdir(artifacts_dir))
+        if VERSION >= v"1.3"
+            @assert !isempty(readdir(artifacts_dir))
+        else
+            @assert !isdir(artifacts_dir)
+        end
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert !isempty(readdir(packages_dir))
         compiled_dir = joinpath(first(DEPOT_PATH), "compiled")
