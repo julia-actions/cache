@@ -41,6 +41,7 @@ jobs:
         version:
           - "1.0"
           - "1"
+          - "nightly"
         os:
           - ubuntu-latest
           - windows-latest
@@ -122,6 +123,7 @@ jobs:
         version:
           - "1.0"
           - "1"
+          - "nightly"
         os:
           - ubuntu-latest
           - windows-latest
