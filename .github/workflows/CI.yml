@@ -30,6 +30,11 @@ jobs:
       run: |
         cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
         echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
+    - name: Debug old caches value
+      run: |
+        echo $DELETE_OLD_CACHES
+      env:
+        DELETE_OLD_CACHES: ${{ github.event.pull_request.head.repo.full_name != 'julia-actions/cache' && 'false' || 'required' }}
 
   test-save:
     needs: generate-key
