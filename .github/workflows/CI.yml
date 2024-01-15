@@ -25,12 +25,11 @@ jobs:
     outputs:
       cache-name: ${{ steps.name.outputs.cache-name }}
     steps:
-    - name: Generate random file
-      shell: 'julia --color=yes {0}'
-      run: 'write("random.txt", string(rand(10)))'
-    - name: Set cache-name as output
+    - name: Generate random cache-name
       id: name
-      run: echo "cache-name=${{ hashFiles('random.txt') }}" >> $GITHUB_OUTPUT
+      run: |
+        cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
+        echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
 
   test-save:
     needs: generate-key
@@ -54,7 +53,8 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
+        delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
@@ -74,7 +74,8 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+        delete-old-caches: required
     - name: Check no artifacts dir
       shell: 'julia --color=yes {0}'
       run: |
@@ -106,7 +107,9 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
+        # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
@@ -138,7 +141,9 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}
+        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+        # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
     - name: Test cache-hit output
       shell: 'julia --color=yes {0}'
       run: |
