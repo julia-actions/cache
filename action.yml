@@ -81,7 +81,7 @@ runs:
             if [ ! -d "${registries_path/#\~/$HOME}" ]; then
                 cache_paths+=("$registries_path")
             else
-                echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` preceeds any workflow steps which add registries."
+                echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` precedes any workflow steps which add registries."
             fi
         fi
         compiled_path="${depot}/compiled"

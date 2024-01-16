@@ -20,19 +20,22 @@ permissions:
   contents: read
 
 jobs:
-  generate-key:
+  generate-prefix:
     runs-on: ubuntu-latest
     outputs:
-      cache-name: ${{ steps.name.outputs.cache-name }}
+      cache-prefix: ${{ steps.name.outputs.cache-prefix }}
     steps:
-    - name: Generate random cache-name
+    - name: Generate random cache-prefix
       id: name
       run: |
-        cache_name=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
-        echo "cache-name=$cache_name" | tee -a "$GITHUB_OUTPUT"
+        cache_prefix=$(head -n 100 </dev/urandom | shasum -a 256 | cut -d ' ' -f 1)
+        echo "cache-prefix=$cache_prefix" >>"$GITHUB_OUTPUT"
 
   test-save:
-    needs: generate-key
+    needs: generate-prefix
+    runs-on: ${{ matrix.os }}
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
     strategy:
       matrix:
         nested:
@@ -53,11 +56,15 @@ jobs:
           - version: "1.0"
             os: macOS-latest
       fail-fast: false
-    runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Set cache-name
+      id: cache-name
+      shell: bash
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
     - uses: julia-actions/setup-julia@v1
       with:
         version: ${{ matrix.version }}
@@ -65,36 +72,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
-        delete-old-caches: required
-    - name: Check no artifacts dir
-      shell: julia --color=yes {0}
-      run: |
-        dir = joinpath(first(DEPOT_PATH), "artifacts")
-        @assert !isdir(dir)
-    - name: Install a small binary
-      shell: julia --color=yes {0}
-      run: |
-        using Pkg
-        if VERSION >= v"1.3"
-            Pkg.add(PackageSpec(name="pandoc_jll", version="3"))
-        else
-            Pkg.add(PackageSpec(name="Scratch", version="1"))
-            using Scratch
-            get_scratch!("test")
-        end
-
-  # Do tests with no matrix also given the matrix is auto-included in cache key
-  test-save-nomatrix:
-    needs: generate-key
-    runs-on: ubuntu-latest
-    steps:
-    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - name: Save cache
-      id: cache
-      uses: ./
-      with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
         delete-old-caches: required
     - name: Check no artifacts dir
       shell: julia --color=yes {0}
@@ -114,7 +92,8 @@ jobs:
         end
 
   test-restore:
-    needs: [generate-key, test-save]
+    needs: test-save
+    runs-on: ${{ matrix.os }}
     strategy:
       matrix:
         nested:
@@ -135,7 +114,6 @@ jobs:
           - version: "1.0"
             os: macOS-latest
       fail-fast: false
-    runs-on: ${{ matrix.os }}
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
@@ -147,7 +125,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-matrix
+        cache-name: ${{ needs.test-save.outputs.cache-name }}
         # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
         delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
     - name: Test cache-hit output
@@ -176,8 +154,43 @@ jobs:
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
 
+  # Do tests with no matrix also given the matrix is auto-included in cache key
+  test-save-nomatrix:
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - name: Save cache
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        delete-old-caches: required
+    - name: Check no artifacts dir
+      shell: julia --color=yes {0}
+      run: |
+        dir = joinpath(first(DEPOT_PATH), "artifacts")
+        @assert !isdir(dir)
+    - name: Install a small binary
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        if VERSION >= v"1.3"
+            Pkg.add(PackageSpec(name="pandoc_jll", version="3"))
+        else
+            Pkg.add(PackageSpec(name="Scratch", version="1"))
+            using Scratch
+            get_scratch!("test")
+        end
+
   test-restore-nomatrix:
-    needs: [generate-key, test-save-nomatrix]
+    needs: test-save-nomatrix
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
@@ -185,7 +198,7 @@ jobs:
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.generate-key.outputs.cache-name }}-nomatrix
+        cache-name: ${{ needs.test-save-nomatrix.outputs.cache-name }}
         # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
         delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
     - name: Test cache-hit output
@@ -215,7 +228,7 @@ jobs:
         @assert !isempty(readdir(logs_dir))
 
   test-save-cloned-registry:
-    needs: [generate-key]
+    needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
@@ -224,7 +237,7 @@ jobs:
     - name: Set cache-name
       id: cache-name
       run: |
-        echo "cache-name=${{ needs.generate-key.outputs.cache-name }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
     - name: Save cache
       uses: ./
       with:
@@ -243,7 +256,7 @@ jobs:
       run: git -C ~/.julia/registries/General reset --hard HEAD~20
 
   test-restore-cloned-registry:
-    needs: [test-save-cloned-registry]
+    needs: test-save-cloned-registry
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
