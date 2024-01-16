@@ -214,3 +214,54 @@ jobs:
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
 
+  test-save-cloned-registry:
+    needs: [generate-key]
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-key.outputs.cache-name }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - name: Save cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Add General registry clone
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.Registry.add("General")
+      env:
+        JULIA_PKG_SERVER: ""
+    # Set the registry worktree to an older state to simulate the cache storing an old version of the registry.
+    - name: Use outdated General worktree
+      run: git -C ~/.julia/registries/General reset --hard HEAD~20
+
+  test-restore-cloned-registry:
+    needs: [test-save-cloned-registry]
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
+    - name: Add General registry clone
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.Registry.add("General")
+      env:
+        JULIA_PKG_SERVER: ""
+    - name: Restore cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-save-cloned-registry.outputs.cache-name }}
+        # Cannot require a successful cache delete on forked PRs as the permissions for actions is limited to read
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Test registry is not corrupt
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.Registry.update()
