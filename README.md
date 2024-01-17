@@ -29,6 +29,13 @@ jobs:
 
 By default all depot directories called out below are cached.
 
+### Requirements
+
+This action uses [`jq`](https://github.com/jqlang/jq) to parse JSON.
+`jq` is installed by default in GitHub-hosted runners.
+[`dcarbone/install-jq-action`](https://github.com/dcarbone/install-jq-action) is used to check that `jq` is available and install it if not.
+**Note:** installing `jq` with `dcarbone/install-jq-action` requires that curl is available; this may not be the case in custom containers.
+
 ### Optional Inputs
 
 - `cache-name` - The cache key prefix. Defaults to `julia-cache;workflow=${{ github.workflow }};job=${{ github.job }}`. The key body automatically includes the OS and, unless disabled with `include-matrix`, the matrix vars. Include any other parameters/details in this prefix to ensure one unique cache key per concurrent job type.
