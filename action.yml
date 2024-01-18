@@ -52,7 +52,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install jq
-      uses: dcarbone/install-jq-action@v2.1.0
+      uses: dcarbone/install-jq-action@8867ddb4788346d7c22b72ea2e2ffe4d514c7bcb
       with:
         force: false  # Skip install when an existing `jq` is present
 
