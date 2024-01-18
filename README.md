@@ -47,6 +47,7 @@ This action uses [`jq`](https://github.com/jqlang/jq) to parse JSON.
 - `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
 - `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `save-always` - Whether to save the cache even when the job fails. Defaults to `true`. This is useful as the julia depot should mostly be reusable from a failing job.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
