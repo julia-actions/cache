@@ -62,6 +62,10 @@ This cached file is then restored upon the second run, and afterwards resaved un
 The benefit of caching is that downloading one big file is quicker than downloading many different files from many different locations
 and precompiling them.
 
+By default, this actions removes the previous cache to make the cached files are as useful as possible.
+A reason for this is that, unlike many other languages, updating one dependency in Julia can outdate large amounts of precompiled code.
+By removing the old cache, this Action ensures that caches will be updated for small changes to the dependencies.
+
 ### Cache keys
 
 The cache key that the cache will be saved as is based on:
