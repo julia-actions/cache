@@ -62,6 +62,10 @@ This cached file is then restored upon the second run, and afterwards resaved un
 The benefit of caching is that downloading one big file is quicker than downloading many different files from many different locations
 and precompiling them.
 
+By default, this action removes caches that were previously made by jobs on the same branch with the same restore key.
+GitHub automatically removes old caches after a certain period or when the repository cache allocation is full.
+It is, however, more efficient to explicitly remove old caches to improve caching for less frequently run jobs.
+
 ### Cache keys
 
 The cache key that the cache will be saved as is based on:
