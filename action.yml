@@ -37,7 +37,7 @@ inputs:
     description: Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.
     default: 'true'
   save-always:
-    description: Whether to save the cache even when the job fails. This is useful as the julia depot should mostly be reusable from a failing job.
+    description: Whether to save the cache even when the job fails. This is useful as the Julia depot should mostly be reusable from a failing job.
     default: 'true'
   delete-old-caches:
     description: Whether to delete old caches for the given key.
