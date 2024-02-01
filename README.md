@@ -87,7 +87,7 @@ This action automatically deletes old caches that match the first 4 fields of th
 - The `runner.os` (may be in the matrix too, but included for safety)
 
 Which means your caches files will not grow needlessly. GitHub also deletes cache files after
-[90 days which can be increased in private repos to up to 400 days](https://docs.github.com/en/organizations/managing-organization-settings/configuring-the-retention-period-for-github-actions-artifacts-and-logs-in-your-organization)
+[7 days of not being accessed](https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy), and there is a limit of 10 GB for the total size of cache files associated to each repository.
 
 > [!NOTE]
 > To allow deletion of caches you will likely need to [grant the following permissions](https://docs.github.com/en/actions/using-jobs/assigning-permissions-to-jobs)
