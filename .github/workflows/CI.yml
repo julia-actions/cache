@@ -65,7 +65,7 @@ jobs:
       shell: bash
       run: |
         echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
-    - uses: julia-actions/setup-julia@v1
+    - uses: julia-actions/setup-julia@v2
       with:
         version: ${{ matrix.version }}
     - name: Save cache
@@ -118,7 +118,7 @@ jobs:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
     - uses: actions/checkout@b4ffde65f46336ab88eb53be808477a3936bae11
-    - uses: julia-actions/setup-julia@v1
+    - uses: julia-actions/setup-julia@v2
       with:
         version: ${{ matrix.version }}
     - name: Restore cache
