@@ -136,7 +136,7 @@ runs:
     # that match the restore key just before saving the new cache
 
     # Not windows
-    - uses: pyTooling/Actions/with-post-step@60281e01e2514114849e490153aa0a3627994077 # v1.0.1
+    - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
       if: ${{ inputs.delete-old-caches != 'false' && runner.OS != 'Windows' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
@@ -147,7 +147,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
 
     # Windows (because this action uses command prompt on windows)
-    - uses: pyTooling/Actions/with-post-step@60281e01e2514114849e490153aa0a3627994077 # v1.0.1
+    - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
       if: ${{ inputs.delete-old-caches != 'false' && runner.OS == 'Windows' }}
       with:
         main: echo ""
