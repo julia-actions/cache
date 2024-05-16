@@ -15,7 +15,7 @@ git fetch --all --tags
 # Make sure to change `v2.2.0` to the actual value for the release
 # that you just created in the previous step.
 #
-# The `-f` flag forcible overwrites the old
+# The `-f` flag forcibly overwrites the old
 # `v2` tag (if it exists).
 git tag -f v2 v2.2.0
 
