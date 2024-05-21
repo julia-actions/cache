@@ -19,12 +19,19 @@ permissions:
 jobs:
   test:
     runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        version:
+          - '1.6'
+          - '1'
     steps:
-    - uses: actions/checkout@v4
-    - uses: julia-actions/setup-julia@v2
-    - uses: julia-actions/cache@v2
-    - uses: julia-actions/julia-buildpkg@v1
-    - uses: julia-actions/julia-runtest@v1
+      - uses: actions/checkout@v4
+      - uses: julia-actions/setup-julia@v2
+      - uses: julia-actions/cache@v2
+        with:
+          cache-name: 'test-${{ matrix.os }}'
+      - uses: julia-actions/julia-buildpkg@v1
+      - uses: julia-actions/julia-runtest@v1
 ```
 
 By default all depot directories called out below are cached.
