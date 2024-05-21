@@ -76,8 +76,8 @@ The cache key that the cache will be saved as is based on:
 - The run attempt number
 
 > [!NOTE]
-> If in your workflow if you do not use a matrix for concurrency you should make `cache-name` such that it is unique for
-> concurrent jobs, otherwise caching may not be effective.
+> If your workflow uses a matrix for concurrency you should ensure `cache-name` is unique for concurrent jobs or caching may not
+> be effective.
 
 ### Cache Retention
 
