@@ -31,10 +31,10 @@ By default all depot directories called out below are cached.
 
 ### Requirements
 
-This action uses [`jq`](https://github.com/jqlang/jq) to parse JSON.
-`jq` is installed by default in GitHub-hosted runners.
-[`dcarbone/install-jq-action`](https://github.com/dcarbone/install-jq-action) is used to check that `jq` is available and install it if not.
-**Note:** installing `jq` with `dcarbone/install-jq-action` requires that curl is available; this may not be the case in custom containers.
+1. `jq`
+    - This action uses [`jq`](https://github.com/jqlang/jq) to parse JSON. `jq` is installed by default in GitHub-hosted runners. [`dcarbone/install-jq-action`](https://github.com/dcarbone/install-jq-action) is used to check that `jq` is available and install it if not. **Note:** installing `jq` with `dcarbone/install-jq-action` requires that `curl` is available; this may not be the case in custom containers.
+2. Bash
+    - This action requires Bash. Bash is installed by default in GitHub-hosted runners. On self-hosted runners, you may need to make sure that Bash is available in the PATH.
 
 ### Optional Inputs
 
