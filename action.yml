@@ -148,13 +148,6 @@ runs:
     # - https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
     # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
 
-    - name: Debug
-      shell: bash
-      run: |
-        echo "- ${{ github.event.repository.default_branch }}"
-        echo "- ${{ github.ref }}"
-
-
     # Not windows
     - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
       if: ${{ inputs.delete-old-caches != 'false' &&
