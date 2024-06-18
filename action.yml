@@ -149,6 +149,7 @@ runs:
     # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
 
     - name: Debug
+      shell: bash
       run: |
         echo "- ${{ github.event.repository.default_branch }}"
         echo "- ${{ github.ref }}"
