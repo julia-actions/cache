@@ -133,10 +133,10 @@ runs:
       shell: bash
 
     # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
-    # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old cache entries before
-    # the new cache is saved. However, we need to be careful with our manual cleanup as otherwise we can
-    # cause cache misses for jobs which would have normally had a cache hit. Some scenarios to keep in
-    # mind include:
+    # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old
+    # cache entries before the new cache is saved. However, we need to be careful with our manual
+    # cleanup as otherwise we can cause cache misses for jobs which would have normally had a cache hit.
+    # Some scenarios to keep in mind include:
     #
     # - Job failures result in the post-action for `actions/cache` being skipped. If we delete all cache
     #   entries for the branch we may have no cache entry available for the next run.

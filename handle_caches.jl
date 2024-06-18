@@ -19,7 +19,7 @@ function handle_caches()
             # https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#list-github-actions-caches-for-a-repository
             # Note: The `key` field matches on the full key or a prefix.
             cmd = ```
-                gh api -X GET /repos/$repo/actions/cache
+                gh api -X GET /repos/$repo/actions/caches
                     --field per_page=$per_page
                     --field page=$page
                     --field ref=$ref
