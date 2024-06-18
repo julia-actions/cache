@@ -32,7 +32,7 @@ function handle_caches()
 
             # Avoid deleting the latest used cache entry. This is particularly important for
             # job failures where a new cache entry will not be saved after this.
-            page == 1 && push!(skipped, popfirst!(ids))
+            page == 1 && !isempty(ids) && push!(skipped, popfirst!(ids))
 
             for id in ids
                 try
