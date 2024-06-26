@@ -10,37 +10,48 @@ function handle_caches()
         repo, restore_key, ref = ARGS[2:4]
         allow_failure = ARGS[5] == "true"
 
-        endpoint = "/repos/$repo/actions/caches"
         page = 1
         per_page = 100
-        escaped_restore_key = replace(restore_key, "\"" => "\\\"")
-        query = ".actions_caches[] | select(.key | startswith(\"$escaped_restore_key\")) | .id"
-
-        deletions = String[]
-        failures = String[]
+        skipped = String[]
+        deleted = String[]
+        failed = String[]
         while 1 <= page <= 5 # limit to avoid accidental rate limiting
-            cmd = `gh api -X GET $endpoint -F ref=$ref -F per_page=$per_page -F page=$page --jq $query`
+            # https://docs.github.com/en/rest/actions/cache?apiVersion=2022-11-28#list-github-actions-caches-for-a-repository
+            # Note: The `key` field matches on the full key or a prefix.
+            cmd = ```
+                gh api -X GET /repos/$repo/actions/caches
+                    --field per_page=$per_page
+                    --field page=$page
+                    --field ref=$ref
+                    --field key=$restore_key
+                    --field sort=last_accessed_at
+                    --field direction=desc
+                    --jq '.actions_caches[].id'
+                ```
             ids = split(read(cmd, String); keepempty=false)
-            page = length(ids) == per_page ? page + 1 : -1
 
-            # We can delete all cache entries on this branch that matches the restore key
-            # because the new cache is saved later.
+            # Avoid deleting the latest used cache entry. This is particularly important for
+            # job failures where a new cache entry will not be saved after this.
+            page == 1 && !isempty(ids) && push!(skipped, popfirst!(ids))
+
             for id in ids
                 try
                     run(`gh cache delete $id --repo $repo`)
-                    push!(deletions, id)
+                    push!(deleted, id)
                 catch e
                     @error e
-                    push!(failures, id)
+                    push!(failed, id)
                 end
             end
+
+            page = length(ids) == per_page ? page + 1 : -1
         end
-        if isempty(failures) && isempty(deletions)
+        if isempty(skipped) && isempty(deleted) && isempty(failed)
             println("No existing caches found on ref `$ref` matching restore key `$restore_key`")
         else
-            if !isempty(failures)
-                println("Failed to delete $(length(failures)) existing caches on ref `$ref` matching restore key `$restore_key`")
-                println.(failures)
+            if !isempty(failed)
+                println("Failed to delete $(length(failed)) existing caches on ref `$ref` matching restore key `$restore_key`")
+                println.(failed)
                 @info """
                     To delete caches you need to grant the following to the default `GITHUB_TOKEN` by adding
                     this to your workflow:
@@ -55,9 +66,9 @@ function handle_caches()
                     """
                 allow_failure || exit(1)
             end
-            if !isempty(deletions)
-                println("Deleted $(length(deletions)) caches on ref `$ref` matching restore key `$restore_key`")
-                println.(deletions)
+            if !isempty(deleted)
+                println("Deleted $(length(deleted)) caches on ref `$ref` matching restore key `$restore_key`")
+                println.(deleted)
             end
         end
     else

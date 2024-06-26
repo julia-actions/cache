@@ -132,12 +132,27 @@ runs:
         du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
-    # github and actions/cache doesn't provide a way to update a cache at a given key, so we delete any
-    # that match the restore key just before saving the new cache
+    # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
+    # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old
+    # cache entries before the new cache is saved. However, we need to be careful with our manual
+    # cleanup as otherwise we can cause cache misses for jobs which would have normally had a cache hit.
+    # Some scenarios to keep in mind include:
+    #
+    # - Job failures result in the post-action for `actions/cache` being skipped. If we delete all cache
+    #   entries for the branch we may have no cache entry available for the next run.
+    # - We should avoid deleting old cache entries for the default branch since these entries serve as
+    #   the fallback if no earlier cache entry exists on a branch. We can rely on GitHub's default cache
+    #   eviction policy here which will remove the oldest cache entry first.
+    #
+    # References:
+    # - https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
+    # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
 
     # Not windows
     - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
-      if: ${{ inputs.delete-old-caches != 'false' && runner.OS != 'Windows' }}
+      if: ${{ inputs.delete-old-caches != 'false' &&
+              github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
+              runner.OS != 'Windows' }}
       with:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
@@ -148,7 +163,9 @@ runs:
 
     # Windows (because this action uses command prompt on windows)
     - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
-      if: ${{ inputs.delete-old-caches != 'false' && runner.OS == 'Windows' }}
+      if: ${{ inputs.delete-old-caches != 'false' &&
+              github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
+              runner.OS == 'Windows' }}
       with:
         main: echo ""
         post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches != 'required' }}"
