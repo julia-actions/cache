@@ -132,6 +132,9 @@ runs:
         du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
+    # issue https://github.com/julia-actions/cache/issues/110
+    # Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
+    # `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
     - name: Update any cached registries
       if: ${{ inputs.cache-registries == 'true' }}
       run: |
