@@ -132,6 +132,17 @@ runs:
         du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
+    - name: Update any cached registries
+      if: ${{ inputs.cache-registries == 'true' }}
+      run: |
+        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ "$(ls -A ${{ steps.paths.outputs.depot }}/registries)" ]; then
+          echo "Registries directory exists and is non-empty. Updating any registries"
+          julia -e "import Pkg; Pkg.Registry.update()"
+        else
+          echo "Directory does not exist or is empty. Skipping registry update"
+        fi
+      shell: bash
+
     # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
     # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old
     # cache entries before the new cache is saved. However, we need to be careful with our manual
