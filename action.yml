@@ -140,7 +140,7 @@ runs:
     - name: Update any cached registries
       if: ${{ inputs.cache-registries == 'true' }}
       run: |
-        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ "$(ls -A ${{ steps.paths.outputs.depot }}/registries)" ]; then
+        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ -n "$(ls -A "${{ steps.paths.outputs.depot }}/registries")" ]; then
           echo "Registries directory exists and is non-empty. Updating any registries"
           julia -e "import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();"
         else
