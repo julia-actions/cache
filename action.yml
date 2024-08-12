@@ -132,6 +132,22 @@ runs:
         du -shc ${{ steps.paths.outputs.depot }}/* || true
       shell: bash
 
+    # issue https://github.com/julia-actions/cache/issues/110
+    # Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
+    # `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
+    # Older (~v1.0) versions of julia that don't have `Pkg.Registry.update()` seem to always update registries in
+    # Pkg operations. So this is only necessary for newer julia versions.
+    - name: Update any cached registries
+      if: ${{ inputs.cache-registries == 'true' }}
+      run: |
+        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ -n "$(ls -A "${{ steps.paths.outputs.depot }}/registries")" ]; then
+          echo "Registries directory exists and is non-empty. Updating any registries"
+          julia -e "import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();"
+        else
+          echo "Registries directory does not exist or is empty. Skipping registry update"
+        fi
+      shell: bash
+
     # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
     # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old
     # cache entries before the new cache is saved. However, we need to be careful with our manual
