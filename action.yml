@@ -66,6 +66,7 @@ runs:
         else
             depot="~/.julia"
         fi
+        depot="${depot/#\~/$HOME}"  # Expand tilde which cannot be used in BASH checks (i.e. `[ -d "~/.julia" ]` fails)
         echo "depot=$depot" | tee -a "$GITHUB_OUTPUT"
 
         cache_paths=()
@@ -75,7 +76,7 @@ runs:
         [ "${{ inputs.cache-packages }}" = "true" ] && cache_paths+=("$packages_path")
         registries_path="${depot}/registries"
         if [ "${{ inputs.cache-registries }}" = "true" ]; then
-            if [ ! -d "${registries_path/#\~/$HOME}" ]; then
+            if [ ! -d "${registries_path}" ]; then
                 cache_paths+=("$registries_path")
             else
                 echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` precedes any workflow steps which add registries."
