@@ -140,6 +140,7 @@ runs:
     # Pkg operations. So this is only necessary for newer julia versions.
     - name: Update any cached registries
       if: ${{ inputs.cache-registries == 'true' }}
+      continue-on-error: true
       run: |
         if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ -n "$(ls -A "${{ steps.paths.outputs.depot }}/registries")" ]; then
           echo "Registries directory exists and is non-empty. Updating any registries"
