@@ -36,6 +36,9 @@ inputs:
   cache-logs:
     description: Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.
     default: 'true'
+  save-always:
+    description: Whether to save the cache even when the job fails. This is useful as the Julia depot should mostly be reusable from a failing job.
+    default: 'true'
   delete-old-caches:
     description: Whether to delete old caches for the given key.
     default: 'true'
@@ -52,7 +55,7 @@ runs:
   using: 'composite'
   steps:
     - name: Install jq
-      uses: dcarbone/install-jq-action@8867ddb4788346d7c22b72ea2e2ffe4d514c7bcb
+      uses: dcarbone/install-jq-action@8867ddb4788346d7c22b72ea2e2ffe4d514c7bcb # v2.1.0
       with:
         force: false  # Skip install when an existing `jq` is present
 
@@ -128,6 +131,7 @@ runs:
         key: ${{ steps.keys.outputs.key }}
         restore-keys: ${{ steps.keys.outputs.restore-key }}
         enableCrossOsArchive: false
+        save-always: ${{ inputs.save-always }}
 
     # if it wasn't restored make the depot anyway as a signal that this action ran
     # for other julia actions to check, like https://github.com/julia-actions/julia-buildpkg/pull/41
