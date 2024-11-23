@@ -68,6 +68,7 @@ runs:
         fi
         if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
           depot="${depot/#\~/$USERPROFILE}"  # Windows paths
+          depot="${depot//\\//}"             # Replace backslashes with forward slashes
         else
           depot="${depot/#\~/$HOME}"  # Unix-like paths
         fi
