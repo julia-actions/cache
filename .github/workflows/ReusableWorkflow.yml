@@ -4,11 +4,13 @@ on:
   workflow_call:
     inputs: {}
     outputs:
-      json: ${{ toJSON(github) }}
+      github-json: ${{ jobs.duplicate.outputs.github-json }}
 
 jobs:
   duplicate:
     runs-on: ubuntu-latest
+    outputs:
+      github-json: ${{ steps.export.outputs.github-json }}
     steps:
       - run: jq <"$GITHUB_EVENT_PATH"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
@@ -17,3 +19,10 @@ jobs:
           version: "1"
       - name: Save cache
         uses: ./
+      - id: export
+        run: |
+          {
+             echo "github-json<<EOF"
+             echo "${{ toJSON(github) }}"
+             echo "EOF"
+          } | tee -a "$GITHUB_OUTPUT"
