@@ -20,10 +20,11 @@ jobs:
           version: "1"
       - name: Save cache
         uses: ./
-      - id: export
+      - name: Export
+        id: export
         run: |
           {
              echo "github-json<<EOF"
-             echo "${{ toJSON(github) }}"
+             jq <<<"${{ toJSON(github) }}"
              echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
