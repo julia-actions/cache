@@ -25,6 +25,8 @@ jobs:
         run: |
           {
              echo "github-json<<EOF"
-             jq <<<"${{ toJSON(github) }}"
+             jq <<<"$github_context"
              echo "EOF"
           } | tee -a "$GITHUB_OUTPUT"
+        env:
+          github_context: ${{ toJSON(github) }}
