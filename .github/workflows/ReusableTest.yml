@@ -24,12 +24,17 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - run: |
-          echo "---"
+          echo "::group::Raw A"
           jq <<<"$a"
-          echo "---"
+          echo "::endgroup::"
+
+          echo "::group::Raw B"
           jq <<<"$b"
-          echo "---"
+          echo "::endgroup::"
+          
+          echo "::group::Diff"
           diff <(echo "$a") <(echo "$b")
+          echo "::endgroup::"
         env:
           a: ${{ toJSON(github) }}
           b: ${{ needs.duplicate.outputs.github-json }}
