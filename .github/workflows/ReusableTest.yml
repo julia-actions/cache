@@ -10,7 +10,6 @@ jobs:
 
   duplicate:
     runs-on: ubuntu-latest
-    outputs:
     steps:
       - run: jq <"$GITHUB_EVENT_PATH"
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
