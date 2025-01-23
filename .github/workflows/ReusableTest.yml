@@ -18,3 +18,18 @@ jobs:
           version: "1"
       - name: Save cache
         uses: ./
+
+  compare:
+    needs: duplicate
+    runs-on: ubuntu-latest
+    steps:
+      - run: |
+          echo "---"
+          jq <<<"$a"
+          echo "---"
+          jq <<<"$b"
+          echo "---"
+          diff <(echo "$a") <(echo "$b")
+        env:
+          a: ${{ toJSON(github) }}
+          b: ${{ needs.duplicate.outputs.github-json }}

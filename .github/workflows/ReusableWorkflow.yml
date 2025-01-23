@@ -3,6 +3,8 @@ name: Reusable Workflow
 on:
   workflow_call:
     inputs: {}
+    outputs:
+      json: ${{ toJSON(github) }}
 
 jobs:
   duplicate:
