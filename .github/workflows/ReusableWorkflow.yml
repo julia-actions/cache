@@ -1,5 +1,5 @@
 ---
-name: Re-usable Workflow
+name: Reusable Workflow
 on:
   workflow_call:
     inputs: {}
@@ -8,9 +8,10 @@ jobs:
   duplicate:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
-    - uses: julia-actions/setup-julia@v2
-      with:
-        version: "1"
-    - name: Save cache
-      uses: ./
+      - run: jq <"$GITHUB_EVENT_PATH"
+      - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
+      - uses: julia-actions/setup-julia@v2
+        with:
+          version: "1"
+      - name: Save cache
+        uses: ./
