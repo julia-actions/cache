@@ -5,7 +5,7 @@ on:
     inputs: {}
 
 jobs:
-  trigger:
+  reusable:
     uses: ./.github/workflows/ReusableWorkflow.yml
 
   duplicate:
@@ -17,17 +17,34 @@ jobs:
           version: "1"
       - name: Save cache
         uses: ./
+      - name: Export Context
+        id: export
+        run: |
+          jq -c <<<"$github_json" >github.json
+        env:
+          github_json: ${{ toJSON(github) }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: trigger-context
+          path: "*.json"
 
   compare:
-    needs: duplicate
+    needs:
+      - reusable
+      - duplicate
     runs-on: ubuntu-latest
     steps:
       - uses: actions/download-artifact@v4
         with:
+          name: trigger-context
+          path: trigger
+      - uses: actions/download-artifact@v4
+        with:
           name: reusable-context
+          path: resuable
       - run: |
-          a="$github_json"
-          b="$(cat github.json)"
+          a="$(cat trigger/github.json)"
+          b="$(cat reusable/github.json)"
 
           echo "::group::Raw A"
           jq <<<"$a"
@@ -40,5 +57,3 @@ jobs:
           echo "::group::Diff"
           diff <(echo "$a") <(echo "$b")
           echo "::endgroup::"
-        env:
-          github_json: ${{ toJSON(github) }}
