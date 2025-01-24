@@ -41,7 +41,7 @@ jobs:
       - uses: actions/download-artifact@v4
         with:
           name: reusable-context
-          path: resuable
+          path: reusable
       - run: |
           find .
           a="$(cat trigger/github.json)"
