@@ -56,5 +56,5 @@ jobs:
           echo "::endgroup::"
           
           echo "::group::Diff"
-          diff <(echo "$a") <(echo "$b")
+          diff <(jq <<<"$a") <(jq <<<"$b")
           echo "::endgroup::"
