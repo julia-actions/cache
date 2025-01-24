@@ -39,13 +39,14 @@ jobs:
           set -x
           uuid="$(cat /proc/sys/kernel/random/uuid)"
           echo "$uuid"
-          sleep 60
+          # sleep 60
           # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#download-workflow-run-logs
-          gh api "/repos/{owner}/{repo}/actions/runs/${run_id:?}/logs" >logs.zip
-          unzip -- logs.zip "*.txt"
-          find .
-          grep -rnH ReusableWorkflow.yml .
-          grep -rnH "$uuid" .
+          # gh api "/repos/{owner}/{repo}/actions/runs/${run_id:?}/logs" >logs.zip
+          # unzip -- logs.zip "*.txt"
+          # find .
+          # grep -rnH ReusableWorkflow.yml .
+          # grep -rnH "$uuid" .
+          gh run view "${run_id:?}" --log
         env:
           GH_TOKEN: ${{ github.token }}
           run_id: ${{ github.run_id }}
