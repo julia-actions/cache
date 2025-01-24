@@ -23,10 +23,17 @@ jobs:
           jq -c <<<"$github_json" >github.json
           jq -c <<<"$env_json" >env.json
           jq -c <<<"$job_json" >job.json
+          jq -c <<<"$steps_json" >steps.json
+          jq -c <<<"$runner_json" >runner.json
+          jq -c <<<"$inputs_json" >inputs.json
+          jq -n env >env_vars.json
         env:
           github_json: ${{ toJSON(github) }}
           env_json: ${{ toJSON(env) }}
           job_json: ${{ toJSON(job) }}
+          steps_json: ${{ toJSON(steps) }}
+          runner_json: ${{ toJSON(runner) }}
+          inputs_json: ${{ toJSON(inputs) }}
       - uses: actions/upload-artifact@v4
         with:
           name: trigger-context
@@ -64,6 +71,8 @@ jobs:
               echo "::endgroup::"
               
               echo "::group::Diff"
-              diff <(jq <<<"$a") <(jq <<<"$b")
+              (diff <(jq <<<"$a") <(jq <<<"$b")); same=$?
               echo "::endgroup::"
+
+              [[ $same -eq 0 ]] && echo "Same" || echo "Differ"
           done
