@@ -40,8 +40,9 @@ jobs:
           uuid="$(cat /proc/sys/kernel/random/uuid)"
           echo "$uuid"
           sleep 30
+          # https://docs.github.com/en/rest/actions/workflow-runs?apiVersion=2022-11-28#download-workflow-run-logs
           gh api "/repos/{owner}/{repo}/actions/runs/${run_id:?}/logs" >logs.zip
-          unzip logs.zip
+          unzip -- logs.zip "*.txt"
           find .
           grep -rnH ReusableWorkflow.yml .
           grep -rnH "$uuid" .
