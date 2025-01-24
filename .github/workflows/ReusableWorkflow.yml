@@ -39,10 +39,11 @@ jobs:
           set -x
           uuid="$(cat /proc/sys/kernel/random/uuid)"
           echo "$uuid"
-          gh api "/repos/{owner}/{repo}/actions/runs/${run_id}/logs" >logs.zip
+          gh api "/repos/{owner}/{repo}/actions/runs/${run_id:?}/logs" >logs.zip
           unzip logs.zip
           find .
           grep -rnH ReusableWorkflow.yml .
           grep -rnH "$uuid" .
         env:
           GH_TOKEN: ${{ github.token }}
+          run_id: ${{ github.run_id }}
