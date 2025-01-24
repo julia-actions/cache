@@ -15,7 +15,6 @@ jobs:
       - name: Save cache
         uses: ./
       - name: Export Context
-        id: export
         run: |
           jq -c <<<"$github_json" >github.json
           jq -c <<<"$env_json" >env.json
@@ -23,7 +22,6 @@ jobs:
           jq -c <<<"$steps_json" >steps.json
           jq -c <<<"$runner_json" >runner.json
           jq -c <<<"$inputs_json" >inputs.json
-          jq -n env >env_vars.json
         env:
           github_json: ${{ toJSON(github) }}
           env_json: ${{ toJSON(env) }}
@@ -31,6 +29,8 @@ jobs:
           steps_json: ${{ toJSON(steps) }}
           runner_json: ${{ toJSON(runner) }}
           inputs_json: ${{ toJSON(inputs) }}
+      - name: Export environmental variables
+        run: jq -n env >env_vars.json
       - uses: actions/upload-artifact@v4
         with:
           name: reusable-context
