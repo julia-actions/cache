@@ -21,8 +21,12 @@ jobs:
         id: export
         run: |
           jq -c <<<"$github_json" >github.json
+          jq -c <<<"$env_json" >env.json
+          jq -c <<<"$job_json" >job.json
         env:
           github_json: ${{ toJSON(github) }}
+          env_json: ${{ toJSON(env) }}
+          job_json: ${{ toJSON(job) }}
       - uses: actions/upload-artifact@v4
         with:
           name: trigger-context
@@ -44,17 +48,22 @@ jobs:
           path: reusable
       - run: |
           find .
-          a="$(cat trigger/github.json)"
-          b="$(cat reusable/github.json)"
+          for p in trigger/*.json; do
+              context_file="$(basename "$p")"
+              echo "$context_file"
 
-          echo "::group::Raw A"
-          jq <<<"$a"
-          echo "::endgroup::"
+              a="$(cat trigger/$context_file)"
+              b="$(cat reusable/$context_file)"
 
-          echo "::group::Raw B"
-          jq <<<"$b"
-          echo "::endgroup::"
-          
-          echo "::group::Diff"
-          diff <(jq <<<"$a") <(jq <<<"$b")
-          echo "::endgroup::"
+              echo "::group::Raw A"
+              jq <<<"$a"
+              echo "::endgroup::"
+
+              echo "::group::Raw B"
+              jq <<<"$b"
+              echo "::endgroup::"
+              
+              echo "::group::Diff"
+              diff <(jq <<<"$a") <(jq <<<"$b")
+              echo "::endgroup::"
+          done
