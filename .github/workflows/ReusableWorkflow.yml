@@ -3,15 +3,10 @@ name: Reusable Workflow
 on:
   workflow_call:
     inputs: {}
-    outputs:
-      context:
-        value: ${{ jobs.duplicate.outputs.context }}
 
 jobs:
   duplicate:
     runs-on: ubuntu-latest
-    outputs:
-      context: ${{ steps.export.outputs.context }}
     steps:
       - uses: actions/checkout@11bd71901bbe5b1630ceea73d27597364c9af683 # v4.2.2
       - uses: julia-actions/setup-julia@v2
@@ -19,9 +14,13 @@ jobs:
           version: "1"
       - name: Save cache
         uses: ./
-      - name: Export
+      - name: Export Context
         id: export
         run: |
-          echo "context=$(jq -c <<<"$github_json" | base64)" | tee -a "$GITHUB_OUTPUT"
+          jq -c <<<"$github_json" >github.json
         env:
           github_json: ${{ toJSON(github) }}
+      - uses: actions/upload-artifact@v4
+        with:
+          name: reusable-context
+          path: "*.json"

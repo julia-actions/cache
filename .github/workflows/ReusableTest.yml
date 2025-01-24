@@ -22,18 +22,23 @@ jobs:
     needs: duplicate
     runs-on: ubuntu-latest
     steps:
+      - uses: actions/download-artifact@v4
+        with:
+          name: reusable-context
       - run: |
+          a="$github_json"
+          b="$(cat github.json)"
+
           echo "::group::Raw A"
           jq <<<"$a"
           echo "::endgroup::"
 
           echo "::group::Raw B"
-          base64 -d <<<"$b" | jq
+          jq <<<"$b"
           echo "::endgroup::"
           
           echo "::group::Diff"
           diff <(echo "$a") <(echo "$b")
           echo "::endgroup::"
         env:
-          a: ${{ toJSON(github) }}
-          b: ${{ needs.trigger.outputs.context }}
+          github_json: ${{ toJSON(github) }}
