@@ -39,6 +39,7 @@ jobs:
           set -x
           uuid="$(cat /proc/sys/kernel/random/uuid)"
           echo "$uuid"
+          sleep 30
           gh api "/repos/{owner}/{repo}/actions/runs/${run_id:?}/logs" >logs.zip
           unzip logs.zip
           find .
@@ -46,4 +47,4 @@ jobs:
           grep -rnH "$uuid" .
         env:
           GH_TOKEN: ${{ github.token }}
-          run_id: 12953268398  # ${{ github.run_id }}
+          run_id: ${{ github.run_id }}
