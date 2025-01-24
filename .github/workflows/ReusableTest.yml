@@ -43,6 +43,7 @@ jobs:
           name: reusable-context
           path: resuable
       - run: |
+          find .
           a="$(cat trigger/github.json)"
           b="$(cat reusable/github.json)"
 
