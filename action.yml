@@ -58,8 +58,8 @@ runs:
 
     - id: paths
       run: |
-        if [ -n "${{ inputs.depot }}" ]; then
-            depot="${{ inputs.depot }}"
+        if [ -n '${{ inputs.depot }}' ]; then
+            depot='${{ inputs.depot }}'
         elif [ -n "$JULIA_DEPOT_PATH" ]; then
             # Use the first depot path
             depot=$(echo $JULIA_DEPOT_PATH | cut -d$PATH_DELIMITER -f1)
@@ -76,11 +76,11 @@ runs:
 
         cache_paths=()
         artifacts_path="${depot}/artifacts"
-        [ "${{ inputs.cache-artifacts }}" = "true" ] && cache_paths+=("$artifacts_path")
+        [ '${{ inputs.cache-artifacts }}' = "true" ] && cache_paths+=("$artifacts_path")
         packages_path="${depot}/packages"
-        [ "${{ inputs.cache-packages }}" = "true" ] && cache_paths+=("$packages_path")
+        [ '${{ inputs.cache-packages }}' = "true" ] && cache_paths+=("$packages_path")
         registries_path="${depot}/registries"
-        if [ "${{ inputs.cache-registries }}" = "true" ]; then
+        if [ '${{ inputs.cache-registries }}' = "true" ]; then
             if [ ! -d "${registries_path}" ]; then
                 cache_paths+=("$registries_path")
             else
@@ -88,11 +88,11 @@ runs:
             fi
         fi
         compiled_path="${depot}/compiled"
-        [ "${{ inputs.cache-compiled }}" = "true" ] && cache_paths+=("$compiled_path")
+        [ '${{ inputs.cache-compiled }}' = "true" ] && cache_paths+=("$compiled_path")
         scratchspaces_path="${depot}/scratchspaces"
-        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && cache_paths+=("$scratchspaces_path")
+        [ '${{ inputs.cache-scratchspaces }}' = "true" ] && cache_paths+=("$scratchspaces_path")
         logs_path="${depot}/logs"
-        [ "${{ inputs.cache-logs }}" = "true" ] && cache_paths+=("$logs_path")
+        [ '${{ inputs.cache-logs }}' = "true" ] && cache_paths+=("$logs_path")
         {
             echo "cache-paths<<EOF"
             printf "%s\n" "${cache_paths[@]}"
@@ -107,10 +107,10 @@ runs:
       run: |
         # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
         # When `matrix` isn't set for the job then `MATRIX_JSON=null`.
-        if [ "${{ inputs.include-matrix }}" == "true" ] && [ "$MATRIX_JSON" != "null" ]; then
+        if [ '${{ inputs.include-matrix }}' == "true" ] && [ "$MATRIX_JSON" != "null" ]; then
           matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
         fi
-        restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
+        restore_key='${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}'
         # URL encode any restricted characters:
         # https://github.com/actions/toolkit/blob/5430c5d84832076372990c7c27f900878ff66dc9/packages/cache/src/cache.ts#L38-L43
         restore_key=$(sed 's/,/%2C/g' <<<"${restore_key}")
@@ -180,7 +180,7 @@ runs:
         # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
         # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
         main: echo ""
-        post: julia $GITHUB_ACTION_PATH/handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches != 'required' }}"
+        post: julia $GITHUB_ACTION_PATH/handle_caches.jl rm '${{ github.repository }}' '${{ steps.keys.outputs.restore-key }}' '${{ github.ref }}' "${{ inputs.delete-old-caches != 'required' }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
@@ -191,7 +191,7 @@ runs:
               runner.OS == 'Windows' }}
       with:
         main: echo ""
-        post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches != 'required' }}"
+        post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm '${{ github.repository }}' '${{ steps.keys.outputs.restore-key }}' '${{ github.ref }}' "${{ inputs.delete-old-caches != 'required' }}"
       env:
         GH_TOKEN: ${{ inputs.token }}
 
