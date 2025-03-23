@@ -47,6 +47,12 @@ outputs:
   cache-hit:
     description: A boolean value to indicate an exact match was found for the primary key. Returns "" when the key is new. Forwarded from actions/cache.
     value: ${{ steps.hit.outputs.cache-hit }}
+  cache-paths:
+    description: The paths that were cached
+    value: ${{ steps.paths.outputs.cache-paths }}
+  cache-key:
+    description: The full cache key used
+    value: ${{ steps.keys.outputs.key }}
 
 runs:
   using: 'composite'
