@@ -66,8 +66,8 @@ By default, this action removes caches that were previously made by jobs on the 
 GitHub automatically removes old caches after a certain period or when the repository cache allocation is full.
 It is, however, more efficient to explicitly remove old caches to improve caching for less frequently run jobs.
 
-For more information about Github caching generically, for example how to manually delete caches, see
-[this Github documentation page](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#managing-caches).
+For more information about GitHub caching generically, for example how to manually delete caches, see
+[this GitHub documentation page](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#managing-caches).
 
 ### Cache keys
 
