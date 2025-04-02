@@ -51,6 +51,8 @@ By default all depot directories called out below are cached.
 ### Outputs
 
 - `cache-hit` - A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache.
+- `cache-paths` - A list of paths (as a newline-separated string) that were cached.
+- `cache-key` - The cache key that was used for this run.
 
 ## How It Works
 
@@ -103,6 +105,37 @@ Which means your caches files will not grow needlessly. GitHub also deletes cach
 > See https://cli.github.com/manual/gh_cache_delete
 
 To disable deletion set input `delete-old-caches: 'false'`.
+
+### Caching even if an intermediate job fails
+
+Just like [the basic actions/cache workflow](https://github.com/actions/cache), this action has a cache restore step, and also a save step which runs after the workflow completes.
+By default, if any job in the workflow fails, the entire workflow will be stopped, and the cache will not be saved.
+
+Due to current limitations in GitHub Actions syntax, there is no built-in option for this action to save the cache even if the job fails.
+However, it does output information which you can feed into `actions/cache` yourself to achieve the same effect.
+For example, this workflow will save the cache regardless of success or failure (only skipping it if the workflow was manually cancelled, or if the cache was hit, i.e. there's no need to cache it again).
+
+```yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load Julia packages from cache
+        id: julia-cache
+        uses: julia-actions/cache@v2
+        with:
+          cache-name: foo
+
+      # do whatever you want here (that might fail)
+
+      - name: Save Julia depot cache
+        id: julia-cache-save
+        if: !cancelled() && steps.julia-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with: 
+          path: |
+            ${{ steps.julia-cache.outputs.cache-paths }}
+          key: ${{ steps.julia-cache.outputs.cache-key }}
+```
 
 ### Cache Garbage Collection
 
