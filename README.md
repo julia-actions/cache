@@ -113,7 +113,7 @@ By default, if any job in the workflow fails, the entire workflow will be stoppe
 
 Due to current limitations in GitHub Actions syntax, there is no built-in option for this action to save the cache even if the job fails.
 However, it does output information which you can feed into `actions/cache` yourself to achieve the same effect.
-For example, this workflow will save the cache regardless of success or failure (only skipping it if the workflow was manually cancelled, or if the cache was hit, i.e. there's no need to cache it again).
+For example, this workflow will ensure that the cache is saved if a step fails (but skipping it if the cache was hit, i.e. there's no need to cache it again).
 
 ```yaml
     steps:
@@ -129,7 +129,7 @@ For example, this workflow will save the cache regardless of success or failure 
 
       - name: Save Julia depot cache
         id: julia-cache-save
-        if: !cancelled() && steps.julia-cache.outputs.cache-hit != 'true'
+        if: failure() && steps.julia-cache.outputs.cache-hit != 'true'
         uses: actions/cache/save@v4
         with: 
           path: |
