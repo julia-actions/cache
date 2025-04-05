@@ -51,6 +51,8 @@ By default all depot directories called out below are cached.
 ### Outputs
 
 - `cache-hit` - A boolean value to indicate an exact match was found for the primary key. Returns \"\" when the key is new. Forwarded from actions/cache.
+- `cache-paths` - A list of paths (as a newline-separated string) that were cached.
+- `cache-key` - The cache key that was used for this run.
 
 ## How It Works
 
@@ -64,8 +66,8 @@ By default, this action removes caches that were previously made by jobs on the 
 GitHub automatically removes old caches after a certain period or when the repository cache allocation is full.
 It is, however, more efficient to explicitly remove old caches to improve caching for less frequently run jobs.
 
-For more information about Github caching generically, for example how to manually delete caches, see
-[this Github documentation page](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#managing-caches).
+For more information about GitHub caching generically, for example how to manually delete caches, see
+[this GitHub documentation page](https://docs.github.com/en/actions/writing-workflows/choosing-what-your-workflow-does/caching-dependencies-to-speed-up-workflows#managing-caches).
 
 ### Cache keys
 
@@ -103,6 +105,37 @@ Which means your caches files will not grow needlessly. GitHub also deletes cach
 > See https://cli.github.com/manual/gh_cache_delete
 
 To disable deletion set input `delete-old-caches: 'false'`.
+
+### Caching even if an intermediate job fails
+
+Just like [the basic actions/cache workflow](https://github.com/actions/cache), this action has a cache restore step, and also a save step which runs after the workflow completes.
+By default, if any job in the workflow fails, the entire workflow will be stopped, and the cache will not be saved.
+
+Due to current limitations in GitHub Actions syntax, there is no built-in option for this action to save the cache even if the job fails.
+However, it does output information which you can feed into `actions/cache` yourself to achieve the same effect.
+For example, this workflow will ensure that the cache is saved if a step fails (but skipping it if the cache was hit, i.e. there's no need to cache it again).
+
+```yaml
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Load Julia packages from cache
+        id: julia-cache
+        uses: julia-actions/cache@v2
+        with:
+          cache-name: foo
+
+      # do whatever you want here (that might fail)
+
+      - name: Save Julia depot cache on failure
+        id: julia-cache-save
+        if: failure() && steps.julia-cache.outputs.cache-hit != 'true'
+        uses: actions/cache/save@v4
+        with: 
+          path: |
+            ${{ steps.julia-cache.outputs.cache-paths }}
+          key: ${{ steps.julia-cache.outputs.cache-key }}
+```
 
 ### Cache Garbage Collection
 
