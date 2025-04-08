@@ -122,8 +122,6 @@ For example, this workflow will ensure that the cache is saved if a step fails (
       - name: Load Julia packages from cache
         id: julia-cache
         uses: julia-actions/cache@v2
-        with:
-          cache-name: foo
 
       # do whatever you want here (that might fail)
 
