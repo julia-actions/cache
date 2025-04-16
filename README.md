@@ -122,14 +122,12 @@ For example, this workflow will ensure that the cache is saved if a step fails (
       - name: Load Julia packages from cache
         id: julia-cache
         uses: julia-actions/cache@v2
-        with:
-          cache-name: foo
 
       # do whatever you want here (that might fail)
 
-      - name: Save Julia depot cache on failure
+      - name: Save Julia depot cache on cancel or failure
         id: julia-cache-save
-        if: failure() && steps.julia-cache.outputs.cache-hit != 'true'
+        if: cancelled() || failure()
         uses: actions/cache/save@v4
         with: 
           path: |
