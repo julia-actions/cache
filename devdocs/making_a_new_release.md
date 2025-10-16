@@ -16,15 +16,15 @@ Step 2: Create a new lightweight tag of the form `vMAJOR.MINOR.PATCH`.
 ```bash
 # Get the commit SHA of the latest pushed commit on the default branch
 git fetch origin --tags --force
-commit_sha=$(git rev-parse origin/HEAD)
+commit_sha="$(git rev-parse origin/HEAD)"
 
 # Validate this commit is the one you intend to release
-git --no-pager log -1 ${commit_sha:?}
+git --no-pager log -1 "${commit_sha:?}"
 
 # Now, create a new lightweight tag of the form `vMAJOR.MINOR.PATCH`.
 # Replace `v2.2.0` with the actual version number that you want to use.
 tag=v2.2.0
-git tag ${tag:?} ${commit_sha:?}
+git tag "${tag:?}" "${commit_sha:?}"
 ```
 
 Step 3: Once you've created the new release, you need to update the major tag to point to the new release. For example, suppose that the previous release was `v2.1.0`, and suppose that you just created the new release `v2.2.0`. You need to update the major tag `v2` so that it points to `v2.2.0`. Here are the commands:
@@ -34,18 +34,18 @@ Step 3: Once you've created the new release, you need to update the major tag to
 # release that you created in the previous step.
 #
 # The `-f` flag forcibly overwrites the old major tag (if it exists).
-major_tag=$(echo ${tag:?} | grep -o '^v[0-9]*')
-git tag -f ${major_tag:?} ${tag:?}
+major_tag="$(echo ${tag:?} | grep -o '^v[0-9]*')"
+git tag --force "${major_tag:?}" "${tag:?}"
 ```
 
 Step 4: Now you need to push the tags:
 
 ```bash
 # Regular-push the new tag:
-git push origin tag ${tag:?}
+git push origin tag "${tag:?}"
 
 # Force-push the new major tag:
-git push origin tag ${major_tag:?} --force
+git push origin tag "${major_tag:?}" --force
 ```
 
 ## Part 2: Create the GitHub Release
