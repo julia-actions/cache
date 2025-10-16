@@ -47,12 +47,18 @@ outputs:
   cache-hit:
     description: A boolean value to indicate an exact match was found for the primary key. Returns "" when the key is new. Forwarded from actions/cache.
     value: ${{ steps.hit.outputs.cache-hit }}
+  cache-paths:
+    description: The paths that were cached
+    value: ${{ steps.paths.outputs.cache-paths }}
+  cache-key:
+    description: The full cache key used
+    value: ${{ steps.keys.outputs.key }}
 
 runs:
   using: 'composite'
   steps:
     - name: Install jq
-      uses: dcarbone/install-jq-action@8867ddb4788346d7c22b72ea2e2ffe4d514c7bcb
+      uses: dcarbone/install-jq-action@b7ef57d46ece78760b4019dbc4080a1ba2a40b45 # v3.2.0
       with:
         force: false  # Skip install when an existing `jq` is present
 
@@ -66,6 +72,12 @@ runs:
         else
             depot="~/.julia"
         fi
+        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
+          depot="${depot/#\~/$USERPROFILE}"  # Windows paths
+          depot="${depot//\\//}"             # Replace backslashes with forward slashes
+        else
+          depot="${depot/#\~/$HOME}"  # Unix-like paths
+        fi
         echo "depot=$depot" | tee -a "$GITHUB_OUTPUT"
 
         cache_paths=()
@@ -75,7 +87,7 @@ runs:
         [ "${{ inputs.cache-packages }}" = "true" ] && cache_paths+=("$packages_path")
         registries_path="${depot}/registries"
         if [ "${{ inputs.cache-registries }}" = "true" ]; then
-            if [ ! -d "${registries_path/#\~/$HOME}" ]; then
+            if [ ! -d "${registries_path}" ]; then
                 cache_paths+=("$registries_path")
             else
                 echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` precedes any workflow steps which add registries."
@@ -115,7 +127,7 @@ runs:
       env:
         MATRIX_JSON: ${{ toJSON(matrix) }}
 
-    - uses: actions/cache@0c45773b623bea8c8e75f6c82b208c3cf94ea4f9 # v4.0.2
+    - uses: actions/cache@0057852bfaa89a56745cba8c7296529d2fc39830 # v4.3.0
       id: cache
       with:
         path: |
@@ -130,6 +142,23 @@ runs:
       run: |
         mkdir -p ${{ steps.paths.outputs.depot }}
         du -shc ${{ steps.paths.outputs.depot }}/* || true
+      shell: bash
+
+    # issue https://github.com/julia-actions/cache/issues/110
+    # Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
+    # `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
+    # Older (~v1.0) versions of julia that don't have `Pkg.Registry.update()` seem to always update registries in
+    # Pkg operations. So this is only necessary for newer julia versions.
+    - name: Update any cached registries
+      if: ${{ inputs.cache-registries == 'true' }}
+      continue-on-error: true
+      run: |
+        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ -n "$(ls -A "${{ steps.paths.outputs.depot }}/registries")" ]; then
+          echo "Registries directory exists and is non-empty. Updating any registries"
+          julia -e "import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();"
+        else
+          echo "Registries directory does not exist or is empty. Skipping registry update"
+        fi
       shell: bash
 
     # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
@@ -149,7 +178,7 @@ runs:
     # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
 
     # Not windows
-    - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
+    - uses: pyTooling/Actions/with-post-step@d6342484cd335d4c9c63d4f52f267c54d5bc3b19 # v5.4.0
       if: ${{ inputs.delete-old-caches != 'false' &&
               github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
               runner.OS != 'Windows' }}
@@ -162,7 +191,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
 
     # Windows (because this action uses command prompt on windows)
-    - uses: pyTooling/Actions/with-post-step@e9d0dc3dba9fda45f195946858708f60c0240caf # v1.0.5
+    - uses: pyTooling/Actions/with-post-step@d6342484cd335d4c9c63d4f52f267c54d5bc3b19 # v5.4.0
       if: ${{ inputs.delete-old-caches != 'false' &&
               github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
               runner.OS == 'Windows' }}
