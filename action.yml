@@ -178,7 +178,7 @@ runs:
     # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
 
     # Not windows
-    - uses: pyTooling/Actions/with-post-step@d6342484cd335d4c9c63d4f52f267c54d5bc3b19 # v5.4.0
+    - uses: pyTooling/Actions/with-post-step@ae8a961e93682a14eee02f1f2f42ae27b45c2ae7 # v6.2.0
       if: ${{ inputs.delete-old-caches != 'false' &&
               github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
               runner.OS != 'Windows' }}
@@ -191,7 +191,7 @@ runs:
         GH_TOKEN: ${{ inputs.token }}
 
     # Windows (because this action uses command prompt on windows)
-    - uses: pyTooling/Actions/with-post-step@d6342484cd335d4c9c63d4f52f267c54d5bc3b19 # v5.4.0
+    - uses: pyTooling/Actions/with-post-step@ae8a961e93682a14eee02f1f2f42ae27b45c2ae7 # v6.2.0
       if: ${{ inputs.delete-old-caches != 'false' &&
               github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
               runner.OS == 'Windows' }}
