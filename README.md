@@ -79,7 +79,7 @@ The cache key that the cache will be saved as is based on:
 - The run attempt number
 
 > [!NOTE]
-> If there is job concurrency that is not fully defined by a matrix you should ensure that `cache-name` is 
+> If there is job concurrency that is not fully defined by a matrix you should ensure that `cache-name` is
 > unique for each concurrent job, otherwise caching may not be effective.
 
 ### Cache Retention
@@ -129,7 +129,7 @@ For example, this workflow will ensure that the cache is saved if a step fails (
         id: julia-cache-save
         if: cancelled() || failure()
         uses: actions/cache/save@v4
-        with: 
+        with:
           path: |
             ${{ steps.julia-cache.outputs.cache-paths }}
           key: ${{ steps.julia-cache.outputs.cache-key }}
