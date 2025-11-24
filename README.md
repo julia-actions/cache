@@ -20,7 +20,7 @@ jobs:
   test:
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@v4
+    - uses: actions/checkout@v5
     - uses: julia-actions/setup-julia@v2
     - uses: julia-actions/cache@v2
     - uses: julia-actions/julia-buildpkg@v1
