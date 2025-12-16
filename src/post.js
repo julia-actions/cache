@@ -66,8 +66,10 @@ async function run() {
 
         // Determine if we should save the cache
         // - If saveAlways is true, save regardless of job status
-        // - Otherwise, only save if the job succeeded (default behavior)
-        const jobStatus = process.env.JOB_STATUS || 'success';
+        // - Otherwise, only save if the job succeeded
+        // Get job status from input (evaluated at post-step time)
+        const jobStatus = core.getInput('_job-status') || 'success';
+        core.info(`Job status: ${jobStatus}, save-always: ${saveAlways}`);
         const shouldSave = saveAlways || jobStatus === 'success';
 
         if (!shouldSave) {
