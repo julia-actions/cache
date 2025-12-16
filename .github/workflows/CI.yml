@@ -388,7 +388,7 @@ jobs:
       with:
         cache-name: ${{ needs.test-no-save-on-failure.outputs.cache-name }}
         delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
-    - name: Test cache was NOT restored (save-always: false worked)
+    - name: "Test cache was NOT restored (save-always: false worked)"
       shell: julia --color=yes {0}
       run: |
         @show ENV["cache-hit"]
