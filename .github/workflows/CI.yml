@@ -285,6 +285,7 @@ jobs:
 
   # Test that cache is saved even when job fails (default behavior with save-always: true)
   test-save-on-failure:
+    name: "[EXPECTED TO FAIL] test-save-on-failure"
     needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
@@ -314,7 +315,7 @@ jobs:
 
   test-restore-after-failure:
     needs: test-save-on-failure
-    # Always run this job even if test-save-on-failure fails (which it will)
+    # Always run this job even if the previous job fails (which it will)
     if: always() && needs.test-save-on-failure.result == 'failure'
     runs-on: ubuntu-latest
     steps:
@@ -344,6 +345,7 @@ jobs:
 
   # Test that cache is NOT saved when job fails and save-always: false
   test-no-save-on-failure:
+    name: "[EXPECTED TO FAIL] test-no-save-on-failure"
     needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
@@ -374,7 +376,7 @@ jobs:
 
   test-no-restore-after-failure:
     needs: test-no-save-on-failure
-    # Always run this job even if test-no-save-on-failure fails (which it will)
+    # Always run this job even if the previous job fails (which it will)
     if: always() && needs.test-no-save-on-failure.result == 'failure'
     runs-on: ubuntu-latest
     steps:
