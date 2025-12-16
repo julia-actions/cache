@@ -283,8 +283,8 @@ jobs:
         using Pkg
         Pkg.Registry.update()
 
-  # Test that save-always saves the cache even when the job fails
-  test-save-always:
+  # Test that cache is saved even when job fails (default behavior with save-always: true)
+  test-save-on-failure:
     needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
@@ -298,43 +298,42 @@ jobs:
     - uses: julia-actions/setup-julia@v2
       with:
         version: "1"
-    - name: Save cache with save-always
+    - name: Save cache (save-always is true by default)
       id: cache
       uses: ./
       with:
         cache-name: ${{ steps.cache-name.outputs.cache-name }}
-        save-always: true
         delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
     - name: Install a package to populate cache
       shell: julia --color=yes {0}
       run: |
         using Pkg
         Pkg.add(PackageSpec(name="Example", version="0.5"))
-    - name: Force failure to test save-always
+    - name: Force failure to test save-on-failure
       run: exit 1
 
-  test-restore-after-save-always:
-    needs: test-save-always
-    # Always run this job even if test-save-always fails (which it will)
-    if: always() && needs.test-save-always.result == 'failure'
+  test-restore-after-failure:
+    needs: test-save-on-failure
+    # Always run this job even if test-save-on-failure fails (which it will)
+    if: always() && needs.test-save-on-failure.result == 'failure'
     runs-on: ubuntu-latest
     steps:
     - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
     - uses: julia-actions/setup-julia@v2
       with:
         version: "1"
-    - name: Restore cache saved with save-always
+    - name: Restore cache saved despite failure
       id: cache
       uses: ./
       with:
-        cache-name: ${{ needs.test-save-always.outputs.cache-name }}
+        cache-name: ${{ needs.test-save-on-failure.outputs.cache-name }}
         delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
-    - name: Test cache was restored (save-always worked)
+    - name: Test cache was restored (save-always default worked)
       shell: julia --color=yes {0}
       run: |
         @show ENV["cache-hit"]
-        # Cache should have been saved despite the failure
-        @assert ENV["cache-hit"] == "true" "save-always should have saved the cache even though the job failed"
+        # Cache should have been saved despite the failure (save-always: true is default)
+        @assert ENV["cache-hit"] == "true" "Cache should have been saved even though the job failed"
       env:
         cache-hit: ${{ steps.cache.outputs.cache-hit }}
     - name: Check Example package was cached
@@ -342,3 +341,63 @@ jobs:
       run: |
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
         @assert isdir(joinpath(packages_dir, "Example")) "Example package should be in cache"
+
+  # Test that cache is NOT saved when job fails and save-always: false
+  test-no-save-on-failure:
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Save cache with save-always disabled
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        save-always: false
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Install a package to populate cache
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add(PackageSpec(name="DataFrames", version="1.6"))
+    - name: Force failure to test no-save-on-failure
+      run: exit 1
+
+  test-no-restore-after-failure:
+    needs: test-no-save-on-failure
+    # Always run this job even if test-no-save-on-failure fails (which it will)
+    if: always() && needs.test-no-save-on-failure.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Try to restore cache (should not exist)
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-no-save-on-failure.outputs.cache-name }}
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Test cache was NOT restored (save-always: false worked)
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        # Cache should NOT have been saved because save-always: false and job failed
+        @assert ENV["cache-hit"] == "" "Cache should NOT have been saved when save-always: false and job failed"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check DataFrames package was NOT cached
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isdir(joinpath(packages_dir, "DataFrames")) "DataFrames package should NOT be in cache"
