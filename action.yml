@@ -43,8 +43,8 @@ inputs:
     description: A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.
     default: ${{ github.token }}
   save-always:
-    description: Save the cache even if the job fails. Useful for caching dependencies during debugging.
-    default: 'false'
+    description: Save the cache even if the job fails. Set to false to only save cache on successful jobs.
+    default: 'true'
   # Internal inputs - do not use directly
   _matrix-json:
     description: 'Internal: JSON representation of the matrix context'
