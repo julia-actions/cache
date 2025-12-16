@@ -67,6 +67,9 @@ inputs:
   _github-event-repository-default-branch:
     description: 'Internal: Default branch of the repository'
     default: ${{ github.event.repository.default_branch }}
+  _job-status:
+    description: 'Internal: Job status for post step'
+    default: ${{ job.status }}
 
 outputs:
   cache-hit:
