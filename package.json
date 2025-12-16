@@ -15,14 +15,14 @@
   "author": "Sascha Mann, Rik Huijzer, and contributors",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^4.0.0",
-    "@actions/core": "^1.10.1",
-    "@actions/exec": "^1.1.1",
+    "@actions/cache": "^5.0.1",
+    "@actions/core": "^2.0.1",
+    "@actions/exec": "^2.0.0",
     "@actions/glob": "^0.5.0",
-    "@actions/io": "^1.1.3",
+    "@actions/io": "^2.0.0",
     "@protobuf-ts/runtime": "^2.11.1"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.38.1"
+    "@vercel/ncc": "^0.38.4"
   }
 }
