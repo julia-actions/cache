@@ -31,11 +31,15 @@ async function run() {
 
         // Run Pkg.gc() and handle old caches using the Julia script
         if (deleteOldCaches !== 'false' && !isDefaultBranch) {
-            const actionPath = process.env.GITHUB_ACTION_PATH || path.join(__dirname, '..');
+            // GITHUB_ACTION_PATH points to the action root directory
+            // __dirname points to dist/post/ when bundled, so go up two levels to get to root
+            const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
             const handleCachesScript = path.join(actionPath, 'handle_caches.jl');
             const allowFailure = deleteOldCaches !== 'required' ? 'true' : 'false';
 
-            core.info('Running Pkg.gc() and cleaning up old caches...');
+            core.info(`Running Pkg.gc() and cleaning up old caches...`);
+            core.debug(`Action path: ${actionPath}`);
+            core.debug(`Handle caches script: ${handleCachesScript}`);
             try {
                 await exec.exec('julia', [
                     handleCachesScript,
