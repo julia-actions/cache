@@ -104,12 +104,12 @@ To disable deletion set input `delete-old-caches: 'false'`.
 
 ### Caching even if a job step fails
 
-By default, this action saves the cache even if the job fails (`save-always: true`). This is useful because Julia package installation and precompilation can take a long time, and you don't want to lose that work just because a later step (like tests) failed.
+By default, this action saves the cache even if the job fails (`save-always: true`). This differs from GitHub's own `actions/cache` but is useful because Julia package installation and precompilation can take a long time, and you don't want to lose that work just because a later step (like tests) failed.
 
 If you prefer the old behavior where caches are only saved on successful jobs, set `save-always: false`.
 
 > [!NOTE]
-> This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`.
+> This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`. See https://github.com/julia-actions/cache/pull/169.
 
 ### Cache Garbage Collection
 
