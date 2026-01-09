@@ -2,7 +2,6 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const cache = require('@actions/cache');
 const fs = require('fs');
-const path = require('path');
 const os = require('os');
 
 async function run() {
