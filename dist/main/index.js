@@ -86873,7 +86873,6 @@ const core = __nccwpck_require__(37484);
 const exec = __nccwpck_require__(95236);
 const cache = __nccwpck_require__(5116);
 const fs = __nccwpck_require__(79896);
-const path = __nccwpck_require__(16928);
 const os = __nccwpck_require__(70857);
 
 async function run() {
