@@ -9,8 +9,6 @@ async function run() {
         const cachePathsJson = core.getState('cache-paths');
         const cacheKey = core.getState('cache-key');
         const restoreKey = core.getState('restore-key');
-        const depotPath = core.getState('depot');
-        const cacheRegistries = core.getState('cache-registries') === 'true';
         const deleteOldCaches = core.getState('delete-old-caches');
         const token = core.getState('token');
         const saveAlways = core.getState('save-always') === 'true';
