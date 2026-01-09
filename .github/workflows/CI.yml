@@ -302,7 +302,7 @@ jobs:
 
   # Test that cache is saved even when job fails (default behavior with save-always: true)
   test-save-on-failure:
-    name: "[EXPECTED TO FAIL] test-save-on-failure"
+    name: "[SUPPOSED TO FAIL] test-save-on-failure"
     needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
@@ -362,7 +362,7 @@ jobs:
 
   # Test that cache is NOT saved when job fails and save-always: false
   test-no-save-on-failure:
-    name: "[EXPECTED TO FAIL] test-no-save-on-failure"
+    name: "[SUPPOSED TO FAIL] test-no-save-on-failure"
     needs: generate-prefix
     runs-on: ubuntu-latest
     outputs:
