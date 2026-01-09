@@ -1,6 +1,6 @@
 {
   "name": "julia-cache",
-  "version": "2.0.0",
+  "version": "3.0.0",
   "description": "Cache Julia artifacts, packages and registry",
   "main": "dist/main/index.js",
   "scripts": {
