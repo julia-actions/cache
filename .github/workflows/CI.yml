@@ -7,11 +7,15 @@ on:
     paths:
       - 'action.yml'
       - 'handle_caches.jl'
+      - 'src/**'
+      - 'dist/**'
       - '.github/**'
   pull_request:
     paths:
       - 'action.yml'
       - 'handle_caches.jl'
+      - 'src/**'
+      - 'dist/**'
       - '.github/**'
 
 # needed to allow julia-actions/cache to delete old caches that it has created
@@ -20,6 +24,23 @@ permissions:
   contents: read
 
 jobs:
+  check-dist:
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
+      with:
+        node-version: '20'
+    - run: npm ci
+    - run: npm run build
+    - name: Check dist is up to date
+      run: |
+        if [ -n "$(git status --porcelain dist/)" ]; then
+          echo "::error::dist/ is out of date. Run 'npm run build' and commit the changes."
+          git diff dist/
+          exit 1
+        fi
+
   generate-prefix:
     runs-on: ubuntu-latest
     outputs:
@@ -278,3 +299,126 @@ jobs:
       run: |
         using Pkg
         Pkg.Registry.update()
+
+  # Test that cache is saved even when job fails (default behavior with save-always: true)
+  test-save-on-failure:
+    name: "[SUPPOSED TO FAIL] test-save-on-failure"
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Save cache (save-always is true by default)
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Install a package to populate cache
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add(PackageSpec(name="Example", version="0.5"))
+    - name: Force failure to test save-on-failure
+      run: |
+        echo "This job is intended to fail, as it is part of a test which checks that this action successfully caches Julia dependencies even when a job fails. Due to existing limitations in GitHub's UI it is not possible to mark this job as being expected to fail, or to mark CI as passing overall."
+        exit 1
+
+  test-restore-after-failure:
+    needs: test-save-on-failure
+    # Always run this job even if the previous job fails (which it will)
+    if: always() && needs.test-save-on-failure.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Restore cache saved despite failure
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-save-on-failure.outputs.cache-name }}
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Test cache was restored (save-always default worked)
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        # Cache should have been saved despite the failure (save-always: true is default)
+        @assert ENV["cache-hit"] == "true" "Cache should have been saved even though the job failed"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check Example package was cached
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert isdir(joinpath(packages_dir, "Example")) "Example package should be in cache"
+
+  # Test that cache is NOT saved when job fails and save-always: false
+  test-no-save-on-failure:
+    name: "[SUPPOSED TO FAIL] test-no-save-on-failure"
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Save cache with save-always disabled
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        save-always: false
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Install a package to populate cache
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add(PackageSpec(name="DataFrames", version="1.6"))
+    - name: Force failure to test no-save-on-failure
+      run: exit 1
+
+  test-no-restore-after-failure:
+    needs: test-no-save-on-failure
+    # Always run this job even if the previous job fails (which it will)
+    if: always() && needs.test-no-save-on-failure.result == 'failure'
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: julia-actions/setup-julia@v2
+      with:
+        version: "1"
+    - name: Try to restore cache (should not exist)
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-no-save-on-failure.outputs.cache-name }}
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: "Test cache was NOT restored (save-always: false worked)"
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        # Cache should NOT have been saved because save-always: false and job failed
+        @assert ENV["cache-hit"] == "" "Cache should NOT have been saved when save-always: false and job failed"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check DataFrames package was NOT cached
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isdir(joinpath(packages_dir, "DataFrames")) "DataFrames package should NOT be in cache"

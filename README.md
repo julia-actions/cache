@@ -22,17 +22,12 @@ jobs:
     steps:
     - uses: actions/checkout@v6
     - uses: julia-actions/setup-julia@v2
-    - uses: julia-actions/cache@v2
+    - uses: julia-actions/cache@v3
     - uses: julia-actions/julia-buildpkg@v1
     - uses: julia-actions/julia-runtest@v1
 ```
 
 By default all depot directories called out below are cached.
-
-### Requirements
-
-- `jq`: This action uses [`jq`](https://github.com/jqlang/jq) to parse JSON. For GitHub-hosted runners, `jq` is installed by default. On self-hosted runners and custom containers, if `jq` is not already available, this action will automatically use [`dcarbone/install-jq-action`](https://github.com/dcarbone/install-jq-action) to install `jq` (Note: `dcarbone/install-jq-action` requires that `curl` is installed; this may not always be the case in custom containers and self-hosted runners).
-- `bash`: This action requires `bash`. For GitHub-hosted runners `bash` is installed by default. Self-hosted runners will need to ensure that `bash` is installed and available on the `PATH`.
 
 ### Optional Inputs
 
@@ -45,6 +40,7 @@ By default all depot directories called out below are cached.
 - `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
 - `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `save-always` - Whether to save the cache even if the job fails. Defaults to `true`.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
@@ -106,34 +102,14 @@ Which means your caches files will not grow needlessly. GitHub also deletes cach
 
 To disable deletion set input `delete-old-caches: 'false'`.
 
-### Caching even if an intermediate job fails
+### Caching even if a job step fails
 
-Just like [the basic actions/cache workflow](https://github.com/actions/cache), this action has a cache restore step, and also a save step which runs after the workflow completes.
-By default, if any job in the workflow fails, the entire workflow will be stopped, and the cache will not be saved.
+By default, this action saves the cache even if the job fails (`save-always: true`). This differs from GitHub's own `actions/cache` but is useful because Julia package installation and precompilation can take a long time, and you don't want to lose that work just because a later step (like tests) failed.
 
-Due to current limitations in GitHub Actions syntax, there is no built-in option for this action to save the cache even if the job fails.
-However, it does output information which you can feed into `actions/cache` yourself to achieve the same effect.
-For example, this workflow will ensure that the cache is saved if a step fails (but skipping it if the cache was hit, i.e. there's no need to cache it again).
+If you prefer the old behavior where caches are only saved on successful jobs, set `save-always: false`.
 
-```yaml
-    steps:
-      - uses: actions/checkout@v4
-
-      - name: Load Julia packages from cache
-        id: julia-cache
-        uses: julia-actions/cache@v2
-
-      # do whatever you want here (that might fail)
-
-      - name: Save Julia depot cache on cancel or failure
-        id: julia-cache-save
-        if: cancelled() || failure()
-        uses: actions/cache/save@v4
-        with:
-          path: |
-            ${{ steps.julia-cache.outputs.cache-paths }}
-          key: ${{ steps.julia-cache.outputs.cache-key }}
-```
+> [!NOTE]
+> This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`. See https://github.com/julia-actions/cache/pull/169.
 
 ### Cache Garbage Collection
 

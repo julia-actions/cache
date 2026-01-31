@@ -42,167 +42,45 @@ inputs:
   token:
     description: A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.
     default: ${{ github.token }}
+  save-always:
+    description: Save the cache even if the job fails. Set to false to only save cache on successful jobs.
+    default: 'true'
+  # Internal inputs - do not use directly
+  _matrix-json:
+    description: 'Internal: JSON representation of the matrix context'
+    default: ${{ toJSON(matrix) }}
+  _runner-os:
+    description: 'Internal: Runner OS'
+    default: ${{ runner.os }}
+  _github-run-id:
+    description: 'Internal: GitHub run ID'
+    default: ${{ github.run_id }}
+  _github-run-attempt:
+    description: 'Internal: GitHub run attempt'
+    default: ${{ github.run_attempt }}
+  _github-repository:
+    description: 'Internal: GitHub repository'
+    default: ${{ github.repository }}
+  _github-ref:
+    description: 'Internal: GitHub ref'
+    default: ${{ github.ref }}
+  _github-event-repository-default-branch:
+    description: 'Internal: Default branch of the repository'
+    default: ${{ github.event.repository.default_branch }}
+  _job-status:
+    description: 'Internal: Job status for post step'
+    default: ${{ job.status }}
 
 outputs:
   cache-hit:
     description: A boolean value to indicate an exact match was found for the primary key. Returns "" when the key is new. Forwarded from actions/cache.
-    value: ${{ steps.hit.outputs.cache-hit }}
   cache-paths:
-    description: The paths that were cached
-    value: ${{ steps.paths.outputs.cache-paths }}
+    description: The paths that were cached.
   cache-key:
-    description: The full cache key used
-    value: ${{ steps.keys.outputs.key }}
+    description: The full cache key used.
 
 runs:
-  using: 'composite'
-  steps:
-    - name: Install jq
-      uses: dcarbone/install-jq-action@b7ef57d46ece78760b4019dbc4080a1ba2a40b45 # v3.2.0
-      with:
-        force: false  # Skip install when an existing `jq` is present
-
-    - id: paths
-      run: |
-        if [ -n "${{ inputs.depot }}" ]; then
-            depot="${{ inputs.depot }}"
-        elif [ -n "$JULIA_DEPOT_PATH" ]; then
-            # Use the first depot path
-            depot=$(echo $JULIA_DEPOT_PATH | cut -d$PATH_DELIMITER -f1)
-        else
-            depot="~/.julia"
-        fi
-        if [[ "$OSTYPE" == "msys" || "$OSTYPE" == "cygwin" ]]; then
-          depot="${depot/#\~/$USERPROFILE}"  # Windows paths
-          depot="${depot//\\//}"             # Replace backslashes with forward slashes
-        else
-          depot="${depot/#\~/$HOME}"  # Unix-like paths
-        fi
-        echo "depot=$depot" | tee -a "$GITHUB_OUTPUT"
-
-        cache_paths=()
-        artifacts_path="${depot}/artifacts"
-        [ "${{ inputs.cache-artifacts }}" = "true" ] && cache_paths+=("$artifacts_path")
-        packages_path="${depot}/packages"
-        [ "${{ inputs.cache-packages }}" = "true" ] && cache_paths+=("$packages_path")
-        registries_path="${depot}/registries"
-        if [ "${{ inputs.cache-registries }}" = "true" ]; then
-            if [ ! -d "${registries_path}" ]; then
-                cache_paths+=("$registries_path")
-            else
-                echo "::warning::Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that \`julia-actions/cache\` precedes any workflow steps which add registries."
-            fi
-        fi
-        compiled_path="${depot}/compiled"
-        [ "${{ inputs.cache-compiled }}" = "true" ] && cache_paths+=("$compiled_path")
-        scratchspaces_path="${depot}/scratchspaces"
-        [ "${{ inputs.cache-scratchspaces }}" = "true" ] && cache_paths+=("$scratchspaces_path")
-        logs_path="${depot}/logs"
-        [ "${{ inputs.cache-logs }}" = "true" ] && cache_paths+=("$logs_path")
-        {
-            echo "cache-paths<<EOF"
-            printf "%s\n" "${cache_paths[@]}"
-            echo "EOF"
-        } | tee -a "$GITHUB_OUTPUT"
-      shell: bash
-      env:
-        PATH_DELIMITER: ${{ runner.OS == 'Windows' && ';' || ':' }}
-
-    - name: Generate Keys
-      id: keys
-      run: |
-        # `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
-        # When `matrix` isn't set for the job then `MATRIX_JSON=null`.
-        if [ "${{ inputs.include-matrix }}" == "true" ] && [ "$MATRIX_JSON" != "null" ]; then
-          matrix_key=$(echo "$MATRIX_JSON" | jq 'paths(type != "object") as $p | ($p | join("-")) + "=" + (getpath($p) | tostring)' | jq -rs 'join(";") | . + ";"')
-        fi
-        restore_key="${{ inputs.cache-name }};os=${{ runner.os }};${matrix_key}"
-        # URL encode any restricted characters:
-        # https://github.com/actions/toolkit/blob/5430c5d84832076372990c7c27f900878ff66dc9/packages/cache/src/cache.ts#L38-L43
-        restore_key=$(sed 's/,/%2C/g' <<<"${restore_key}")
-        key="${restore_key}run_id=${{ github.run_id }};run_attempt=${{ github.run_attempt }}"
-        echo "restore-key=${restore_key}" >> $GITHUB_OUTPUT
-        echo "key=${key}" >> $GITHUB_OUTPUT
-      shell: bash
-      env:
-        MATRIX_JSON: ${{ toJSON(matrix) }}
-
-    - uses: actions/cache@9255dc7a253b0ccc959486e2bca901246202afeb # v5.0.1
-      id: cache
-      with:
-        path: |
-          ${{ steps.paths.outputs.cache-paths }}
-        key: ${{ steps.keys.outputs.key }}
-        restore-keys: ${{ steps.keys.outputs.restore-key }}
-        enableCrossOsArchive: false
-
-    # if it wasn't restored make the depot anyway as a signal that this action ran
-    # for other julia actions to check, like https://github.com/julia-actions/julia-buildpkg/pull/41
-    - name: make depot if not restored, then list depot directory sizes
-      run: |
-        mkdir -p ${{ steps.paths.outputs.depot }}
-        du -shc ${{ steps.paths.outputs.depot }}/* || true
-      shell: bash
-
-    # issue https://github.com/julia-actions/cache/issues/110
-    # Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
-    # `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
-    # Older (~v1.0) versions of julia that don't have `Pkg.Registry.update()` seem to always update registries in
-    # Pkg operations. So this is only necessary for newer julia versions.
-    - name: Update any cached registries
-      if: ${{ inputs.cache-registries == 'true' }}
-      continue-on-error: true
-      run: |
-        if [ -d "${{ steps.paths.outputs.depot }}/registries" ] && [ -n "$(ls -A "${{ steps.paths.outputs.depot }}/registries")" ]; then
-          echo "Registries directory exists and is non-empty. Updating any registries"
-          julia -e "import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();"
-        else
-          echo "Registries directory does not exist or is empty. Skipping registry update"
-        fi
-      shell: bash
-
-    # GitHub actions cache entries are immutable and cannot be updated. In order to have both the Julia
-    # depot cache be up-to-date and avoid storing redundant cache entries we'll manually cleanup old
-    # cache entries before the new cache is saved. However, we need to be careful with our manual
-    # cleanup as otherwise we can cause cache misses for jobs which would have normally had a cache hit.
-    # Some scenarios to keep in mind include:
-    #
-    # - Job failures result in the post-action for `actions/cache` being skipped. If we delete all cache
-    #   entries for the branch we may have no cache entry available for the next run.
-    # - We should avoid deleting old cache entries for the default branch since these entries serve as
-    #   the fallback if no earlier cache entry exists on a branch. We can rely on GitHub's default cache
-    #   eviction policy here which will remove the oldest cache entry first.
-    #
-    # References:
-    # - https://github.com/actions/cache/blob/main/tips-and-workarounds.md#update-a-cache
-    # - https://docs.github.com/en/actions/using-workflows/caching-dependencies-to-speed-up-workflows#usage-limits-and-eviction-policy
-
-    # Not windows
-    - uses: pyTooling/Actions/with-post-step@14db3bef6131bc913e61aeff5a842690853ea44c # v7.2.0
-      if: ${{ inputs.delete-old-caches != 'false' &&
-              github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
-              runner.OS != 'Windows' }}
-      with:
-        # seems like there has to be a `main` step in this action. Could list caches for info if we wanted
-        # main:  julia ${{ github.action_path }}/handle_caches.jl "${{ github.repository }}" "list"
-        main: echo ""
-        post: julia $GITHUB_ACTION_PATH/handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches != 'required' }}"
-      env:
-        GH_TOKEN: ${{ inputs.token }}
-
-    # Windows (because this action uses command prompt on windows)
-    - uses: pyTooling/Actions/with-post-step@14db3bef6131bc913e61aeff5a842690853ea44c # v7.2.0
-      if: ${{ inputs.delete-old-caches != 'false' &&
-              github.ref != format('refs/heads/{0}', github.event.repository.default_branch) &&
-              runner.OS == 'Windows' }}
-      with:
-        main: echo ""
-        post: cd %GITHUB_ACTION_PATH% && julia handle_caches.jl rm "${{ github.repository }}" "${{ steps.keys.outputs.restore-key }}" "${{ github.ref }}" "${{ inputs.delete-old-caches != 'required' }}"
-      env:
-        GH_TOKEN: ${{ inputs.token }}
-
-    - id: hit
-      run: echo "cache-hit=$CACHE_HIT" >> $GITHUB_OUTPUT
-      env:
-        CACHE_HIT: ${{ steps.cache.outputs.cache-hit }}
-      shell: bash
+  using: 'node20'
+  main: 'dist/main/index.js'
+  post: 'dist/post/index.js'
+  post-if: 'always()'
