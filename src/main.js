@@ -146,7 +146,10 @@ async function run() {
 
         core.setOutput('cache-hit', cacheHit);
 
-        // Create depot directory if it doesn't exist
+        // Create depot directory if it doesn't exist.
+        // We do this even if the cache wasn't restored, as this signals that this action ran
+        // which other Julia actions to check, e.g.
+        //  https://github.com/julia-actions/julia-buildpkg/pull/41
         if (!fs.existsSync(depotPath)) {
             fs.mkdirSync(depotPath, { recursive: true });
             core.info(`Created depot directory: ${depotPath}`);
