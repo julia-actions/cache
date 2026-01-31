@@ -157,7 +157,11 @@ async function run() {
             // Ignore errors from du command
         }
 
-        // Update cached registries if they exist
+        // issue https://github.com/julia-actions/cache/issues/110
+        // Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
+        // `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
+        // Older (~v1.0) versions of julia that don't have `Pkg.Registry.update()` seem to always update registries in
+        // Pkg operations. So this is only necessary for newer julia versions.
         if (cacheRegistries && fs.existsSync(registriesPath)) {
             const registriesContent = fs.readdirSync(registriesPath);
             if (registriesContent.length > 0) {
