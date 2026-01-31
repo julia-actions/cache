@@ -328,7 +328,9 @@ jobs:
         using Pkg
         Pkg.add(PackageSpec(name="Example", version="0.5"))
     - name: Force failure to test save-on-failure
-      run: exit 1
+      run: |
+        echo "This job is intended to fail, as it is part of a test which checks that this action successfully caches Julia dependencies even when a job fails. Due to existing limitations in GitHub's UI it is not possible to mark this job as being expected to fail, or to mark CI as passing overall."
+        exit 1
 
   test-restore-after-failure:
     needs: test-save-on-failure
