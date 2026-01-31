@@ -75,6 +75,8 @@ async function run() {
         const runAttempt = core.getInput('_github-run-attempt') || process.env.GITHUB_RUN_ATTEMPT;
         
         let matrixKey = '';
+        // `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
+        // When `matrix` isn't set for the job then `MATRIX_JSON=null`.
         if (includeMatrix && matrixJson !== 'null') {
             try {
                 const matrix = JSON.parse(matrixJson);
