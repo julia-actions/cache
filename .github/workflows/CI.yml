@@ -59,7 +59,7 @@ jobs:
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Set cache-name
       id: cache-name
       shell: bash
@@ -117,7 +117,7 @@ jobs:
     env:
       JULIA_DEPOT_PATH: /tmp/julia-depot
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - uses: julia-actions/setup-julia@v2
       with:
         version: ${{ matrix.version }}
@@ -161,7 +161,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Set cache-name
       id: cache-name
       run: |
@@ -193,7 +193,7 @@ jobs:
     needs: test-save-nomatrix
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Restore cache
       id: cache
       uses: ./
@@ -233,7 +233,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Set cache-name
       id: cache-name
       run: |
@@ -259,7 +259,7 @@ jobs:
     needs: test-save-cloned-registry
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
+    - uses: actions/checkout@de0fac2e4500dabe0009e67214ff5f5447ce83dd # v6.0.2
     - name: Add General registry clone
       shell: julia --color=yes {0}
       run: |
