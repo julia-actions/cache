@@ -24,6 +24,37 @@ async function run() {
 
         const cachePaths = JSON.parse(cachePathsJson);
 
+        // Determine if we should save the cache
+        // - If saveAlways is true, save regardless of job status
+        // - Otherwise, only save if the job succeeded
+        // Get job status from input (evaluated at post-step time)
+        const jobStatus = core.getInput('_job-status') || 'success';
+        core.info(`Job status: ${jobStatus}, save-always: ${saveAlways}`);
+        const shouldSave = saveAlways || jobStatus === 'success';
+
+        if (!shouldSave) {
+            core.info('Job failed and save-always is not enabled. Skipping cache save.');
+            return;
+        }
+
+        // Don't save if we got an exact cache hit (cache is already up to date)
+        if (cacheMatchedKey === cacheKey) {
+            core.info('Cache hit occurred on the exact key, not saving cache.');
+        } else if (cachePaths.length > 0) {
+            // Save the cache
+            core.info(`Saving cache with key: ${cacheKey}`);
+            try {
+                await cache.saveCache(cachePaths, cacheKey);
+                core.info('Cache saved successfully');
+            } catch (error) {
+                if (error.name === 'ReserveCacheError') {
+                    core.info('Cache already exists, skipping save.');
+                } else {
+                    core.warning(`Failed to save cache: ${error.message}`);
+                }
+            }
+        }
+
         // Check if on default branch
         const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
 
@@ -58,40 +89,6 @@ async function run() {
                     return;
                 } else {
                     core.warning(`Failed to delete old caches: ${error.message}`);
-                }
-            }
-        }
-
-        // Determine if we should save the cache
-        // - If saveAlways is true, save regardless of job status
-        // - Otherwise, only save if the job succeeded
-        // Get job status from input (evaluated at post-step time)
-        const jobStatus = core.getInput('_job-status') || 'success';
-        core.info(`Job status: ${jobStatus}, save-always: ${saveAlways}`);
-        const shouldSave = saveAlways || jobStatus === 'success';
-
-        if (!shouldSave) {
-            core.info('Job failed and save-always is not enabled. Skipping cache save.');
-            return;
-        }
-
-        // Don't save if we got an exact cache hit (cache is already up to date)
-        if (cacheMatchedKey === cacheKey) {
-            core.info('Cache hit occurred on the exact key, not saving cache.');
-            return;
-        }
-
-        // Save the cache
-        if (cachePaths.length > 0) {
-            core.info(`Saving cache with key: ${cacheKey}`);
-            try {
-                await cache.saveCache(cachePaths, cacheKey);
-                core.info('Cache saved successfully');
-            } catch (error) {
-                if (error.name === 'ReserveCacheError') {
-                    core.info('Cache already exists, skipping save.');
-                } else {
-                    core.warning(`Failed to save cache: ${error.message}`);
                 }
             }
         }

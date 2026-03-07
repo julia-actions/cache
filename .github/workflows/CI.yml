@@ -30,7 +30,7 @@ jobs:
     - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - uses: actions/setup-node@395ad3262231945c25e8478fd5baf05154b1d79f # v6.1.0
       with:
-        node-version: '20'
+        node-version: '24'
     - run: npm ci
     - run: npm run build
     - name: Check dist is up to date
@@ -308,7 +308,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - name: Set cache-name
       id: cache-name
       run: |
@@ -338,7 +338,7 @@ jobs:
     if: always() && needs.test-save-on-failure.result == 'failure'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - uses: julia-actions/setup-julia@v2
       with:
         version: "1"
@@ -370,7 +370,7 @@ jobs:
     outputs:
       cache-name: ${{ steps.cache-name.outputs.cache-name }}
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - name: Set cache-name
       id: cache-name
       run: |
@@ -389,7 +389,7 @@ jobs:
       shell: julia --color=yes {0}
       run: |
         using Pkg
-        Pkg.add(PackageSpec(name="DataFrames", version="1.6"))
+        Pkg.add(PackageSpec(name="Example", version="0.5"))
     - name: Force failure to test no-save-on-failure
       run: exit 1
 
@@ -399,7 +399,7 @@ jobs:
     if: always() && needs.test-no-save-on-failure.result == 'failure'
     runs-on: ubuntu-latest
     steps:
-    - uses: actions/checkout@1af3b93b6815bc44a9784bd300feb67ff0d1eeb3 # v6.0.0
+    - uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
     - uses: julia-actions/setup-julia@v2
       with:
         version: "1"
@@ -417,8 +417,8 @@ jobs:
         @assert ENV["cache-hit"] == "" "Cache should NOT have been saved when save-always: false and job failed"
       env:
         cache-hit: ${{ steps.cache.outputs.cache-hit }}
-    - name: Check DataFrames package was NOT cached
+    - name: Check Example package was NOT cached
       shell: julia --color=yes {0}
       run: |
         packages_dir = joinpath(first(DEPOT_PATH), "packages")
-        @assert !isdir(joinpath(packages_dir, "DataFrames")) "DataFrames package should NOT be in cache"
+        @assert !isdir(joinpath(packages_dir, "Example")) "Example package should NOT be in cache"
