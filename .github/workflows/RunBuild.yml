@@ -2,13 +2,13 @@ name: NPM run build
 
 on:
   pull_request:
-    types: [opened]
+    types: [opened, reopened]
 
 jobs:
   npm_run_build:
     name: NPM run build
     runs-on: ubuntu-latest
-    if: ${{ github.actor == 'dependabot[bot]' }}
+    if: ${{ github.event.pull_request.user.login == 'dependabot[bot]' }}
     permissions:
       contents: write
     steps:
