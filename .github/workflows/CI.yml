@@ -4,19 +4,16 @@ on:
   push:
     branches:
       - main
-    paths:
+    paths: &paths
       - 'action.yml'
       - 'handle_caches.jl'
+      - 'package.json'
+      - 'package-lock.json'
       - 'src/**'
       - 'dist/**'
       - '.github/**'
   pull_request:
-    paths:
-      - 'action.yml'
-      - 'handle_caches.jl'
-      - 'src/**'
-      - 'dist/**'
-      - '.github/**'
+    paths: *paths
 
 # needed to allow julia-actions/cache to delete old caches that it has created
 permissions:
