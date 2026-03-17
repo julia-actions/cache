@@ -1,6 +1,10 @@
 using Pkg, Dates
 function handle_caches()
     subcommand = ARGS[1]
+    if isnothing(Sys.which("gh")) || isempty(Sys.which("gh"))
+        @info "GitHub CLI (`gh`) not found. Skipping GitHub Actions cache management."
+        return
+    end
 
     if subcommand == "list"
         repo = ARGS[2]
