@@ -15,6 +15,9 @@ inputs:
   include-matrix:
     description: Whether to include the matrix values when constructing the cache key.
     default: 'true'
+  gcp-bucket:
+    description: Google Cloud Storage bucket to use for caching (e.g., 'my-cache-bucket'). If provided, this is used instead of the default Actions cache.
+    default: ''
   depot:
     description: Path to a Julia depot directory where cached data will be saved to and restored from.
     default: ''

@@ -3,6 +3,7 @@ const exec = require('@actions/exec');
 const cache = require('@actions/cache');
 const fs = require('fs');
 const os = require('os');
+const path = require('path');
 
 async function run() {
     try {
@@ -19,6 +20,7 @@ async function run() {
         const deleteOldCaches = core.getInput('delete-old-caches');
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
+        const gcpBucket = core.getInput('gcp-bucket');
 
         // Determine depot path
         let depotPath;
@@ -126,21 +128,53 @@ async function run() {
         core.saveState('repository', repository);
         core.saveState('ref', ref);
         core.saveState('default-branch', defaultBranch);
+        core.saveState('gcp-bucket', gcpBucket);
 
         // Restore cache
         let cacheHit = '';
         if (cachePaths.length > 0) {
-            try {
-                const restoredKey = await cache.restoreCache(cachePaths, key, [restoreKey]);
-                if (restoredKey) {
-                    cacheHit = restoredKey === key ? 'true' : '';
-                    core.info(`Cache restored from key: ${restoredKey}`);
-                    core.saveState('cache-matched-key', restoredKey);
-                } else {
-                    core.info('No cache found');
+            if (gcpBucket) {
+                try {
+                    const tarPath = process.platform === 'win32'
+                        ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
+                        : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
+                    
+                    let restoredKey = '';
+                    let exitCode = await exec.exec('gsutil', ['-q', 'cp', `gs://${gcpBucket}/${key}.tar.gz`, tarPath], { ignoreReturnCode: true });
+                    if (exitCode === 0) {
+                        restoredKey = key;
+                    } else {
+                        exitCode = await exec.exec('gsutil', ['-q', 'cp', `gs://${gcpBucket}/${restoreKey}.tar.gz`, tarPath], { ignoreReturnCode: true });
+                        if (exitCode === 0) {
+                            restoredKey = restoreKey;
+                        }
+                    }
+
+                    if (restoredKey) {
+                        cacheHit = restoredKey === key ? 'true' : '';
+                        core.info(`Cache restored from GCS key: ${restoredKey}`);
+                        core.saveState('cache-matched-key', restoredKey);
+                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
+                        await exec.exec('tar', ['-zxf', tarPath], { cwd: cwd });
+                    } else {
+                        core.info('No cache found in GCS');
+                    }
+                } catch (error) {
+                    core.warning(`Failed to restore cache from GCS: ${error.message}`);
                 }
-            } catch (error) {
-                core.warning(`Failed to restore cache: ${error.message}`);
+            } else {
+                try {
+                    const restoredKey = await cache.restoreCache(cachePaths, key, [restoreKey]);
+                    if (restoredKey) {
+                        cacheHit = restoredKey === key ? 'true' : '';
+                        core.info(`Cache restored from key: ${restoredKey}`);
+                        core.saveState('cache-matched-key', restoredKey);
+                    } else {
+                        core.info('No cache found');
+                    }
+                } catch (error) {
+                    core.warning(`Failed to restore cache: ${error.message}`);
+                }
             }
         }
 
