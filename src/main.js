@@ -4,6 +4,7 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
+const { Storage } = require('@google-cloud/storage');
 
 async function run() {
     try {
@@ -139,13 +140,21 @@ async function run() {
                         ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
                         : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
                     
+                    const storage = new Storage();
+                    const bucket = storage.bucket(gcpBucket);
                     let restoredKey = '';
-                    let exitCode = await exec.exec('gsutil', ['-q', 'cp', `gs://${gcpBucket}/${key}.tar.gz`, tarPath], { ignoreReturnCode: true });
-                    if (exitCode === 0) {
+
+                    const exactFile = bucket.file(`${key}.tar.gz`);
+                    const [exactExists] = await exactFile.exists();
+                    
+                    if (exactExists) {
+                        await exactFile.download({ destination: tarPath });
                         restoredKey = key;
                     } else {
-                        exitCode = await exec.exec('gsutil', ['-q', 'cp', `gs://${gcpBucket}/${restoreKey}.tar.gz`, tarPath], { ignoreReturnCode: true });
-                        if (exitCode === 0) {
+                        const restoreFile = bucket.file(`${restoreKey}.tar.gz`);
+                        const [restoreExists] = await restoreFile.exists();
+                        if (restoreExists) {
+                            await restoreFile.download({ destination: tarPath });
                             restoredKey = restoreKey;
                         }
                     }

@@ -2,6 +2,7 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const cache = require('@actions/cache');
 const path = require('path');
+const { Storage } = require('@google-cloud/storage');
 
 async function run() {
     try {
@@ -56,10 +57,13 @@ async function run() {
                     
                     await exec.exec('tar', ['-zcf', tarPath, ...relativePaths], { cwd: cwd });
                     
+                    const storage = new Storage();
+                    const bucket = storage.bucket(gcpBucket);
+                    
                     // Upload exact match
-                    await exec.exec('gsutil', ['-q', 'cp', tarPath, `gs://${gcpBucket}/${cacheKey}.tar.gz`]);
-                    // Upload restore key (latest)
-                    await exec.exec('gsutil', ['-q', 'cp', tarPath, `gs://${gcpBucket}/${restoreKey}.tar.gz`]);
+                    await bucket.upload(tarPath, { destination: `${cacheKey}.tar.gz` });
+                    // Upload restore key (latest fallback)
+                    await bucket.upload(tarPath, { destination: `${restoreKey}.tar.gz` });
                     
                     core.info('Cache saved to GCS successfully');
                 } catch (error) {

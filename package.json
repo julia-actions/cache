@@ -17,7 +17,8 @@
   "dependencies": {
     "@actions/cache": "^5.0.1",
     "@actions/core": "^2.0.1",
-    "@actions/exec": "^2.0.0"
+    "@actions/exec": "^2.0.0",
+    "@google-cloud/storage": "^7.15.0"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4"
