@@ -12,7 +12,7 @@ These instructions apply to work performed by Codex in this repository.
 ## Git Commits
 
 - Add this trailer to every commit made by Codex:
-  `Co-authored-by: Codex <codex@openai.com>`
+  `Co-authored-by: OpenAI Codex <codex@openai.com>`
 
 ## Pull Requests
 
