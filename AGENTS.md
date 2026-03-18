@@ -7,7 +7,7 @@ These instructions apply to work performed by Codex in this repository.
 - This repository contains the `julia-actions/cache` GitHub Action.
 - The action metadata lives in `action.yml`.
 - The source code lives in `src/`, and the bundled action artifacts live in `dist/`.
-- If a change updates the JavaScript action code, rebuild `dist/` so it stays in sync with `src/`.
+- If a change updates the JavaScript action code, run `npm run build` from the repository root to rebuild `dist/` so it stays in sync with `src/`.
 
 ## Git Commits
 
