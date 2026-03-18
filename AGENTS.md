@@ -8,6 +8,7 @@ These instructions apply to work performed by LLM coding agents in this reposito
 - The action metadata lives in `action.yml`.
 - The source code lives in `src/`, and the bundled action artifacts live in `dist/`.
 - Run `npm ci` from the repository root before the first build in a fresh checkout, and whenever `package.json` or `package-lock.json` changes.
+- If you add or remove npm dependencies, update the lockfile with `npm install`, `npm install <package>`, or `npm uninstall <package>` as appropriate.
 - If a change updates the JavaScript action code, run `npm run build` from the repository root to rebuild `dist/` so it stays in sync with `src/`.
 
 ## Git Commits
