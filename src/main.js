@@ -66,6 +66,16 @@ async function run() {
         if (cacheScratchspaces) cachePaths.push(scratchspacesPath);
         if (cacheLogs) cachePaths.push(logsPath);
 
+        // Exclude stale pidfiles – they are auto-cleaned but should not be cached.
+        // Each pattern targets only the specific depth where Julia/Pkg places them.
+        // Both .pid and .pidfile extensions are matched for forward-compatibility.
+        cachePaths.push(`!${depotPath}/artifacts/*.{pid,pidfile}`);           // Pkg artifact locks
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*.{pid,pidfile}`);       // Julia base precompile locks (UUID-less packages)
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.{pid,pidfile}`);     // Julia base precompile locks (registry packages)
+        cachePaths.push(`!${depotPath}/packages/*/*.{pid,pidfile}`);          // Pkg package source locks
+        cachePaths.push(`!${depotPath}/registries/*/.{pid,pidfile}`);         // Pkg registry locks
+        cachePaths.push(`!${depotPath}/logs/*.{pid,pidfile}`);                // Pkg usage file locks
+
         core.setOutput('cache-paths', cachePaths.join('\n'));
 
         // Generate cache keys
