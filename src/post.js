@@ -57,9 +57,10 @@ async function run() {
 
                     const depotPath = core.getState('depot');
                     const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
-                    const relativePaths = cachePaths.map(p => path.relative(cwd, p));
+                    const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => `--exclude=${path.relative(cwd, p.slice(1))}`);
+                    const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => path.relative(cwd, p));
 
-                    await exec.exec('tar', ['-zcf', tarPath, ...relativePaths], { cwd: cwd });
+                    await exec.exec('tar', ['-zcf', tarPath, ...excludePaths, ...includePaths], { cwd: cwd });
 
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);

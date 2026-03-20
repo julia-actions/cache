@@ -149,14 +149,14 @@ async function run() {
                     const tarPath = process.platform === 'win32'
                         ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
                         : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-                    
+
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
                     let restoredKey = '';
 
                     const exactFile = bucket.file(`${key}.tar.gz`);
                     const [exactExists] = await exactFile.exists();
-                    
+
                     if (exactExists) {
                         await exactFile.download({ destination: tarPath });
                         restoredKey = key;
