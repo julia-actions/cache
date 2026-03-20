@@ -43,12 +43,14 @@ async function run() {
             return;
         }
 
+        let cacheSaved = false;
         if (cachePaths.length > 0) {
             // Save the cache
             core.info(`Saving cache with key: ${cacheKey}`);
             try {
                 await cache.saveCache(cachePaths, cacheKey);
                 core.info('Cache saved successfully');
+                cacheSaved = true;
             } catch (error) {
                 if (error.name === 'ReserveCacheError') {
                     core.info('Cache already exists, skipping save.');
@@ -56,6 +58,11 @@ async function run() {
                     core.warning(`Failed to save cache: ${error.message}`);
                 }
             }
+        }
+
+        if (!cacheSaved) {
+            core.info('No new cache was saved. Skipping old cache deletion.');
+            return;
         }
 
         // Check if on default branch
