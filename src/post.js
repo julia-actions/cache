@@ -40,7 +40,10 @@ async function run() {
         // Don't save if we got an exact cache hit (cache is already up to date)
         if (cacheMatchedKey === cacheKey) {
             core.info('Cache hit occurred on the exact key, not saving cache.');
-        } else if (cachePaths.length > 0) {
+            return;
+        }
+
+        if (cachePaths.length > 0) {
             // Save the cache
             core.info(`Saving cache with key: ${cacheKey}`);
             try {
