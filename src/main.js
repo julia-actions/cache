@@ -4,7 +4,7 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { Storage } = require('@google-cloud/storage');
+const { GoogleCloudStorage } = require('@google-cloud/storage');
 
 async function run() {
     try {
@@ -150,7 +150,7 @@ async function run() {
                         ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
                         : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
                     
-                    const storage = new Storage();
+                    const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
                     let restoredKey = '';
 

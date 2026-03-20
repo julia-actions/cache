@@ -2,7 +2,7 @@ const core = require('@actions/core');
 const exec = require('@actions/exec');
 const cache = require('@actions/cache');
 const path = require('path');
-const { Storage } = require('@google-cloud/storage');
+const { GoogleCloudStorage } = require('@google-cloud/storage');
 
 async function run() {
     try {
@@ -61,7 +61,7 @@ async function run() {
 
                     await exec.exec('tar', ['-zcf', tarPath, ...relativePaths], { cwd: cwd });
 
-                    const storage = new Storage();
+                    const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
 
                     // Upload exact match
