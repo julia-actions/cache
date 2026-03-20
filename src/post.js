@@ -42,7 +42,11 @@ async function run() {
         // Don't save if we got an exact cache hit (cache is already up to date)
         if (cacheMatchedKey === cacheKey) {
             core.info('Cache hit occurred on the exact key, not saving cache.');
-        } else if (cachePaths.length > 0) {
+            return;
+        }
+
+        let cacheSaved = false;
+        if (cachePaths.length > 0) {
             if (gcpBucket) {
                 // Save the cache to GCS
                 core.info(`Saving cache to GCS with key: ${cacheKey}`);
@@ -50,22 +54,23 @@ async function run() {
                     const tarPath = process.platform === 'win32'
                         ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
                         : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-                    
+
                     const depotPath = core.getState('depot');
                     const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
                     const relativePaths = cachePaths.map(p => path.relative(cwd, p));
-                    
+
                     await exec.exec('tar', ['-zcf', tarPath, ...relativePaths], { cwd: cwd });
-                    
+
                     const storage = new Storage();
                     const bucket = storage.bucket(gcpBucket);
-                    
+
                     // Upload exact match
                     await bucket.upload(tarPath, { destination: `${cacheKey}.tar.gz` });
                     // Upload restore key (latest fallback)
                     await bucket.upload(tarPath, { destination: `${restoreKey}.tar.gz` });
-                    
+
                     core.info('Cache saved to GCS successfully');
+                    cacheSaved = true;
                 } catch (error) {
                     core.warning(`Failed to save cache to GCS: ${error.message}`);
                 }
@@ -75,6 +80,7 @@ async function run() {
                 try {
                     await cache.saveCache(cachePaths, cacheKey);
                     core.info('Cache saved successfully');
+                    cacheSaved = true;
                 } catch (error) {
                     if (error.name === 'ReserveCacheError') {
                         core.info('Cache already exists, skipping save.');
@@ -83,6 +89,11 @@ async function run() {
                     }
                 }
             }
+        }
+
+        if (!cacheSaved) {
+            core.info('No new cache was saved. Skipping old cache deletion.');
+            return;
         }
 
         // Check if on default branch
