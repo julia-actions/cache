@@ -48,7 +48,7 @@ async function run() {
         let cacheSaved = false;
         if (cachePaths.length > 0) {
             if (gcpBucket) {
-                // Save the cache to GCS
+                // Save the cache to Google Cloud Storage
                 core.info(`Saving cache to GCS with key: ${cacheKey}`);
                 try {
                     const tarPath = process.platform === 'win32'
@@ -75,7 +75,7 @@ async function run() {
                     core.warning(`Failed to save cache to GCS: ${error.message}`);
                 }
             } else {
-                // Save the cache
+                // Save the cache to GitHub Actions
                 core.info(`Saving cache with key: ${cacheKey}`);
                 try {
                     await cache.saveCache(cachePaths, cacheKey);
