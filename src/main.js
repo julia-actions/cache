@@ -4,7 +4,7 @@ const cache = require('@actions/cache');
 const fs = require('fs');
 const os = require('os');
 const path = require('path');
-const { GoogleCloudStorage } = require('@google-cloud/storage');
+const { Storage: GoogleCloudStorage } = require('@google-cloud/storage');
 
 async function run() {
     try {
