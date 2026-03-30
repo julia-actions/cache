@@ -1,6 +1,7 @@
 {
   "name": "julia-cache",
   "version": "3.0.0",
+  "type": "module",
   "description": "Cache Julia artifacts, packages and registry",
   "main": "dist/main/index.js",
   "scripts": {
@@ -15,9 +16,9 @@
   "author": "Sascha Mann, Rik Huijzer, and contributors",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^5.0.1",
-    "@actions/core": "^2.0.1",
-    "@actions/exec": "^2.0.0"
+    "@actions/cache": "^6.0.0",
+    "@actions/core": "^3.0.0",
+    "@actions/exec": "^3.0.0"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4"
