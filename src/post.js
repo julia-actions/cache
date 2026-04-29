@@ -1,8 +1,10 @@
-const core = require('@actions/core');
-const exec = require('@actions/exec');
-const cache = require('@actions/cache');
-const path = require('path');
-const { Storage: GoogleCloudStorage } = require('@google-cloud/storage');
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as cache from '@actions/cache';
+import path from 'path';
+import { fileURLToPath } from 'url';
+import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 async function run() {
     try {

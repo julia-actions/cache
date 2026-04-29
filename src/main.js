@@ -1,10 +1,10 @@
-const core = require('@actions/core');
-const exec = require('@actions/exec');
-const cache = require('@actions/cache');
-const fs = require('fs');
-const os = require('os');
-const path = require('path');
-const { Storage: GoogleCloudStorage } = require('@google-cloud/storage');
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as cache from '@actions/cache';
+import fs from 'fs';
+import os from 'os';
+import path from 'path';
+import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 
 async function run() {
     try {
@@ -72,12 +72,20 @@ async function run() {
         // Exclude stale pidfiles – they are auto-cleaned but should not be cached.
         // Each pattern targets only the specific depth where Julia/Pkg places them.
         // Both .pid and .pidfile extensions are matched for forward-compatibility.
-        cachePaths.push(`!${depotPath}/artifacts/*.{pid,pidfile}`);           // Pkg artifact locks
-        cachePaths.push(`!${depotPath}/compiled/v*.*/*.{pid,pidfile}`);       // Julia base precompile locks (UUID-less packages)
-        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.{pid,pidfile}`);     // Julia base precompile locks (registry packages)
-        cachePaths.push(`!${depotPath}/packages/*/*.{pid,pidfile}`);          // Pkg package source locks
-        cachePaths.push(`!${depotPath}/registries/*/.{pid,pidfile}`);         // Pkg registry locks
-        cachePaths.push(`!${depotPath}/logs/*.{pid,pidfile}`);                // Pkg usage file locks
+        // Note: @actions/glob does not support brace expansion, so each
+        // extension needs its own entry.
+        cachePaths.push(`!${depotPath}/artifacts/*.pid`);                     // Pkg artifact locks
+        cachePaths.push(`!${depotPath}/artifacts/*.pidfile`);
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*.pid`);                 // Julia base precompile locks (UUID-less packages)
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*.pidfile`);
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.pid`);               // Julia base precompile locks (registry packages)
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.pidfile`);
+        cachePaths.push(`!${depotPath}/packages/*/*.pid`);                    // Pkg package source locks
+        cachePaths.push(`!${depotPath}/packages/*/*.pidfile`);
+        cachePaths.push(`!${depotPath}/registries/*/.pid`);                   // Pkg registry locks
+        cachePaths.push(`!${depotPath}/registries/*/.pidfile`);
+        cachePaths.push(`!${depotPath}/logs/*.pid`);                          // Pkg usage file locks
+        cachePaths.push(`!${depotPath}/logs/*.pidfile`);
 
         core.setOutput('cache-paths', cachePaths.join('\n'));
 
