@@ -19,7 +19,7 @@
     "@actions/cache": "^6.0.0",
     "@actions/core": "^3.0.0",
     "@actions/exec": "^3.0.0",
-    "@google-cloud/storage": "^7.19.0"
+    "@octokit/rest": "^22.0.1"
   },
   "devDependencies": {
     "@vercel/ncc": "^0.38.4"

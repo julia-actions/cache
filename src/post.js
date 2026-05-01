@@ -1,10 +1,120 @@
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as cache from '@actions/cache';
-import path from 'path';
-import { fileURLToPath } from 'url';
-import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
-const __dirname = path.dirname(fileURLToPath(import.meta.url));
+import { Octokit } from '@octokit/rest';
+
+async function runPkgGc() {
+    const exitCode = await exec.exec('julia', [
+        '-e',
+        [
+            'try',
+            '    using Pkg',
+            '    Pkg.gc()',
+            'catch e',
+            '    @error "An error occurred while managing existing caches" e',
+            '    exit(17)',
+            'end'
+        ].join('\n')
+    ], {
+        ignoreReturnCode: true
+    });
+
+    return exitCode === 0;
+}
+
+function parseRepository(repository) {
+    const [owner, repo] = repository.split('/');
+    if (!owner || !repo) {
+        throw new Error(`Invalid GitHub repository: ${repository}`);
+    }
+
+    return { owner, repo };
+}
+
+async function cleanupOldCaches({ repository, restoreKey, ref, token, allowFailure }) {
+    let page = 1;
+    const perPage = 100;
+    const skipped = [];
+    const deleted = [];
+    const failed = [];
+
+    try {
+        const { owner, repo } = parseRepository(repository);
+        const octokit = new Octokit({ auth: token });
+
+        while (1 <= page && page <= 5) {
+            const response = await octokit.rest.actions.getActionsCacheList({
+                owner,
+                repo,
+                per_page: perPage,
+                page,
+                ref,
+                key: restoreKey,
+                sort: 'last_accessed_at',
+                direction: 'desc'
+            });
+
+            const ids = response.data.actions_caches.map(cacheEntry => cacheEntry.id);
+
+            // Avoid deleting the latest used cache entry. This is particularly important for
+            // job failures where a new cache entry will not be saved after this.
+            if (page === 1 && ids.length > 0) {
+                skipped.push(ids.shift());
+            }
+
+            for (const id of ids) {
+                try {
+                    await octokit.rest.actions.deleteActionsCacheById({
+                        owner,
+                        repo,
+                        cache_id: id
+                    });
+                    deleted.push(id);
+                } catch (error) {
+                    core.error(error);
+                    failed.push(id);
+                }
+            }
+
+            page = ids.length === perPage ? page + 1 : -1;
+        }
+    } catch (error) {
+        core.error(`An error occurred while managing existing caches: ${error.message}`);
+        return true;
+    }
+
+    if (skipped.length === 0 && deleted.length === 0 && failed.length === 0) {
+        core.info(`No existing caches found on ref \`${ref}\` matching restore key \`${restoreKey}\``);
+    } else {
+        if (failed.length > 0) {
+            core.info(`Failed to delete ${failed.length} existing caches on ref \`${ref}\` matching restore key \`${restoreKey}\``);
+            failed.forEach(id => core.info(String(id)));
+            core.info([
+                'To delete caches you need to grant the following to the default `GITHUB_TOKEN` by adding',
+                'this to your workflow:',
+                '```',
+                'permissions:',
+                '  actions: write',
+                '  contents: read',
+                '```',
+                "(Note this won't work for fork PRs but should once merged)",
+                'Or provide a token with `repo` scope via the `token` input option.',
+                'See https://docs.github.com/en/rest/actions/cache#delete-a-github-actions-cache-for-a-repository-using-a-cache-id'
+            ].join('\n'));
+
+            if (!allowFailure) {
+                return false;
+            }
+        }
+
+        if (deleted.length > 0) {
+            core.info(`Deleted ${deleted.length} caches on ref \`${ref}\` matching restore key \`${restoreKey}\``);
+            deleted.forEach(id => core.info(String(id)));
+        }
+    }
+
+    return true;
+}
 
 async function run() {
     try {
@@ -19,7 +129,6 @@ async function run() {
         const repository = core.getState('repository');
         const ref = core.getState('ref');
         const defaultBranch = core.getState('default-branch');
-        const gcpBucket = core.getState('gcp-bucket');
 
         if (!cachePathsJson || !cacheKey) {
             core.info('No cache state found. Skipping post action.');
@@ -49,47 +158,17 @@ async function run() {
 
         let cacheSaved = false;
         if (cachePaths.length > 0) {
-            if (gcpBucket) {
-                // Save the cache to Google Cloud Storage
-                core.info(`Saving cache to GCS with key: ${cacheKey}`);
-                try {
-                    const tarPath = process.platform === 'win32'
-                        ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
-                        : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-
-                    const depotPath = core.getState('depot');
-                    const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
-                    const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => `--exclude=${path.relative(cwd, p.slice(1))}`);
-                    const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => path.relative(cwd, p));
-
-                    await exec.exec('tar', ['-zcf', tarPath, ...excludePaths, ...includePaths], { cwd: cwd });
-
-                    const storage = new GoogleCloudStorage();
-                    const bucket = storage.bucket(gcpBucket);
-
-                    // Upload exact match
-                    await bucket.upload(tarPath, { destination: `${cacheKey}.tar.gz` });
-                    // Upload restore key (latest fallback)
-                    await bucket.upload(tarPath, { destination: `${restoreKey}.tar.gz` });
-
-                    core.info('Cache saved to GCS successfully');
-                    cacheSaved = true;
-                } catch (error) {
-                    core.warning(`Failed to save cache to GCS: ${error.message}`);
-                }
-            } else {
-                // Save the cache to GitHub Actions
-                core.info(`Saving cache with key: ${cacheKey}`);
-                try {
-                    await cache.saveCache(cachePaths, cacheKey);
-                    core.info('Cache saved successfully');
-                    cacheSaved = true;
-                } catch (error) {
-                    if (error.name === 'ReserveCacheError') {
-                        core.info('Cache already exists, skipping save.');
-                    } else {
-                        core.warning(`Failed to save cache: ${error.message}`);
-                    }
+            // Save the cache
+            core.info(`Saving cache with key: ${cacheKey}`);
+            try {
+                await cache.saveCache(cachePaths, cacheKey);
+                core.info('Cache saved successfully');
+                cacheSaved = true;
+            } catch (error) {
+                if (error.name === 'ReserveCacheError') {
+                    core.info('Cache already exists, skipping save.');
+                } else {
+                    core.warning(`Failed to save cache: ${error.message}`);
                 }
             }
         }
@@ -102,31 +181,29 @@ async function run() {
         // Check if on default branch
         const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
 
-        // Run Pkg.gc() and handle old caches using the Julia script
+        // Run Pkg.gc() and handle old caches
         if (deleteOldCaches !== 'false' && !isDefaultBranch) {
-            // GITHUB_ACTION_PATH points to the action root directory
-            // __dirname points to dist/post/ when bundled, so go up two levels to get to root
-            const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
-            const handleCachesScript = path.join(actionPath, 'handle_caches.jl');
-            const allowFailure = deleteOldCaches !== 'required' ? 'true' : 'false';
+            const allowFailure = deleteOldCaches !== 'required';
 
             core.info(`Running Pkg.gc() and cleaning up old caches...`);
-            core.debug(`Action path: ${actionPath}`);
-            core.debug(`Handle caches script: ${handleCachesScript}`);
             try {
-                await exec.exec('julia', [
-                    handleCachesScript,
-                    'rm',
+                const gcSucceeded = await runPkgGc();
+                if (!gcSucceeded) {
+                    return;
+                }
+
+                const cleanupSucceeded = await cleanupOldCaches({
                     repository,
                     restoreKey,
                     ref,
+                    token,
                     allowFailure
-                ], {
-                    env: {
-                        ...process.env,
-                        GH_TOKEN: token
-                    }
                 });
+
+                if (!cleanupSucceeded) {
+                    core.setFailed('Failed to delete old caches');
+                    return;
+                }
             } catch (error) {
                 if (deleteOldCaches === 'required') {
                     core.setFailed(`Failed to delete old caches: ${error.message}`);
