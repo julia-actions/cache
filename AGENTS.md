@@ -14,6 +14,8 @@ These instructions apply to work performed by LLM coding agents in this reposito
 ## Git Commits
 
 - Add yourself as a co-author on every commit you make.
+- Changes that modify `dist/*` should go into a separate commit.
+- Changes that modify `package-lock.json` should go into a separate commit.
 
 ## Pull Requests
 
