@@ -8,11 +8,10 @@ async function runPkgGc() {
         '-e',
         [
             'try',
-            '    using Pkg',
+            '    import Pkg',
             '    Pkg.gc()',
-            'catch e',
-            '    @error "An error occurred while managing existing caches" e',
-            '    exit(17)',
+            'catch',
+            '    error("An error occurred while managing existing caches")',
             'end'
         ].join('\n')
     ], {
