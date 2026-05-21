@@ -16,7 +16,7 @@
   "author": "Sascha Mann, Rik Huijzer, and contributors",
   "license": "MIT",
   "dependencies": {
-    "@actions/cache": "^6.0.0",
+    "@actions/cache": "^6.0.1",
     "@actions/core": "^3.0.0",
     "@actions/exec": "^3.0.0",
     "@google-cloud/storage": "^7.19.0"
