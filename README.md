@@ -98,7 +98,7 @@ Which means your caches files will not grow needlessly. GitHub also deletes cach
 > ```
 > (Note this won't work for fork PRs but should once merged)
 > Or provide a token with `repo` scope via the `token` input option.
-> See https://cli.github.com/manual/gh_cache_delete
+> See https://docs.github.com/en/rest/actions/cache#delete-a-github-actions-cache-for-a-repository-using-a-cache-id
 
 To disable deletion set input `delete-old-caches: 'false'`.
 
