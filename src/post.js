@@ -2,9 +2,64 @@ import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as cache from '@actions/cache';
 import path from 'path';
+import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+function isZstdAvailable() {
+    try {
+        execSync('zstd --version', { stdio: 'ignore' });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function streamSave({ outStream, useZstd, cwd, excludePaths, includePaths }) {
+    return new Promise((resolve, reject) => {
+        const tarArgs = ['-cf', '-', ...excludePaths, ...includePaths];
+        const tarProc = spawn('tar', tarArgs, { cwd, stdio: ['ignore', 'pipe', 'inherit'] });
+
+        const compressCmd = useZstd ? 'zstd' : 'gzip';
+        const compressArgs = useZstd ? ['-T0'] : ['-c'];
+        const compressProc = spawn(compressCmd, compressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
+
+        let errorOccurred = false;
+        const onError = (err) => {
+            if (!errorOccurred) {
+                errorOccurred = true;
+                tarProc.kill();
+                compressProc.kill();
+                outStream.destroy(err);
+                reject(err);
+            }
+        };
+
+        tarProc.on('error', onError);
+        compressProc.on('error', onError);
+        outStream.on('error', onError);
+
+        tarProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`tar process failed with exit code ${code}`));
+            }
+        });
+
+        compressProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`${compressCmd} process failed with exit code ${code}`));
+            }
+        });
+
+        outStream.on('finish', () => {
+            if (!errorOccurred) resolve();
+        });
+
+        tarProc.stdout.pipe(compressProc.stdin);
+        compressProc.stdout.pipe(outStream);
+    });
+}
 
 async function run() {
     try {
@@ -20,6 +75,7 @@ async function run() {
         const ref = core.getState('ref');
         const defaultBranch = core.getState('default-branch');
         const gcpBucket = core.getState('gcp-bucket');
+        const gcpZstd = core.getState('gcp-zstd') !== 'false';
 
         if (!cachePathsJson || !cacheKey) {
             core.info('No cache state found. Skipping post action.');
@@ -53,24 +109,38 @@ async function run() {
                 // Save the cache to Google Cloud Storage
                 core.info(`Saving cache to GCS with key: ${cacheKey}`);
                 try {
-                    const tarPath = process.platform === 'win32'
-                        ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
-                        : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-
                     const depotPath = core.getState('depot');
                     const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
-                    const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => `--exclude=${path.relative(cwd, p.slice(1))}`);
-                    const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => path.relative(cwd, p));
+                    const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => {
+                        const rel = path.relative(cwd, p.slice(1));
+                        return `--exclude=${process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel}`;
+                    });
+                    const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => {
+                        const rel = path.relative(cwd, p);
+                        return process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel;
+                    });
 
-                    await exec.exec('tar', ['-zcf', tarPath, ...excludePaths, ...includePaths], { cwd: cwd });
+                    const useZstd = gcpZstd && isZstdAvailable();
+                    const ext = useZstd ? '.tar.zst' : '.tar.gz';
 
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
 
-                    // Upload exact match
-                    await bucket.upload(tarPath, { destination: `${cacheKey}.tar.gz` });
-                    // Upload restore key (latest fallback)
-                    await bucket.upload(tarPath, { destination: `${restoreKey}.tar.gz` });
+                    const exactFile = bucket.file(`${cacheKey}${ext}`);
+                    const outStream = exactFile.createWriteStream({
+                        metadata: {
+                            contentType: useZstd ? 'application/zstd' : 'application/gzip'
+                        }
+                    });
+
+                    core.info(`Streaming tar + ${useZstd ? 'zstd' : 'gzip'} directly to GCS (${cacheKey}${ext})...`);
+                    await streamSave({ outStream, useZstd, cwd, excludePaths, includePaths });
+
+                    if (restoreKey !== cacheKey) {
+                        core.info(`Copying cache to restore key: ${restoreKey}${ext}`);
+                        const restoreFile = bucket.file(`${restoreKey}${ext}`);
+                        await exactFile.copy(restoreFile);
+                    }
 
                     core.info('Cache saved to GCS successfully');
                     cacheSaved = true;

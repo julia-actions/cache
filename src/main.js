@@ -4,7 +4,59 @@ import * as cache from '@actions/cache';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { spawn, execSync } from 'child_process';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+
+function isZstdAvailable() {
+    try {
+        execSync('zstd --version', { stdio: 'ignore' });
+        return true;
+    } catch (e) {
+        return false;
+    }
+}
+
+function streamRestore({ inStream, useZstd, cwd }) {
+    return new Promise((resolve, reject) => {
+        const decompressCmd = useZstd ? 'zstd' : 'gzip';
+        const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
+        const decompressProc = spawn(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
+
+        const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
+
+        let errorOccurred = false;
+        const onError = (err) => {
+            if (!errorOccurred) {
+                errorOccurred = true;
+                inStream.destroy();
+                decompressProc.kill();
+                tarProc.kill();
+                reject(err);
+            }
+        };
+
+        inStream.on('error', onError);
+        decompressProc.on('error', onError);
+        tarProc.on('error', onError);
+
+        decompressProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`${decompressCmd} process failed with exit code ${code}`));
+            }
+        });
+
+        tarProc.on('close', (code) => {
+            if (code === 0) {
+                if (!errorOccurred) resolve();
+            } else if (!errorOccurred) {
+                onError(new Error(`tar extraction failed with exit code ${code}`));
+            }
+        });
+
+        inStream.pipe(decompressProc.stdin);
+        decompressProc.stdout.pipe(tarProc.stdin);
+    });
+}
 
 async function run() {
     try {
@@ -22,6 +74,7 @@ async function run() {
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
         const gcpBucket = core.getInput('gcp-bucket');
+        const gcpZstd = core.getInput('gcp-zstd') !== 'false';
 
         // Determine depot path
         let depotPath;
@@ -148,41 +201,61 @@ async function run() {
         core.saveState('ref', ref);
         core.saveState('default-branch', defaultBranch);
         core.saveState('gcp-bucket', gcpBucket);
+        core.saveState('gcp-zstd', gcpZstd.toString());
 
         // Restore cache
         let cacheHit = '';
         if (cachePaths.length > 0) {
             if (gcpBucket) {
                 try {
-                    const tarPath = process.platform === 'win32'
-                        ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
-                        : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
-                    let restoredKey = '';
+                    const zstdAvailable = gcpZstd && isZstdAvailable();
 
-                    const exactFile = bucket.file(`${key}.tar.gz`);
-                    const [exactExists] = await exactFile.exists();
+                    const candidateKeys = [
+                        ...(zstdAvailable ? [
+                            { key: key, ext: '.tar.zst', useZstd: true },
+                            { key: key, ext: '.tar.gz', useZstd: false }
+                        ] : [
+                            { key: key, ext: '.tar.gz', useZstd: false },
+                            { key: key, ext: '.tar.zst', useZstd: true }
+                        ]),
+                        ...(zstdAvailable ? [
+                            { key: restoreKey, ext: '.tar.zst', useZstd: true },
+                            { key: restoreKey, ext: '.tar.gz', useZstd: false }
+                        ] : [
+                            { key: restoreKey, ext: '.tar.gz', useZstd: false },
+                            { key: restoreKey, ext: '.tar.zst', useZstd: true }
+                        ])
+                    ];
 
-                    if (exactExists) {
-                        await exactFile.download({ destination: tarPath });
-                        restoredKey = key;
-                    } else {
-                        const restoreFile = bucket.file(`${restoreKey}.tar.gz`);
-                        const [restoreExists] = await restoreFile.exists();
-                        if (restoreExists) {
-                            await restoreFile.download({ destination: tarPath });
-                            restoredKey = restoreKey;
+                    const uniqueCandidates = [];
+                    const seen = new Set();
+                    for (const cand of candidateKeys) {
+                        const id = `${cand.key}${cand.ext}`;
+                        if (!seen.has(id)) {
+                            seen.add(id);
+                            uniqueCandidates.push(cand);
                         }
                     }
 
-                    if (restoredKey) {
-                        cacheHit = restoredKey === key ? 'true' : '';
-                        core.info(`Cache restored from GCS key: ${restoredKey}`);
-                        core.saveState('cache-matched-key', restoredKey);
+                    let match = null;
+                    for (const cand of uniqueCandidates) {
+                        const file = bucket.file(`${cand.key}${cand.ext}`);
+                        const [exists] = await file.exists();
+                        if (exists) {
+                            match = { file, key: cand.key, ext: cand.ext, useZstd: cand.useZstd };
+                            break;
+                        }
+                    }
+
+                    if (match) {
+                        cacheHit = match.key === key ? 'true' : '';
+                        core.info(`Cache restored from GCS key: ${match.key}${match.ext}`);
+                        core.saveState('cache-matched-key', match.key);
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        await exec.exec('tar', ['-zxf', tarPath], { cwd: cwd });
+                        const inStream = match.file.createReadStream();
+                        await streamRestore({ inStream, useZstd: match.useZstd, cwd });
                     } else {
                         core.info('No cache found in GCS');
                     }

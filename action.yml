@@ -18,6 +18,9 @@ inputs:
   gcp-bucket:
     description: Google Cloud Storage bucket to use for caching (e.g., 'my-cache-bucket'). If provided, this is used instead of the default Actions cache.
     default: ''
+  gcp-zstd:
+    description: Enable zstd compression for GCP storage caching if zstd is available on the runner.
+    default: 'true'
   depot:
     description: Path to a Julia depot directory where cached data will be saved to and restored from.
     default: ''
