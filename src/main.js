@@ -4,7 +4,47 @@ import * as cache from '@actions/cache';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
+import { spawn } from 'child_process';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+
+function streamRestore({ inStream, cwd }) {
+    return new Promise((resolve, reject) => {
+        const decompressProc = spawn('gzip', ['-d', '-c'], { stdio: ['pipe', 'pipe', 'inherit'] });
+        const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
+
+        let errorOccurred = false;
+        const onError = (err) => {
+            if (!errorOccurred) {
+                errorOccurred = true;
+                inStream.destroy();
+                decompressProc.kill();
+                tarProc.kill();
+                reject(err);
+            }
+        };
+
+        inStream.on('error', onError);
+        decompressProc.on('error', onError);
+        tarProc.on('error', onError);
+
+        decompressProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`gzip process failed with exit code ${code}`));
+            }
+        });
+
+        tarProc.on('close', (code) => {
+            if (code === 0) {
+                if (!errorOccurred) resolve();
+            } else if (!errorOccurred) {
+                onError(new Error(`tar extraction failed with exit code ${code}`));
+            }
+        });
+
+        inStream.pipe(decompressProc.stdin);
+        decompressProc.stdout.pipe(tarProc.stdin);
+    });
+}
 
 async function run() {
     try {
@@ -154,10 +194,6 @@ async function run() {
         if (cachePaths.length > 0) {
             if (gcpBucket) {
                 try {
-                    const tarPath = process.platform === 'win32'
-                        ? `${process.env.RUNNER_TEMP || 'C:\\Windows\\Temp'}\\cache.tar.gz`
-                        : `${process.env.RUNNER_TEMP || '/tmp'}/cache.tar.gz`;
-
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
                     let restoredKey = '';
@@ -165,24 +201,26 @@ async function run() {
                     const exactFile = bucket.file(`${key}.tar.gz`);
                     const [exactExists] = await exactFile.exists();
 
+                    let fileToStream = null;
                     if (exactExists) {
-                        await exactFile.download({ destination: tarPath });
+                        fileToStream = exactFile;
                         restoredKey = key;
                     } else {
                         const restoreFile = bucket.file(`${restoreKey}.tar.gz`);
                         const [restoreExists] = await restoreFile.exists();
                         if (restoreExists) {
-                            await restoreFile.download({ destination: tarPath });
+                            fileToStream = restoreFile;
                             restoredKey = restoreKey;
                         }
                     }
 
-                    if (restoredKey) {
+                    if (restoredKey && fileToStream) {
                         cacheHit = restoredKey === key ? 'true' : '';
                         core.info(`Cache restored from GCS key: ${restoredKey}`);
                         core.saveState('cache-matched-key', restoredKey);
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        await exec.exec('tar', ['-zxf', tarPath], { cwd: cwd });
+                        const inStream = fileToStream.createReadStream();
+                        await streamRestore({ inStream, cwd });
                     } else {
                         core.info('No cache found in GCS');
                     }
