@@ -21,6 +21,9 @@ inputs:
   gcp-compression:
     description: Compression algorithm to use for GCP storage caching ('zstd' or 'gzip').
     default: 'zstd'
+  key-prefix:
+    description: Optional prefix to prepend to the cache key (and GCS object path, if using GCP).
+    default: ''
   depot:
     description: Path to a Julia depot directory where cached data will be saved to and restored from.
     default: ''
