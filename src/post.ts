@@ -4,10 +4,24 @@ import * as cache from '@actions/cache';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
+import type { Writable } from 'stream';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
-function isZstdAvailable() {
+interface StreamSaveOptions {
+    outStream: Writable;
+    compressCmd: string;
+    compressArgs: string[];
+    cwd: string;
+    excludePaths: string[];
+    includePaths: string[];
+}
+
+function getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function isZstdAvailable(): boolean {
     try {
         execSync('zstd --version', { stdio: 'ignore' });
         return true;
@@ -16,15 +30,15 @@ function isZstdAvailable() {
     }
 }
 
-function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths }) {
-    return new Promise((resolve, reject) => {
+function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths }: StreamSaveOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
         const tarArgs = ['-cf', '-', ...excludePaths, ...includePaths];
         const tarProc = spawn('tar', tarArgs, { cwd, stdio: ['ignore', 'pipe', 'inherit'] });
 
         const compressProc = spawn(compressCmd, compressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
 
         let errorOccurred = false;
-        const onError = (err) => {
+        const onError = (err: Error): void => {
             if (!errorOccurred) {
                 errorOccurred = true;
                 tarProc.kill();
@@ -81,7 +95,7 @@ async function run() {
             return;
         }
 
-        const cachePaths = JSON.parse(cachePathsJson);
+        const cachePaths = JSON.parse(cachePathsJson) as string[];
 
         // Determine if we should save the cache
         // - If saveAlways is true, save regardless of job status
@@ -148,7 +162,7 @@ async function run() {
                     core.info('Cache saved to GCS successfully');
                     cacheSaved = true;
                 } catch (error) {
-                    core.warning(`Failed to save cache to GCS: ${error.message}`);
+                    core.warning(`Failed to save cache to GCS: ${getErrorMessage(error)}`);
                 }
             } else {
                 // Save the cache to GitHub Actions
@@ -158,10 +172,10 @@ async function run() {
                     core.info('Cache saved successfully');
                     cacheSaved = true;
                 } catch (error) {
-                    if (error.name === 'ReserveCacheError') {
+                    if (error instanceof cache.ReserveCacheError) {
                         core.info('Cache already exists, skipping save.');
                     } else {
-                        core.warning(`Failed to save cache: ${error.message}`);
+                        core.warning(`Failed to save cache: ${getErrorMessage(error)}`);
                     }
                 }
             }
@@ -202,16 +216,16 @@ async function run() {
                 });
             } catch (error) {
                 if (deleteOldCaches === 'required') {
-                    core.setFailed(`Failed to delete old caches: ${error.message}`);
+                    core.setFailed(`Failed to delete old caches: ${getErrorMessage(error)}`);
                     return;
                 } else {
-                    core.warning(`Failed to delete old caches: ${error.message}`);
+                    core.warning(`Failed to delete old caches: ${getErrorMessage(error)}`);
                 }
             }
         }
 
     } catch (error) {
-        core.warning(`Post action failed: ${error.message}`);
+        core.warning(`Post action failed: ${getErrorMessage(error)}`);
     }
 }
 

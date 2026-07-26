@@ -5,9 +5,22 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
+import type { Readable } from 'stream';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 
-function isZstdAvailable() {
+type GcpCompression = 'zstd' | 'gzip';
+
+interface StreamRestoreOptions {
+    inStream: Readable;
+    useZstd: boolean;
+    cwd: string;
+}
+
+function getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function isZstdAvailable(): boolean {
     try {
         execSync('zstd --version', { stdio: 'ignore' });
         return true;
@@ -16,7 +29,7 @@ function isZstdAvailable() {
     }
 }
 
-function parseGcpCompressionInput(inputVal) {
+function parseGcpCompressionInput(inputVal: string): GcpCompression {
     if (!inputVal || inputVal.trim() === '') {
         return 'zstd';
     }
@@ -27,8 +40,8 @@ function parseGcpCompressionInput(inputVal) {
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
 
-function streamRestore({ inStream, useZstd, cwd }) {
-    return new Promise((resolve, reject) => {
+function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
         const decompressProc = spawn(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
@@ -36,7 +49,7 @@ function streamRestore({ inStream, useZstd, cwd }) {
         const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
 
         let errorOccurred = false;
-        const onError = (err) => {
+        const onError = (err: Error): void => {
             if (!errorOccurred) {
                 errorOccurred = true;
                 inStream.destroy();
@@ -170,19 +183,19 @@ async function run() {
         if (includeMatrix && matrixJson !== 'null') {
             try {
                 const matrix = JSON.parse(matrixJson);
-                const flattenPaths = (obj, prefix = '') => {
-                    const result = [];
+                const flattenPaths = (obj: Record<string, unknown>, prefix = ''): string[] => {
+                    const result: string[] = [];
                     for (const [key, value] of Object.entries(obj)) {
                         const newKey = prefix ? `${prefix}-${key}` : key;
                         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
-                            result.push(...flattenPaths(value, newKey));
+                            result.push(...flattenPaths(value as Record<string, unknown>, newKey));
                         } else {
                             result.push(`${newKey}=${value}`);
                         }
                     }
                     return result;
                 };
-                matrixKey = flattenPaths(matrix).join(';') + ';';
+                matrixKey = flattenPaths(matrix as Record<string, unknown>).join(';') + ';';
             } catch (e) {
                 core.debug(`Failed to parse matrix JSON: ${e}`);
             }
@@ -257,7 +270,7 @@ async function run() {
                         core.info('No cache found in GCS');
                     }
                 } catch (error) {
-                    core.warning(`Failed to restore cache from GCS: ${error.message}`);
+                    core.warning(`Failed to restore cache from GCS: ${getErrorMessage(error)}`);
                 }
             } else {
                 try {
@@ -270,7 +283,7 @@ async function run() {
                         core.info('No cache found');
                     }
                 } catch (error) {
-                    core.warning(`Failed to restore cache: ${error.message}`);
+                    core.warning(`Failed to restore cache: ${getErrorMessage(error)}`);
                 }
             }
         }
@@ -305,7 +318,7 @@ async function run() {
                 try {
                     await exec.exec('julia', ['-e', 'import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();']);
                 } catch (error) {
-                    core.warning(`Failed to update registries: ${error.message}`);
+                    core.warning(`Failed to update registries: ${getErrorMessage(error)}`);
                 }
             } else {
                 core.info('Registries directory does not exist or is empty. Skipping registry update');
@@ -313,7 +326,7 @@ async function run() {
         }
 
     } catch (error) {
-        core.setFailed(error.message);
+        core.setFailed(getErrorMessage(error));
     }
 }
 

@@ -5,7 +5,8 @@
   "description": "Cache Julia artifacts, packages and registry",
   "main": "dist/main/index.js",
   "scripts": {
-    "build": "ncc build src/main.js -o dist/main && ncc build src/post.js -o dist/post",
+    "build": "npm run typecheck && ncc build src/main.ts -o dist/main && ncc build src/post.ts -o dist/post",
+    "typecheck": "tsc --noEmit",
     "lint": "eslint src/"
   },
   "keywords": [
@@ -22,6 +23,8 @@
     "@google-cloud/storage": "^7.21.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.44.0"
+    "@types/node": "^24.13.3",
+    "@vercel/ncc": "^0.44.0",
+    "typescript": "^5.9.3"
   }
 }
