@@ -86,6 +86,7 @@ async function run() {
         const saveAlways = core.getInput('save-always') === 'true';
         const gcpBucket = core.getInput('gcp-bucket');
         const gcpCompression = parseGcpCompressionInput(core.getInput('gcp-compression'));
+        const keyPrefix = core.getInput('key-prefix');
 
         if (gcpBucket && gcpCompression === 'zstd' && !isZstdAvailable()) {
             throw new Error("zstd is not available on this runner. Please install zstd or set `gcp-compression: 'gzip'` to use gzip compression.");
@@ -187,7 +188,7 @@ async function run() {
             }
         }
 
-        let restoreKey = `${cacheName};os=${runnerOS};${matrixKey}`;
+        let restoreKey = `${keyPrefix}${cacheName};os=${runnerOS};${matrixKey}`;
         // URL encode restricted characters
         restoreKey = restoreKey.replace(/,/g, '%2C');
 
