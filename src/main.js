@@ -4,12 +4,35 @@ import * as cache from '@actions/cache';
 import fs from 'fs';
 import os from 'os';
 import path from 'path';
-import { spawn } from 'child_process';
+import { spawn, execSync } from 'child_process';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 
-function streamRestore({ inStream, cwd }) {
+function isZstdAvailable() {
+    try {
+        execSync('zstd --version', { stdio: 'ignore' });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function parseGcpCompressionInput(inputVal) {
+    if (!inputVal || inputVal.trim() === '') {
+        return 'zstd';
+    }
+    const val = inputVal.trim().toLowerCase();
+    if (val === 'zstd' || val === 'gzip') {
+        return val;
+    }
+    throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
+}
+
+function streamRestore({ inStream, useZstd, cwd }) {
     return new Promise((resolve, reject) => {
-        const decompressProc = spawn('gzip', ['-d', '-c'], { stdio: ['pipe', 'pipe', 'inherit'] });
+        const decompressCmd = useZstd ? 'zstd' : 'gzip';
+        const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
+        const decompressProc = spawn(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
+
         const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
 
         let errorOccurred = false;
@@ -29,7 +52,7 @@ function streamRestore({ inStream, cwd }) {
 
         decompressProc.on('close', (code) => {
             if (code !== 0 && !errorOccurred) {
-                onError(new Error(`gzip process failed with exit code ${code}`));
+                onError(new Error(`${decompressCmd} process failed with exit code ${code}`));
             }
         });
 
@@ -62,6 +85,11 @@ async function run() {
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
         const gcpBucket = core.getInput('gcp-bucket');
+        const gcpCompression = parseGcpCompressionInput(core.getInput('gcp-compression'));
+
+        if (gcpBucket && gcpCompression === 'zstd' && !isZstdAvailable()) {
+            throw new Error("zstd is not available on this runner. Please install zstd or set `gcp-compression: 'gzip'` to use gzip compression.");
+        }
 
         // Determine depot path
         let depotPath;
@@ -188,6 +216,7 @@ async function run() {
         core.saveState('ref', ref);
         core.saveState('default-branch', defaultBranch);
         core.saveState('gcp-bucket', gcpBucket);
+        core.saveState('gcp-compression', gcpCompression);
 
         // Restore cache
         let cacheHit = '';
@@ -196,9 +225,11 @@ async function run() {
                 try {
                     const storage = new GoogleCloudStorage();
                     const bucket = storage.bucket(gcpBucket);
+                    const useZstd = gcpCompression === 'zstd';
+                    const ext = useZstd ? '.tar.zst' : '.tar.gz';
                     let restoredKey = '';
 
-                    const exactFile = bucket.file(`${key}.tar.gz`);
+                    const exactFile = bucket.file(`${key}${ext}`);
                     const [exactExists] = await exactFile.exists();
 
                     let fileToStream = null;
@@ -206,7 +237,7 @@ async function run() {
                         fileToStream = exactFile;
                         restoredKey = key;
                     } else {
-                        const restoreFile = bucket.file(`${restoreKey}.tar.gz`);
+                        const restoreFile = bucket.file(`${restoreKey}${ext}`);
                         const [restoreExists] = await restoreFile.exists();
                         if (restoreExists) {
                             fileToStream = restoreFile;
@@ -220,7 +251,7 @@ async function run() {
                         core.saveState('cache-matched-key', restoredKey);
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
                         const inStream = fileToStream.createReadStream();
-                        await streamRestore({ inStream, cwd });
+                        await streamRestore({ inStream, useZstd, cwd });
                     } else {
                         core.info('No cache found in GCS');
                     }
