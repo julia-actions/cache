@@ -22,6 +22,6 @@
     "@google-cloud/storage": "^7.21.0"
   },
   "devDependencies": {
-    "@vercel/ncc": "^0.44.0"
+    "@vercel/ncc": "^0.44.1"
   }
 }
