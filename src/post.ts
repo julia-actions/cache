@@ -1,0 +1,236 @@
+import * as core from '@actions/core';
+import * as exec from '@actions/exec';
+import * as cache from '@actions/cache';
+import path from 'path';
+import { spawn, execSync } from 'child_process';
+import { fileURLToPath } from 'url';
+import type { Writable } from 'stream';
+import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+import { DeleteOldCachesMode, parseDeleteOldCachesMode } from './delete-old-caches.js';
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+
+interface StreamSaveOptions {
+    outStream: Writable;
+    compressCmd: string;
+    compressArgs: string[];
+    cwd: string;
+    excludePaths: string[];
+    includePaths: string[];
+}
+
+function getErrorMessage(error: unknown): string {
+    return error instanceof Error ? error.message : String(error);
+}
+
+function isZstdAvailable(): boolean {
+    try {
+        execSync('zstd --version', { stdio: 'ignore' });
+        return true;
+    } catch {
+        return false;
+    }
+}
+
+function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths }: StreamSaveOptions): Promise<void> {
+    return new Promise<void>((resolve, reject) => {
+        const tarArgs = ['-cf', '-', ...excludePaths, ...includePaths];
+        const tarProc = spawn('tar', tarArgs, { cwd, stdio: ['ignore', 'pipe', 'inherit'] });
+
+        const compressProc = spawn(compressCmd, compressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
+
+        let errorOccurred = false;
+        const onError = (err: Error): void => {
+            if (!errorOccurred) {
+                errorOccurred = true;
+                tarProc.kill();
+                compressProc.kill();
+                outStream.destroy(err);
+                reject(err);
+            }
+        };
+
+        tarProc.on('error', onError);
+        compressProc.on('error', onError);
+        outStream.on('error', onError);
+
+        tarProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`tar process failed with exit code ${code}`));
+            }
+        });
+
+        compressProc.on('close', (code) => {
+            if (code !== 0 && !errorOccurred) {
+                onError(new Error(`${compressCmd} process failed with exit code ${code}`));
+            }
+        });
+
+        outStream.on('finish', () => {
+            if (!errorOccurred) resolve();
+        });
+
+        tarProc.stdout.pipe(compressProc.stdin);
+        compressProc.stdout.pipe(outStream);
+    });
+}
+
+async function run() {
+    try {
+        // Get state from main action
+        const cachePathsJson = core.getState('cache-paths');
+        const cacheKey = core.getState('cache-key');
+        const restoreKey = core.getState('restore-key');
+        const deleteOldCachesState = core.getState('delete-old-caches');
+        const token = core.getState('token');
+        const saveAlways = core.getState('save-always') === 'true';
+        const cacheMatchedKey = core.getState('cache-matched-key');
+        const repository = core.getState('repository');
+        const ref = core.getState('ref');
+        const defaultBranch = core.getState('default-branch');
+        const gcpBucket = core.getState('gcp-bucket');
+        const gcpCompression = core.getState('gcp-compression');
+        const useZstd = gcpCompression === 'zstd';
+
+        if (!cachePathsJson || !cacheKey) {
+            core.info('No cache state found. Skipping post action.');
+            return;
+        }
+
+        const deleteOldCachesMode = parseDeleteOldCachesMode(deleteOldCachesState);
+        const deleteOldCaches = deleteOldCachesMode !== DeleteOldCachesMode.Disabled;
+        const requireOldCacheDeletion = deleteOldCachesMode === DeleteOldCachesMode.Required;
+        const cachePaths = JSON.parse(cachePathsJson) as string[];
+
+        // Determine if we should save the cache
+        // - If saveAlways is true, save regardless of job status
+        // - Otherwise, only save if the job succeeded
+        // Get job status from input (evaluated at post-step time)
+        const jobStatus = core.getInput('_job-status') || 'success';
+        core.info(`Job status: ${jobStatus}, save-always: ${saveAlways}`);
+        const shouldSave = saveAlways || jobStatus === 'success';
+
+        if (!shouldSave) {
+            core.info('Job failed and save-always is not enabled. Skipping cache save.');
+            return;
+        }
+
+        // Don't save if we got an exact cache hit (cache is already up to date)
+        if (cacheMatchedKey === cacheKey) {
+            core.info('Cache hit occurred on the exact key, not saving cache.');
+            return;
+        }
+
+        let cacheSaved = false;
+        if (cachePaths.length > 0) {
+            if (gcpBucket) {
+                if (useZstd && !isZstdAvailable()) {
+                    throw new Error("zstd is not available on this runner. Please install zstd or set `gcp-compression: 'gzip'` to use gzip compression.");
+                }
+                // Save the cache to Google Cloud Storage
+                core.info(`Saving cache to GCS with key: ${cacheKey}`);
+                try {
+                    const depotPath = core.getState('depot');
+                    const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
+                    const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => {
+                        const rel = path.relative(cwd, p.slice(1));
+                        return `--exclude=${process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel}`;
+                    });
+                    const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => {
+                        const rel = path.relative(cwd, p);
+                        return process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel;
+                    });
+
+                    const compressCmd = useZstd ? 'zstd' : 'gzip';
+                    const compressArgs = useZstd ? ['-T0'] : ['-c'];
+                    const ext = useZstd ? '.tar.zst' : '.tar.gz';
+
+                    const storage = new GoogleCloudStorage();
+                    const bucket = storage.bucket(gcpBucket);
+
+                    const exactFile = bucket.file(`${cacheKey}${ext}`);
+                    const outStream = exactFile.createWriteStream({
+                        metadata: {
+                            contentType: useZstd ? 'application/zstd' : 'application/gzip'
+                        }
+                    });
+
+                    core.info(`Streaming tar + ${useZstd ? 'zstd' : 'gzip'} directly to GCS (${cacheKey}${ext})...`);
+                    await streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths });
+
+                    if (restoreKey !== cacheKey) {
+                        core.info(`Copying cache to restore key: ${restoreKey}${ext}`);
+                        const restoreFile = bucket.file(`${restoreKey}${ext}`);
+                        await exactFile.copy(restoreFile);
+                    }
+
+                    core.info('Cache saved to GCS successfully');
+                    cacheSaved = true;
+                } catch (error) {
+                    core.warning(`Failed to save cache to GCS: ${getErrorMessage(error)}`);
+                }
+            } else {
+                // Save the cache to GitHub Actions
+                core.info(`Saving cache with key: ${cacheKey}`);
+                try {
+                    await cache.saveCache(cachePaths, cacheKey);
+                    core.info('Cache saved successfully');
+                    cacheSaved = true;
+                } catch (error) {
+                    if (error instanceof cache.ReserveCacheError) {
+                        core.info('Cache already exists, skipping save.');
+                    } else {
+                        core.warning(`Failed to save cache: ${getErrorMessage(error)}`);
+                    }
+                }
+            }
+        }
+
+        if (!cacheSaved) {
+            core.info('No new cache was saved. Skipping old cache deletion.');
+            return;
+        }
+
+        // Check if on default branch
+        const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
+
+        // Run Pkg.gc() and handle old caches using the Julia script
+        if (deleteOldCaches && !isDefaultBranch) {
+            // GITHUB_ACTION_PATH points to the action root directory
+            // __dirname points to dist/post/ when bundled, so go up two levels to get to root
+            const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
+            const handleCachesScript = path.join(actionPath, 'handle_caches.jl');
+            const allowFailure = (!requireOldCacheDeletion).toString();
+
+            core.info(`Running Pkg.gc() and cleaning up old caches...`);
+            core.debug(`Action path: ${actionPath}`);
+            core.debug(`Handle caches script: ${handleCachesScript}`);
+            try {
+                await exec.exec('julia', [
+                    handleCachesScript,
+                    'rm',
+                    repository,
+                    restoreKey,
+                    ref,
+                    allowFailure
+                ], {
+                    env: {
+                        ...process.env,
+                        GH_TOKEN: token
+                    }
+                });
+            } catch (error) {
+                if (requireOldCacheDeletion) {
+                    core.setFailed(`Failed to delete old caches: ${getErrorMessage(error)}`);
+                    return;
+                } else {
+                    core.warning(`Failed to delete old caches: ${getErrorMessage(error)}`);
+                }
+            }
+        }
+
+    } catch (error) {
+        core.warning(`Post action failed: ${getErrorMessage(error)}`);
+    }
+}
+
+run();
