@@ -1,0 +1,2 @@
+# Hide generated JS code from diffs and language stats
+dist/** linguist-generated=true
