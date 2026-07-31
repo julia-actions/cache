@@ -7,6 +7,7 @@ import path from 'path';
 import { spawn, execSync } from 'child_process';
 import type { Readable } from 'stream';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+import { parseDeleteOldCachesMode } from './delete-old-caches.js';
 
 type GcpCompression = 'zstd' | 'gzip';
 
@@ -94,7 +95,7 @@ async function run() {
         const cacheCompiled = core.getInput('cache-compiled') === 'true';
         const cacheScratchspaces = core.getInput('cache-scratchspaces') === 'true';
         const cacheLogs = core.getInput('cache-logs') === 'true';
-        const deleteOldCaches = core.getInput('delete-old-caches');
+        const deleteOldCachesMode = parseDeleteOldCachesMode(core.getInput('delete-old-caches'));
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
         const gcpBucket = core.getInput('gcp-bucket');
@@ -223,7 +224,7 @@ async function run() {
         core.saveState('restore-key', restoreKey);
         core.saveState('depot', depotPath);
         core.saveState('cache-registries', cacheRegistries.toString());
-        core.saveState('delete-old-caches', deleteOldCaches);
+        core.saveState('delete-old-caches', deleteOldCachesMode);
         core.saveState('token', token);
         core.saveState('save-always', saveAlways.toString());
         core.saveState('repository', repository);

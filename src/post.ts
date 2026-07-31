@@ -6,6 +6,7 @@ import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
 import type { Writable } from 'stream';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
+import { DeleteOldCachesMode, parseDeleteOldCachesMode } from './delete-old-caches.js';
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 interface StreamSaveOptions {
@@ -79,7 +80,7 @@ async function run() {
         const cachePathsJson = core.getState('cache-paths');
         const cacheKey = core.getState('cache-key');
         const restoreKey = core.getState('restore-key');
-        const deleteOldCaches = core.getState('delete-old-caches');
+        const deleteOldCachesState = core.getState('delete-old-caches');
         const token = core.getState('token');
         const saveAlways = core.getState('save-always') === 'true';
         const cacheMatchedKey = core.getState('cache-matched-key');
@@ -95,6 +96,9 @@ async function run() {
             return;
         }
 
+        const deleteOldCachesMode = parseDeleteOldCachesMode(deleteOldCachesState);
+        const deleteOldCaches = deleteOldCachesMode !== DeleteOldCachesMode.Disabled;
+        const requireOldCacheDeletion = deleteOldCachesMode === DeleteOldCachesMode.Required;
         const cachePaths = JSON.parse(cachePathsJson) as string[];
 
         // Determine if we should save the cache
@@ -190,12 +194,12 @@ async function run() {
         const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
 
         // Run Pkg.gc() and handle old caches using the Julia script
-        if (deleteOldCaches !== 'false' && !isDefaultBranch) {
+        if (deleteOldCaches && !isDefaultBranch) {
             // GITHUB_ACTION_PATH points to the action root directory
             // __dirname points to dist/post/ when bundled, so go up two levels to get to root
             const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
             const handleCachesScript = path.join(actionPath, 'handle_caches.jl');
-            const allowFailure = deleteOldCaches !== 'required' ? 'true' : 'false';
+            const allowFailure = (!requireOldCacheDeletion).toString();
 
             core.info(`Running Pkg.gc() and cleaning up old caches...`);
             core.debug(`Action path: ${actionPath}`);
@@ -215,7 +219,7 @@ async function run() {
                     }
                 });
             } catch (error) {
-                if (deleteOldCaches === 'required') {
+                if (requireOldCacheDeletion) {
                     core.setFailed(`Failed to delete old caches: ${getErrorMessage(error)}`);
                     return;
                 } else {
