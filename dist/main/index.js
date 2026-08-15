@@ -65740,6 +65740,18 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ }
 /******/ 
 /************************************************************************/
+/******/ /* webpack/runtime/compat get default export */
+/******/ (() => {
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__nccwpck_require__.n = (module) => {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			() => (module['default']) :
+/******/ 			() => (module);
+/******/ 		__nccwpck_require__.d(getter, { a: getter });
+/******/ 		return getter;
+/******/ 	};
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/create fake namespace object */
 /******/ (() => {
 /******/ 	var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
@@ -65992,6 +66004,7 @@ __nccwpck_require__.d(mappers_namespaceObject, {
 
 // EXTERNAL MODULE: external "os"
 var external_os_ = __nccwpck_require__(857);
+var external_os_default = /*#__PURE__*/__nccwpck_require__.n(external_os_);
 ;// CONCATENATED MODULE: ./node_modules/@actions/core/lib/utils.js
 // We use any as a valid input type
 /* eslint-disable @typescript-eslint/no-explicit-any */
@@ -66124,6 +66137,7 @@ function escapeProperty(s) {
 var external_crypto_ = __nccwpck_require__(6982);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(9896);
+var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
 ;// CONCATENATED MODULE: ./node_modules/@actions/core/lib/file-command.js
 // For internal use, subject to change.
 // We use any as a valid input type
@@ -130105,7 +130119,25 @@ class TransferManager {
 
 
 
-;// CONCATENATED MODULE: ./src/main.js
+;// CONCATENATED MODULE: ./src/delete-old-caches.ts
+var DeleteOldCachesMode;
+(function (DeleteOldCachesMode) {
+    DeleteOldCachesMode["Disabled"] = "false";
+    DeleteOldCachesMode["Enabled"] = "true";
+    DeleteOldCachesMode["Required"] = "required";
+})(DeleteOldCachesMode || (DeleteOldCachesMode = {}));
+function parseDeleteOldCachesMode(inputValue) {
+    switch (inputValue) {
+        case DeleteOldCachesMode.Disabled:
+        case DeleteOldCachesMode.Enabled:
+        case DeleteOldCachesMode.Required:
+            return inputValue;
+        default:
+            throw new Error(`Invalid value for input 'delete-old-caches': '${inputValue}'. Expected 'true', 'false', or 'required'.`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/main.ts
 
 
 
@@ -130114,16 +130146,18 @@ class TransferManager {
 
 
 
-
+function main_getErrorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
+}
 function isZstdAvailable() {
     try {
         (0,external_child_process_.execSync)('zstd --version', { stdio: 'ignore' });
         return true;
-    } catch {
+    }
+    catch {
         return false;
     }
 }
-
 function parseGcpCompressionInput(inputVal) {
     if (!inputVal || inputVal.trim() === '') {
         return 'zstd';
@@ -130134,15 +130168,12 @@ function parseGcpCompressionInput(inputVal) {
     }
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
-
 function streamRestore({ inStream, useZstd, cwd }) {
     return new Promise((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
         const decompressProc = (0,external_child_process_.spawn)(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
-
         const tarProc = (0,external_child_process_.spawn)('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
-
         let errorOccurred = false;
         const onError = (err) => {
             if (!errorOccurred) {
@@ -130153,30 +130184,27 @@ function streamRestore({ inStream, useZstd, cwd }) {
                 reject(err);
             }
         };
-
         inStream.on('error', onError);
         decompressProc.on('error', onError);
         tarProc.on('error', onError);
-
         decompressProc.on('close', (code) => {
             if (code !== 0 && !errorOccurred) {
                 onError(new Error(`${decompressCmd} process failed with exit code ${code}`));
             }
         });
-
         tarProc.on('close', (code) => {
             if (code === 0) {
-                if (!errorOccurred) resolve();
-            } else if (!errorOccurred) {
+                if (!errorOccurred)
+                    resolve();
+            }
+            else if (!errorOccurred) {
                 onError(new Error(`tar extraction failed with exit code ${code}`));
             }
         });
-
         inStream.pipe(decompressProc.stdin);
         decompressProc.stdout.pipe(tarProc.stdin);
     });
 }
-
 async function run() {
     try {
         // Get inputs
@@ -130189,41 +130217,37 @@ async function run() {
         const cacheCompiled = getInput('cache-compiled') === 'true';
         const cacheScratchspaces = getInput('cache-scratchspaces') === 'true';
         const cacheLogs = getInput('cache-logs') === 'true';
-        const deleteOldCaches = getInput('delete-old-caches');
+        const deleteOldCachesMode = parseDeleteOldCachesMode(getInput('delete-old-caches'));
         const token = getInput('token');
         const saveAlways = getInput('save-always') === 'true';
         const gcpBucket = getInput('gcp-bucket');
         const gcpCompression = parseGcpCompressionInput(getInput('gcp-compression'));
         const keyPrefix = getInput('key-prefix');
-
         if (gcpBucket && gcpCompression === 'zstd' && !isZstdAvailable()) {
             throw new Error("zstd is not available on this runner. Please install zstd or set `gcp-compression: 'gzip'` to use gzip compression.");
         }
-
         // Determine depot path
         let depotPath;
         if (depot) {
             depotPath = depot;
-        } else if (process.env.JULIA_DEPOT_PATH) {
+        }
+        else if (process.env.JULIA_DEPOT_PATH) {
             const delimiter = process.platform === 'win32' ? ';' : ':';
             depotPath = process.env.JULIA_DEPOT_PATH.split(delimiter)[0];
-        } else {
+        }
+        else {
             depotPath = '~/.julia';
         }
-
         // Expand ~ to home directory
         if (depotPath.startsWith('~')) {
-            depotPath = depotPath.replace('~', external_os_.homedir());
+            depotPath = depotPath.replace('~', external_os_default().homedir());
         }
-
         // On Windows, replace backslashes with forward slashes
         if (process.platform === 'win32') {
             depotPath = depotPath.replace(/\\/g, '/');
         }
-
         info(`Using depot path: ${depotPath}`);
         setOutput('depot', depotPath);
-
         // Build cache paths
         const cachePaths = [];
         const artifactsPath = `${depotPath}/artifacts`;
@@ -130232,46 +130256,47 @@ async function run() {
         const compiledPath = `${depotPath}/compiled`;
         const scratchspacesPath = `${depotPath}/scratchspaces`;
         const logsPath = `${depotPath}/logs`;
-
-        if (cacheArtifacts) cachePaths.push(artifactsPath);
-        if (cachePackages) cachePaths.push(packagesPath);
+        if (cacheArtifacts)
+            cachePaths.push(artifactsPath);
+        if (cachePackages)
+            cachePaths.push(packagesPath);
         if (cacheRegistries) {
-            if (external_fs_.existsSync(registriesPath)) {
+            if (external_fs_default().existsSync(registriesPath)) {
                 warning('Julia depot registries already exist. Skipping restoring of cached registries to avoid potential merge conflicts when updating. Please ensure that `julia-actions/cache` precedes any workflow steps which add registries.');
-            } else {
+            }
+            else {
                 cachePaths.push(registriesPath);
             }
         }
-        if (cacheCompiled) cachePaths.push(compiledPath);
-        if (cacheScratchspaces) cachePaths.push(scratchspacesPath);
-        if (cacheLogs) cachePaths.push(logsPath);
-
+        if (cacheCompiled)
+            cachePaths.push(compiledPath);
+        if (cacheScratchspaces)
+            cachePaths.push(scratchspacesPath);
+        if (cacheLogs)
+            cachePaths.push(logsPath);
         // Exclude stale pidfiles – they are auto-cleaned but should not be cached.
         // Each pattern targets only the specific depth where Julia/Pkg places them.
         // Both .pid and .pidfile extensions are matched for forward-compatibility.
         // Note: @actions/glob does not support brace expansion, so each
         // extension needs its own entry.
-        cachePaths.push(`!${depotPath}/artifacts/*.pid`);                     // Pkg artifact locks
+        cachePaths.push(`!${depotPath}/artifacts/*.pid`); // Pkg artifact locks
         cachePaths.push(`!${depotPath}/artifacts/*.pidfile`);
-        cachePaths.push(`!${depotPath}/compiled/v*.*/*.pid`);                 // Julia base precompile locks (UUID-less packages)
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*.pid`); // Julia base precompile locks (UUID-less packages)
         cachePaths.push(`!${depotPath}/compiled/v*.*/*.pidfile`);
-        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.pid`);               // Julia base precompile locks (registry packages)
+        cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.pid`); // Julia base precompile locks (registry packages)
         cachePaths.push(`!${depotPath}/compiled/v*.*/*/*.pidfile`);
-        cachePaths.push(`!${depotPath}/packages/*/*.pid`);                    // Pkg package source locks
+        cachePaths.push(`!${depotPath}/packages/*/*.pid`); // Pkg package source locks
         cachePaths.push(`!${depotPath}/packages/*/*.pidfile`);
-        cachePaths.push(`!${depotPath}/registries/*/.pid`);                   // Pkg registry locks
+        cachePaths.push(`!${depotPath}/registries/*/.pid`); // Pkg registry locks
         cachePaths.push(`!${depotPath}/registries/*/.pidfile`);
-        cachePaths.push(`!${depotPath}/logs/*.pid`);                          // Pkg usage file locks
+        cachePaths.push(`!${depotPath}/logs/*.pid`); // Pkg usage file locks
         cachePaths.push(`!${depotPath}/logs/*.pidfile`);
-
         setOutput('cache-paths', cachePaths.join('\n'));
-
         // Generate cache keys
         const runnerOS = getInput('_runner-os') || process.env.RUNNER_OS;
         const matrixJson = getInput('_matrix-json') || 'null';
         const runId = getInput('_github-run-id') || process.env.GITHUB_RUN_ID;
         const runAttempt = getInput('_github-run-attempt') || process.env.GITHUB_RUN_ATTEMPT;
-
         let matrixKey = '';
         // `matrix_key` joins all of matrix keys/values (including nested objects) to ensure that concurrent runs each use a unique cache key.
         // When `matrix` isn't set for the job then `MATRIX_JSON=null`.
@@ -130284,41 +130309,38 @@ async function run() {
                         const newKey = prefix ? `${prefix}-${key}` : key;
                         if (typeof value === 'object' && value !== null && !Array.isArray(value)) {
                             result.push(...flattenPaths(value, newKey));
-                        } else {
+                        }
+                        else {
                             result.push(`${newKey}=${value}`);
                         }
                     }
                     return result;
                 };
                 matrixKey = flattenPaths(matrix).join(';') + ';';
-            } catch (e) {
+            }
+            catch (e) {
                 core_debug(`Failed to parse matrix JSON: ${e}`);
             }
         }
-
         let restoreKey = `${keyPrefix}${cacheName};os=${runnerOS};${matrixKey}`;
         // URL encode restricted characters
         restoreKey = restoreKey.replace(/,/g, '%2C');
-
         const key = `${restoreKey}run_id=${runId};run_attempt=${runAttempt}`;
-
         setOutput('restore-key', restoreKey);
         setOutput('cache-key', key);
         info(`Cache key: ${key}`);
         info(`Restore key: ${restoreKey}`);
-
         // Get GitHub context from inputs (for post action)
         const repository = getInput('_github-repository') || process.env.GITHUB_REPOSITORY;
         const ref = getInput('_github-ref') || process.env.GITHUB_REF;
         const defaultBranch = getInput('_github-event-repository-default-branch') || 'main';
-
         // Save state for post action
         saveState('cache-paths', JSON.stringify(cachePaths));
         saveState('cache-key', key);
         saveState('restore-key', restoreKey);
         saveState('depot', depotPath);
         saveState('cache-registries', cacheRegistries.toString());
-        saveState('delete-old-caches', deleteOldCaches);
+        saveState('delete-old-caches', deleteOldCachesMode);
         saveState('token', token);
         saveState('save-always', saveAlways.toString());
         saveState('repository', repository);
@@ -130326,7 +130348,6 @@ async function run() {
         saveState('default-branch', defaultBranch);
         saveState('gcp-bucket', gcpBucket);
         saveState('gcp-compression', gcpCompression);
-
         // Restore cache
         let cacheHit = '';
         if (cachePaths.length > 0) {
@@ -130337,15 +130358,14 @@ async function run() {
                     const useZstd = gcpCompression === 'zstd';
                     const ext = useZstd ? '.tar.zst' : '.tar.gz';
                     let restoredKey = '';
-
                     const exactFile = bucket.file(`${key}${ext}`);
                     const [exactExists] = await exactFile.exists();
-
                     let fileToStream = null;
                     if (exactExists) {
                         fileToStream = exactFile;
                         restoredKey = key;
-                    } else {
+                    }
+                    else {
                         const restoreFile = bucket.file(`${restoreKey}${ext}`);
                         const [restoreExists] = await restoreFile.exists();
                         if (restoreExists) {
@@ -130353,7 +130373,6 @@ async function run() {
                             restoredKey = restoreKey;
                         }
                     }
-
                     if (restoredKey && fileToStream) {
                         cacheHit = restoredKey === key ? 'true' : '';
                         info(`Cache restored from GCS key: ${restoredKey}`);
@@ -130361,69 +130380,72 @@ async function run() {
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
                         const inStream = fileToStream.createReadStream();
                         await streamRestore({ inStream, useZstd, cwd });
-                    } else {
+                    }
+                    else {
                         info('No cache found in GCS');
                     }
-                } catch (error) {
-                    warning(`Failed to restore cache from GCS: ${error.message}`);
                 }
-            } else {
+                catch (error) {
+                    warning(`Failed to restore cache from GCS: ${main_getErrorMessage(error)}`);
+                }
+            }
+            else {
                 try {
                     const restoredKey = await restoreCache(cachePaths, key, [restoreKey]);
                     if (restoredKey) {
                         cacheHit = restoredKey === key ? 'true' : '';
                         info(`Cache restored from key: ${restoredKey}`);
                         saveState('cache-matched-key', restoredKey);
-                    } else {
+                    }
+                    else {
                         info('No cache found');
                     }
-                } catch (error) {
-                    warning(`Failed to restore cache: ${error.message}`);
+                }
+                catch (error) {
+                    warning(`Failed to restore cache: ${main_getErrorMessage(error)}`);
                 }
             }
         }
-
         setOutput('cache-hit', cacheHit);
-
         // Create depot directory if it doesn't exist.
         // We do this even if the cache wasn't restored, as this signals that this action ran
         // which other Julia actions to check, e.g.
         //  https://github.com/julia-actions/julia-buildpkg/pull/41
-        if (!external_fs_.existsSync(depotPath)) {
-            external_fs_.mkdirSync(depotPath, { recursive: true });
+        if (!external_fs_default().existsSync(depotPath)) {
+            external_fs_default().mkdirSync(depotPath, { recursive: true });
             info(`Created depot directory: ${depotPath}`);
         }
-
         // List depot directory sizes
         try {
             await exec_exec('bash', ['-c', `du -shc ${depotPath}/* 2>/dev/null || true`]);
-        } catch (error) {
+        }
+        catch (error) {
             // Ignore errors from du command
         }
-
         // issue https://github.com/julia-actions/cache/issues/110
         // Pkg may not run `Registry.update()` if a manifest exists, which may exist because of a
         // `Pkg.dev` call or because one is added to the repo. So be safe and update cached registries here.
         // Older (~v1.0) versions of julia that don't have `Pkg.Registry.update()` seem to always update registries in
         // Pkg operations. So this is only necessary for newer julia versions.
-        if (cacheRegistries && external_fs_.existsSync(registriesPath)) {
-            const registriesContent = external_fs_.readdirSync(registriesPath);
+        if (cacheRegistries && external_fs_default().existsSync(registriesPath)) {
+            const registriesContent = external_fs_default().readdirSync(registriesPath);
             if (registriesContent.length > 0) {
                 info('Registries directory exists and is non-empty. Updating any registries');
                 try {
                     await exec_exec('julia', ['-e', 'import Pkg; isdefined(Pkg, :Registry) && Pkg.Registry.update();']);
-                } catch (error) {
-                    warning(`Failed to update registries: ${error.message}`);
                 }
-            } else {
+                catch (error) {
+                    warning(`Failed to update registries: ${main_getErrorMessage(error)}`);
+                }
+            }
+            else {
                 info('Registries directory does not exist or is empty. Skipping registry update');
             }
         }
-
-    } catch (error) {
-        setFailed(error.message);
+    }
+    catch (error) {
+        setFailed(main_getErrorMessage(error));
     }
 }
-
 run();
 

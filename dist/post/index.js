@@ -13070,7 +13070,7 @@ exports["default"] = _default;
 
 /***/ }),
 
-/***/ 3968:
+/***/ 1587:
 /***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
 
 
@@ -13510,7 +13510,7 @@ Object.defineProperty(exports, "__esModule", ({
 }));
 exports["default"] = void 0;
 
-var _native = _interopRequireDefault(__nccwpck_require__(3968));
+var _native = _interopRequireDefault(__nccwpck_require__(1587));
 
 var _rng = _interopRequireDefault(__nccwpck_require__(4566));
 
@@ -65740,6 +65740,18 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ }
 /******/ 
 /************************************************************************/
+/******/ /* webpack/runtime/compat get default export */
+/******/ (() => {
+/******/ 	// getDefaultExport function for compatibility with non-harmony modules
+/******/ 	__nccwpck_require__.n = (module) => {
+/******/ 		var getter = module && module.__esModule ?
+/******/ 			() => (module['default']) :
+/******/ 			() => (module);
+/******/ 		__nccwpck_require__.d(getter, { a: getter });
+/******/ 		return getter;
+/******/ 	};
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/create fake namespace object */
 /******/ (() => {
 /******/ 	var getProto = Object.getPrototypeOf ? (obj) => (Object.getPrototypeOf(obj)) : (obj) => (obj.__proto__);
@@ -66161,6 +66173,7 @@ function file_command_prepareKeyValueMessage(key, value) {
 //# sourceMappingURL=file-command.js.map
 // EXTERNAL MODULE: external "path"
 var external_path_ = __nccwpck_require__(6928);
+var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: external "http"
 var external_http_ = __nccwpck_require__(8611);
 var external_http_namespaceObject = /*#__PURE__*/__nccwpck_require__.t(external_http_, 2);
@@ -130110,7 +130123,25 @@ class TransferManager {
 
 
 
-;// CONCATENATED MODULE: ./src/post.js
+;// CONCATENATED MODULE: ./src/delete-old-caches.ts
+var DeleteOldCachesMode;
+(function (DeleteOldCachesMode) {
+    DeleteOldCachesMode["Disabled"] = "false";
+    DeleteOldCachesMode["Enabled"] = "true";
+    DeleteOldCachesMode["Required"] = "required";
+})(DeleteOldCachesMode || (DeleteOldCachesMode = {}));
+function parseDeleteOldCachesMode(inputValue) {
+    switch (inputValue) {
+        case DeleteOldCachesMode.Disabled:
+        case DeleteOldCachesMode.Enabled:
+        case DeleteOldCachesMode.Required:
+            return inputValue;
+        default:
+            throw new Error(`Invalid value for input 'delete-old-caches': '${inputValue}'. Expected 'true', 'false', or 'required'.`);
+    }
+}
+
+;// CONCATENATED MODULE: ./src/post.ts
 
 
 
@@ -130118,24 +130149,25 @@ class TransferManager {
 
 
 
-const post_dirname = external_path_.dirname((0,external_url_.fileURLToPath)(import.meta.url));
 
+const post_dirname = external_path_default().dirname((0,external_url_.fileURLToPath)(import.meta.url));
+function post_getErrorMessage(error) {
+    return error instanceof Error ? error.message : String(error);
+}
 function isZstdAvailable() {
     try {
         (0,external_child_process_.execSync)('zstd --version', { stdio: 'ignore' });
         return true;
-    } catch {
+    }
+    catch {
         return false;
     }
 }
-
 function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths }) {
     return new Promise((resolve, reject) => {
         const tarArgs = ['-cf', '-', ...excludePaths, ...includePaths];
         const tarProc = (0,external_child_process_.spawn)('tar', tarArgs, { cwd, stdio: ['ignore', 'pipe', 'inherit'] });
-
         const compressProc = (0,external_child_process_.spawn)(compressCmd, compressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
-
         let errorOccurred = false;
         const onError = (err) => {
             if (!errorOccurred) {
@@ -130146,39 +130178,34 @@ function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, i
                 reject(err);
             }
         };
-
         tarProc.on('error', onError);
         compressProc.on('error', onError);
         outStream.on('error', onError);
-
         tarProc.on('close', (code) => {
             if (code !== 0 && !errorOccurred) {
                 onError(new Error(`tar process failed with exit code ${code}`));
             }
         });
-
         compressProc.on('close', (code) => {
             if (code !== 0 && !errorOccurred) {
                 onError(new Error(`${compressCmd} process failed with exit code ${code}`));
             }
         });
-
         outStream.on('finish', () => {
-            if (!errorOccurred) resolve();
+            if (!errorOccurred)
+                resolve();
         });
-
         tarProc.stdout.pipe(compressProc.stdin);
         compressProc.stdout.pipe(outStream);
     });
 }
-
 async function run() {
     try {
         // Get state from main action
         const cachePathsJson = getState('cache-paths');
         const cacheKey = getState('cache-key');
         const restoreKey = getState('restore-key');
-        const deleteOldCaches = getState('delete-old-caches');
+        const deleteOldCachesState = getState('delete-old-caches');
         const token = getState('token');
         const saveAlways = getState('save-always') === 'true';
         const cacheMatchedKey = getState('cache-matched-key');
@@ -130188,14 +130215,14 @@ async function run() {
         const gcpBucket = getState('gcp-bucket');
         const gcpCompression = getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
-
         if (!cachePathsJson || !cacheKey) {
             info('No cache state found. Skipping post action.');
             return;
         }
-
+        const deleteOldCachesMode = parseDeleteOldCachesMode(deleteOldCachesState);
+        const deleteOldCaches = deleteOldCachesMode !== DeleteOldCachesMode.Disabled;
+        const requireOldCacheDeletion = deleteOldCachesMode === DeleteOldCachesMode.Required;
         const cachePaths = JSON.parse(cachePathsJson);
-
         // Determine if we should save the cache
         // - If saveAlways is true, save regardless of job status
         // - Otherwise, only save if the job succeeded
@@ -130203,18 +130230,15 @@ async function run() {
         const jobStatus = getInput('_job-status') || 'success';
         info(`Job status: ${jobStatus}, save-always: ${saveAlways}`);
         const shouldSave = saveAlways || jobStatus === 'success';
-
         if (!shouldSave) {
             info('Job failed and save-always is not enabled. Skipping cache save.');
             return;
         }
-
         // Don't save if we got an exact cache hit (cache is already up to date)
         if (cacheMatchedKey === cacheKey) {
             info('Cache hit occurred on the exact key, not saving cache.');
             return;
         }
-
         let cacheSaved = false;
         if (cachePaths.length > 0) {
             if (gcpBucket) {
@@ -130227,75 +130251,69 @@ async function run() {
                     const depotPath = getState('depot');
                     const cwd = process.platform === 'win32' && depotPath ? depotPath.split(':')[0] + ':/' : '/';
                     const excludePaths = cachePaths.filter(p => p.startsWith('!')).map(p => {
-                        const rel = external_path_.relative(cwd, p.slice(1));
+                        const rel = external_path_default().relative(cwd, p.slice(1));
                         return `--exclude=${process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel}`;
                     });
                     const includePaths = cachePaths.filter(p => !p.startsWith('!')).map(p => {
-                        const rel = external_path_.relative(cwd, p);
+                        const rel = external_path_default().relative(cwd, p);
                         return process.platform === 'win32' ? rel.replace(/\\/g, '/') : rel;
                     });
-
                     const compressCmd = useZstd ? 'zstd' : 'gzip';
                     const compressArgs = useZstd ? ['-T0'] : ['-c'];
                     const ext = useZstd ? '.tar.zst' : '.tar.gz';
-
                     const storage = new Storage();
                     const bucket = storage.bucket(gcpBucket);
-
                     const exactFile = bucket.file(`${cacheKey}${ext}`);
                     const outStream = exactFile.createWriteStream({
                         metadata: {
                             contentType: useZstd ? 'application/zstd' : 'application/gzip'
                         }
                     });
-
                     info(`Streaming tar + ${useZstd ? 'zstd' : 'gzip'} directly to GCS (${cacheKey}${ext})...`);
                     await streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, includePaths });
-
                     if (restoreKey !== cacheKey) {
                         info(`Copying cache to restore key: ${restoreKey}${ext}`);
                         const restoreFile = bucket.file(`${restoreKey}${ext}`);
                         await exactFile.copy(restoreFile);
                     }
-
                     info('Cache saved to GCS successfully');
                     cacheSaved = true;
-                } catch (error) {
-                    warning(`Failed to save cache to GCS: ${error.message}`);
                 }
-            } else {
+                catch (error) {
+                    warning(`Failed to save cache to GCS: ${post_getErrorMessage(error)}`);
+                }
+            }
+            else {
                 // Save the cache to GitHub Actions
                 info(`Saving cache with key: ${cacheKey}`);
                 try {
                     await cache_saveCache(cachePaths, cacheKey);
                     info('Cache saved successfully');
                     cacheSaved = true;
-                } catch (error) {
-                    if (error.name === 'ReserveCacheError') {
+                }
+                catch (error) {
+                    if (error instanceof ReserveCacheError) {
                         info('Cache already exists, skipping save.');
-                    } else {
-                        warning(`Failed to save cache: ${error.message}`);
+                    }
+                    else {
+                        warning(`Failed to save cache: ${post_getErrorMessage(error)}`);
                     }
                 }
             }
         }
-
         if (!cacheSaved) {
             info('No new cache was saved. Skipping old cache deletion.');
             return;
         }
-
         // Check if on default branch
         const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
-
         // Run Pkg.gc() and handle old caches using the Julia script
-        if (deleteOldCaches !== 'false' && !isDefaultBranch) {
+        if (deleteOldCaches && !isDefaultBranch) {
             // GITHUB_ACTION_PATH points to the action root directory
             // __dirname points to dist/post/ when bundled, so go up two levels to get to root
-            const actionPath = process.env.GITHUB_ACTION_PATH || external_path_.resolve(post_dirname, '..', '..');
-            const handleCachesScript = external_path_.join(actionPath, 'handle_caches.jl');
-            const allowFailure = deleteOldCaches !== 'required' ? 'true' : 'false';
-
+            const actionPath = process.env.GITHUB_ACTION_PATH || external_path_default().resolve(post_dirname, '..', '..');
+            const handleCachesScript = external_path_default().join(actionPath, 'handle_caches.jl');
+            const allowFailure = (!requireOldCacheDeletion).toString();
             info(`Running Pkg.gc() and cleaning up old caches...`);
             core_debug(`Action path: ${actionPath}`);
             core_debug(`Handle caches script: ${handleCachesScript}`);
@@ -130313,20 +130331,21 @@ async function run() {
                         GH_TOKEN: token
                     }
                 });
-            } catch (error) {
-                if (deleteOldCaches === 'required') {
-                    setFailed(`Failed to delete old caches: ${error.message}`);
+            }
+            catch (error) {
+                if (requireOldCacheDeletion) {
+                    setFailed(`Failed to delete old caches: ${post_getErrorMessage(error)}`);
                     return;
-                } else {
-                    warning(`Failed to delete old caches: ${error.message}`);
+                }
+                else {
+                    warning(`Failed to delete old caches: ${post_getErrorMessage(error)}`);
                 }
             }
         }
-
-    } catch (error) {
-        warning(`Post action failed: ${error.message}`);
+    }
+    catch (error) {
+        warning(`Post action failed: ${post_getErrorMessage(error)}`);
     }
 }
-
 run();
 
