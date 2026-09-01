@@ -26,7 +26,6 @@ __webpack_unused_export__ = exports.KY = __webpack_unused_export__ = void 0;
 /*!
  * @module common/paginator
  */
-const arrify = __nccwpck_require__(6251);
 const extend = __nccwpck_require__(3860);
 const resource_stream_1 = __nccwpck_require__(7618);
 __webpack_unused_export__ = ({ enumerable: true, get: function () { return resource_stream_1.ResourceStream; } });
@@ -57,7 +56,9 @@ class Paginator {
      */
     // tslint:disable-next-line:variable-name
     extend(Class, methodNames) {
-        methodNames = arrify(methodNames);
+        if (typeof methodNames === 'string') {
+            methodNames = [methodNames];
+        }
         methodNames.forEach(methodName => {
             const originalMethod = Class.prototype[methodName];
             // map the original method to a private member
@@ -241,6 +242,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResourceStream = void 0;
 const stream_1 = __nccwpck_require__(2203);
 class ResourceStream extends stream_1.Transform {
+    _ended;
+    _maxApiCalls;
+    _nextQuery;
+    _otherArgs;
+    _reading;
+    _requestFn;
+    _requestsMade;
+    _resultsToSend;
     constructor(args, requestFn) {
         const options = Object.assign({ objectMode: true }, args.streamOptions);
         super(options);
@@ -312,7 +321,8 @@ exports.ResourceStream = ResourceStream;
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
-exports.$d = exports.e$ = void 0;
+exports.$d = void 0;
+exports.e$ = replaceProjectIdToken;
 const stream_1 = __nccwpck_require__(2203);
 // Copyright 2014 Google LLC
 //
@@ -362,17 +372,13 @@ function replaceProjectIdToken(value, projectId) {
     }
     return value;
 }
-exports.e$ = replaceProjectIdToken;
 /**
  * Custom error type for missing project ID errors.
  */
 class MissingProjectIdError extends Error {
-    constructor() {
-        super(...arguments);
-        this.message = `Sorry, we cannot connect to Cloud Services without a project
+    message = `Sorry, we cannot connect to Cloud Services without a project
     ID. You may specify one with an environment variable named
     "GOOGLE_CLOUD_PROJECT".`.replace(/ +/g, ' ');
-    }
 }
 exports.$d = MissingProjectIdError;
 //# sourceMappingURL=index.js.map
@@ -385,7 +391,10 @@ exports.$d = MissingProjectIdError;
 
 /* eslint-disable prefer-rest-params */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.callbackifyAll = exports.callbackify = exports.promisifyAll = exports.promisify = void 0;
+exports.promisify = promisify;
+exports.promisifyAll = promisifyAll;
+exports.callbackify = callbackify;
+exports.callbackifyAll = callbackifyAll;
 /**
  * Wraps a callback style function to conditionally return a promise.
  *
@@ -444,7 +453,6 @@ function promisify(originalMethod, options) {
     wrapper.promisified_ = true;
     return wrapper;
 }
-exports.promisify = promisify;
 /**
  * Promisifies certain Class methods. This will not promisify private or
  * streaming methods.
@@ -471,7 +479,6 @@ function promisifyAll(Class, options) {
         }
     });
 }
-exports.promisifyAll = promisifyAll;
 /**
  * Wraps a promisy type function to conditionally call a callback function.
  *
@@ -500,7 +507,6 @@ function callbackify(originalMethod) {
     wrapper.callbackified_ = true;
     return wrapper;
 }
-exports.callbackify = callbackify;
 /**
  * Callbackifies certain Class methods. This will not callbackify private or
  * streaming methods.
@@ -528,7 +534,6 @@ Class, options) {
         }
     });
 }
-exports.callbackifyAll = callbackifyAll;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -5430,46 +5435,6 @@ exports.ReflectionTypeCheck = ReflectionTypeCheck;
 
 /***/ }),
 
-/***/ 8662:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-function once(emitter, name, { signal } = {}) {
-    return new Promise((resolve, reject) => {
-        function cleanup() {
-            signal === null || signal === void 0 ? void 0 : signal.removeEventListener('abort', onAbort);
-            emitter.removeListener(name, onEvent);
-            emitter.removeListener('error', onError);
-        }
-        function onEvent(...args) {
-            cleanup();
-            resolve(args);
-        }
-        function onError(err) {
-            cleanup();
-            reject(err);
-        }
-        function onAbort() {
-            cleanup();
-            const err = new Error('The operation was aborted');
-            err.name = 'AbortError';
-            reject(err);
-        }
-        if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
-            onAbort();
-            return;
-        }
-        signal === null || signal === void 0 ? void 0 : signal.addEventListener('abort', onAbort);
-        emitter.on(name, onEvent);
-        emitter.on('error', onError);
-    });
-}
-exports["default"] = once;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
 /***/ 7413:
 /***/ ((module, exports, __nccwpck_require__) => {
 
@@ -5857,36 +5822,6 @@ class Agent extends http.Agent {
 }
 exports.Agent = Agent;
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 6251:
-/***/ ((module) => {
-
-
-
-const arrify = value => {
-	if (value === null || value === undefined) {
-		return [];
-	}
-
-	if (Array.isArray(value)) {
-		return value;
-	}
-
-	if (typeof value === 'string') {
-		return [value];
-	}
-
-	if (typeof value[Symbol.iterator] === 'function') {
-		return [...value];
-	}
-
-	return [value];
-};
-
-module.exports = arrify;
-
 
 /***/ }),
 
@@ -29057,7 +28992,7 @@ function getNextRetryDelay(config) {
   return Math.min(
     calculatedNextRetryDelay,
     maxAllowableDelayMs,
-    maxRetryDelayMs
+    maxRetryDelayMs,
   );
 }
 
@@ -32625,20 +32560,20 @@ exports.TeenyStatistics = exports.TeenyStatisticsWarning = void 0;
  * @see process.emitWarning
  */
 class TeenyStatisticsWarning extends Error {
+    static CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning';
+    threshold = 0;
+    type = '';
+    value = 0;
     /**
      * @param {string} message
      */
     constructor(message) {
         super(message);
-        this.threshold = 0;
-        this.type = '';
-        this.value = 0;
         this.name = this.constructor.name;
         Error.captureStackTrace(this, this.constructor);
     }
 }
 exports.TeenyStatisticsWarning = TeenyStatisticsWarning;
-TeenyStatisticsWarning.CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning';
 /**
  * @class TeenyStatistics
  * @description Maintain various statistics internal to teeny-request. Tracking
@@ -32646,21 +32581,35 @@ TeenyStatisticsWarning.CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning'
  */
 class TeenyStatistics {
     /**
+     * @description A default threshold representing when to warn about excessive
+     *   in-flight/concurrent requests.
+     * @type {number}
+     * @static
+     * @readonly
+     * @default 5000
+     */
+    static DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
+    /**
+     * @type {TeenyStatisticsConfig}
+     * @private
+     */
+    _options;
+    /**
+     * @type {number}
+     * @private
+     * @default 0
+     */
+    _concurrentRequests = 0;
+    /**
+     * @type {boolean}
+     * @private
+     * @default false
+     */
+    _didConcurrentRequestWarn = false;
+    /**
      * @param {TeenyStatisticsOptions} [opts]
      */
     constructor(opts) {
-        /**
-         * @type {number}
-         * @private
-         * @default 0
-         */
-        this._concurrentRequests = 0;
-        /**
-         * @type {boolean}
-         * @private
-         * @default false
-         */
-        this._didConcurrentRequestWarn = false;
         this._options = TeenyStatistics._prepareOptions(opts);
     }
     /**
@@ -32744,15 +32693,6 @@ class TeenyStatistics {
     }
 }
 exports.TeenyStatistics = TeenyStatistics;
-/**
- * @description A default threshold representing when to warn about excessive
- *   in-flight/concurrent requests.
- * @type {number}
- * @static
- * @readonly
- * @default 5000
- */
-TeenyStatistics.DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
 //# sourceMappingURL=TeenyStatistics.js.map
 
 /***/ }),
@@ -32778,11 +32718,10 @@ TeenyStatistics.DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getAgent = exports.pool = void 0;
+exports.pool = void 0;
+exports.getAgent = getAgent;
 const http_1 = __nccwpck_require__(8611);
 const https_1 = __nccwpck_require__(5692);
-// eslint-disable-next-line node/no-deprecated-api
-const url_1 = __nccwpck_require__(7016);
 exports.pool = new Map();
 /**
  * Determines if a proxy should be considered based on the environment.
@@ -32830,11 +32769,10 @@ function getAgent(uri, reqOpts) {
     const shouldUseProxy = manuallyProvidedProxy || shouldUseProxyForURI(uri);
     if (proxy && shouldUseProxy) {
         // tslint:disable-next-line variable-name
-        const Agent = isHttp
-            ? __nccwpck_require__(875)
-            : __nccwpck_require__(6518);
-        const proxyOpts = { ...(0, url_1.parse)(proxy), ...poolOptions };
-        return new Agent(proxyOpts);
+        const { HttpProxyAgent } = __nccwpck_require__(1970);
+        const { HttpsProxyAgent } = __nccwpck_require__(3669);
+        const Agent = isHttp ? HttpProxyAgent : HttpsProxyAgent;
+        return new Agent(proxy, poolOptions);
     }
     let key = isHttp ? 'http' : 'https';
     if (reqOpts.forever) {
@@ -32847,7 +32785,6 @@ function getAgent(uri, reqOpts) {
     }
     return exports.pool.get(key);
 }
-exports.getAgent = getAgent;
 //# sourceMappingURL=agents.js.map
 
 /***/ }),
@@ -32874,15 +32811,17 @@ var __webpack_unused_export__;
  * limitations under the License.
  */
 __webpack_unused_export__ = ({ value: true });
-exports.V6 = __webpack_unused_export__ = void 0;
-const node_fetch_1 = __nccwpck_require__(6705);
+__webpack_unused_export__ = void 0;
+exports.V6 = teenyRequest;
 const stream_1 = __nccwpck_require__(2203);
-const uuid = __nccwpck_require__(2048);
 const agents_1 = __nccwpck_require__(4003);
 const TeenyStatistics_1 = __nccwpck_require__(7745);
+const crypto_1 = __nccwpck_require__(6982);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const streamEvents = __nccwpck_require__(1546);
+const fetch = (...args) => __nccwpck_require__.e(/* import() */ 674).then(__nccwpck_require__.bind(__nccwpck_require__, 674)).then(({ default: fetch }) => fetch(...args));
 class RequestError extends Error {
+    code;
 }
 __webpack_unused_export__ = RequestError;
 /**
@@ -32899,7 +32838,12 @@ function requestToFetchOptions(reqOpts) {
     if (typeof reqOpts.json === 'object') {
         // Add Content-type: application/json header
         reqOpts.headers = reqOpts.headers || {};
-        reqOpts.headers['Content-Type'] = 'application/json';
+        if (reqOpts.headers instanceof globalThis.Headers) {
+            reqOpts.headers.set('Content-Type', 'application/json');
+        }
+        else {
+            reqOpts.headers['Content-Type'] = 'application/json';
+        }
         // Set body to JSON representation of value
         options.body = JSON.stringify(reqOpts.json);
     }
@@ -32914,8 +32858,16 @@ function requestToFetchOptions(reqOpts) {
             options.body = reqOpts.body;
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options.headers = reqOpts.headers;
+    if (reqOpts.headers instanceof globalThis.Headers) {
+        options.headers = {};
+        for (const pair of reqOpts.headers.entries()) {
+            options.headers[pair[0]] = pair[1];
+        }
+    }
+    else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        options.headers = reqOpts.headers;
+    }
     let uri = (reqOpts.uri ||
         reqOpts.url);
     if (!uri) {
@@ -32990,12 +32942,13 @@ function teenyRequest(reqOpts, callback) {
             // TODO: add support for multipart uploads through streaming
             throw new Error('Multipart without callback is not implemented.');
         }
-        const boundary = uuid.v4();
-        options.headers['Content-Type'] = `multipart/related; boundary=${boundary}`;
+        const boundary = (0, crypto_1.randomUUID)();
+        options.headers['Content-Type'] =
+            `multipart/related; boundary=${boundary}`;
         options.body = createMultipartStream(boundary, multipart);
         // Multipart upload
         teenyRequest.stats.requestStarting();
-        (0, node_fetch_1.default)(uri, options).then(res => {
+        fetch(uri, options).then(res => {
             teenyRequest.stats.requestFinished();
             const header = res.headers.get('content-type');
             const response = fetchToRequestResponse(options, res);
@@ -33039,7 +32992,7 @@ function teenyRequest(reqOpts, callback) {
         });
         options.compress = false;
         teenyRequest.stats.requestStarting();
-        (0, node_fetch_1.default)(uri, options).then(res => {
+        fetch(uri, options).then(res => {
             teenyRequest.stats.requestFinished();
             responseStream = res.body;
             responseStream.on('error', (err) => {
@@ -33058,7 +33011,7 @@ function teenyRequest(reqOpts, callback) {
     }
     // GET or POST with callback
     teenyRequest.stats.requestStarting();
-    (0, node_fetch_1.default)(uri, options).then(res => {
+    fetch(uri, options).then(res => {
         teenyRequest.stats.requestFinished();
         const header = res.headers.get('content-type');
         const response = fetchToRequestResponse(options, res);
@@ -33091,7 +33044,6 @@ function teenyRequest(reqOpts, callback) {
     });
     return;
 }
-exports.V6 = teenyRequest;
 teenyRequest.defaults = (defaults) => {
     return (reqOpts, callback) => {
         const opts = { ...defaults, ...reqOpts };
@@ -33109,685 +33061,6 @@ teenyRequest.resetStats = () => {
     teenyRequest.stats = new TeenyStatistics_1.TeenyStatistics(teenyRequest.stats.getOptions());
 };
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 7954:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const events_1 = __nccwpck_require__(4434);
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const promisify_1 = __importDefault(__nccwpck_require__(4446));
-const debug = debug_1.default('agent-base');
-function isAgent(v) {
-    return Boolean(v) && typeof v.addRequest === 'function';
-}
-function isSecureEndpoint() {
-    const { stack } = new Error();
-    if (typeof stack !== 'string')
-        return false;
-    return stack.split('\n').some(l => l.indexOf('(https.js:') !== -1 || l.indexOf('node:https:') !== -1);
-}
-function createAgent(callback, opts) {
-    return new createAgent.Agent(callback, opts);
-}
-(function (createAgent) {
-    /**
-     * Base `http.Agent` implementation.
-     * No pooling/keep-alive is implemented by default.
-     *
-     * @param {Function} callback
-     * @api public
-     */
-    class Agent extends events_1.EventEmitter {
-        constructor(callback, _opts) {
-            super();
-            let opts = _opts;
-            if (typeof callback === 'function') {
-                this.callback = callback;
-            }
-            else if (callback) {
-                opts = callback;
-            }
-            // Timeout for the socket to be returned from the callback
-            this.timeout = null;
-            if (opts && typeof opts.timeout === 'number') {
-                this.timeout = opts.timeout;
-            }
-            // These aren't actually used by `agent-base`, but are required
-            // for the TypeScript definition files in `@types/node` :/
-            this.maxFreeSockets = 1;
-            this.maxSockets = 1;
-            this.maxTotalSockets = Infinity;
-            this.sockets = {};
-            this.freeSockets = {};
-            this.requests = {};
-            this.options = {};
-        }
-        get defaultPort() {
-            if (typeof this.explicitDefaultPort === 'number') {
-                return this.explicitDefaultPort;
-            }
-            return isSecureEndpoint() ? 443 : 80;
-        }
-        set defaultPort(v) {
-            this.explicitDefaultPort = v;
-        }
-        get protocol() {
-            if (typeof this.explicitProtocol === 'string') {
-                return this.explicitProtocol;
-            }
-            return isSecureEndpoint() ? 'https:' : 'http:';
-        }
-        set protocol(v) {
-            this.explicitProtocol = v;
-        }
-        callback(req, opts, fn) {
-            throw new Error('"agent-base" has no default implementation, you must subclass and override `callback()`');
-        }
-        /**
-         * Called by node-core's "_http_client.js" module when creating
-         * a new HTTP request with this Agent instance.
-         *
-         * @api public
-         */
-        addRequest(req, _opts) {
-            const opts = Object.assign({}, _opts);
-            if (typeof opts.secureEndpoint !== 'boolean') {
-                opts.secureEndpoint = isSecureEndpoint();
-            }
-            if (opts.host == null) {
-                opts.host = 'localhost';
-            }
-            if (opts.port == null) {
-                opts.port = opts.secureEndpoint ? 443 : 80;
-            }
-            if (opts.protocol == null) {
-                opts.protocol = opts.secureEndpoint ? 'https:' : 'http:';
-            }
-            if (opts.host && opts.path) {
-                // If both a `host` and `path` are specified then it's most
-                // likely the result of a `url.parse()` call... we need to
-                // remove the `path` portion so that `net.connect()` doesn't
-                // attempt to open that as a unix socket file.
-                delete opts.path;
-            }
-            delete opts.agent;
-            delete opts.hostname;
-            delete opts._defaultAgent;
-            delete opts.defaultPort;
-            delete opts.createConnection;
-            // Hint to use "Connection: close"
-            // XXX: non-documented `http` module API :(
-            req._last = true;
-            req.shouldKeepAlive = false;
-            let timedOut = false;
-            let timeoutId = null;
-            const timeoutMs = opts.timeout || this.timeout;
-            const onerror = (err) => {
-                if (req._hadError)
-                    return;
-                req.emit('error', err);
-                // For Safety. Some additional errors might fire later on
-                // and we need to make sure we don't double-fire the error event.
-                req._hadError = true;
-            };
-            const ontimeout = () => {
-                timeoutId = null;
-                timedOut = true;
-                const err = new Error(`A "socket" was not created for HTTP request before ${timeoutMs}ms`);
-                err.code = 'ETIMEOUT';
-                onerror(err);
-            };
-            const callbackError = (err) => {
-                if (timedOut)
-                    return;
-                if (timeoutId !== null) {
-                    clearTimeout(timeoutId);
-                    timeoutId = null;
-                }
-                onerror(err);
-            };
-            const onsocket = (socket) => {
-                if (timedOut)
-                    return;
-                if (timeoutId != null) {
-                    clearTimeout(timeoutId);
-                    timeoutId = null;
-                }
-                if (isAgent(socket)) {
-                    // `socket` is actually an `http.Agent` instance, so
-                    // relinquish responsibility for this `req` to the Agent
-                    // from here on
-                    debug('Callback returned another Agent instance %o', socket.constructor.name);
-                    socket.addRequest(req, opts);
-                    return;
-                }
-                if (socket) {
-                    socket.once('free', () => {
-                        this.freeSocket(socket, opts);
-                    });
-                    req.onSocket(socket);
-                    return;
-                }
-                const err = new Error(`no Duplex stream was returned to agent-base for \`${req.method} ${req.path}\``);
-                onerror(err);
-            };
-            if (typeof this.callback !== 'function') {
-                onerror(new Error('`callback` is not defined'));
-                return;
-            }
-            if (!this.promisifiedCallback) {
-                if (this.callback.length >= 3) {
-                    debug('Converting legacy callback function to promise');
-                    this.promisifiedCallback = promisify_1.default(this.callback);
-                }
-                else {
-                    this.promisifiedCallback = this.callback;
-                }
-            }
-            if (typeof timeoutMs === 'number' && timeoutMs > 0) {
-                timeoutId = setTimeout(ontimeout, timeoutMs);
-            }
-            if ('port' in opts && typeof opts.port !== 'number') {
-                opts.port = Number(opts.port);
-            }
-            try {
-                debug('Resolving socket for %o request: %o', opts.protocol, `${req.method} ${req.path}`);
-                Promise.resolve(this.promisifiedCallback(req, opts)).then(onsocket, callbackError);
-            }
-            catch (err) {
-                Promise.reject(err).catch(callbackError);
-            }
-        }
-        freeSocket(socket, opts) {
-            debug('Freeing socket %o %o', socket.constructor.name, opts);
-            socket.destroy();
-        }
-        destroy() {
-            debug('Destroying agent %o', this.constructor.name);
-        }
-    }
-    createAgent.Agent = Agent;
-    // So that `instanceof` works correctly
-    createAgent.prototype = createAgent.Agent.prototype;
-})(createAgent || (createAgent = {}));
-module.exports = createAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 4446:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-function promisify(fn) {
-    return function (req, opts) {
-        return new Promise((resolve, reject) => {
-            fn.call(this, req, opts, (err, rtn) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve(rtn);
-                }
-            });
-        });
-    };
-}
-exports["default"] = promisify;
-//# sourceMappingURL=promisify.js.map
-
-/***/ }),
-
-/***/ 3034:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const net_1 = __importDefault(__nccwpck_require__(9278));
-const tls_1 = __importDefault(__nccwpck_require__(4756));
-const url_1 = __importDefault(__nccwpck_require__(7016));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const once_1 = __importDefault(__nccwpck_require__(8662));
-const agent_base_1 = __nccwpck_require__(7954);
-const debug = (0, debug_1.default)('http-proxy-agent');
-function isHTTPS(protocol) {
-    return typeof protocol === 'string' ? /^https:?$/i.test(protocol) : false;
-}
-/**
- * The `HttpProxyAgent` implements an HTTP Agent subclass that connects
- * to the specified "HTTP proxy server" in order to proxy HTTP requests.
- *
- * @api public
- */
-class HttpProxyAgent extends agent_base_1.Agent {
-    constructor(_opts) {
-        let opts;
-        if (typeof _opts === 'string') {
-            opts = url_1.default.parse(_opts);
-        }
-        else {
-            opts = _opts;
-        }
-        if (!opts) {
-            throw new Error('an HTTP(S) proxy server `host` and `port` must be specified!');
-        }
-        debug('Creating new HttpProxyAgent instance: %o', opts);
-        super(opts);
-        const proxy = Object.assign({}, opts);
-        // If `true`, then connect to the proxy server over TLS.
-        // Defaults to `false`.
-        this.secureProxy = opts.secureProxy || isHTTPS(proxy.protocol);
-        // Prefer `hostname` over `host`, and set the `port` if needed.
-        proxy.host = proxy.hostname || proxy.host;
-        if (typeof proxy.port === 'string') {
-            proxy.port = parseInt(proxy.port, 10);
-        }
-        if (!proxy.port && proxy.host) {
-            proxy.port = this.secureProxy ? 443 : 80;
-        }
-        if (proxy.host && proxy.path) {
-            // If both a `host` and `path` are specified then it's most likely
-            // the result of a `url.parse()` call... we need to remove the
-            // `path` portion so that `net.connect()` doesn't attempt to open
-            // that as a Unix socket file.
-            delete proxy.path;
-            delete proxy.pathname;
-        }
-        this.proxy = proxy;
-    }
-    /**
-     * Called when the node-core HTTP client library is creating a
-     * new HTTP request.
-     *
-     * @api protected
-     */
-    callback(req, opts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { proxy, secureProxy } = this;
-            const parsed = url_1.default.parse(req.path);
-            if (!parsed.protocol) {
-                parsed.protocol = 'http:';
-            }
-            if (!parsed.hostname) {
-                parsed.hostname = opts.hostname || opts.host || null;
-            }
-            if (parsed.port == null && typeof opts.port) {
-                parsed.port = String(opts.port);
-            }
-            if (parsed.port === '80') {
-                // if port is 80, then we can remove the port so that the
-                // ":80" portion is not on the produced URL
-                parsed.port = '';
-            }
-            // Change the `http.ClientRequest` instance's "path" field
-            // to the absolute path of the URL that will be requested.
-            req.path = url_1.default.format(parsed);
-            // Inject the `Proxy-Authorization` header if necessary.
-            if (proxy.auth) {
-                req.setHeader('Proxy-Authorization', `Basic ${Buffer.from(proxy.auth).toString('base64')}`);
-            }
-            // Create a socket connection to the proxy server.
-            let socket;
-            if (secureProxy) {
-                debug('Creating `tls.Socket`: %o', proxy);
-                socket = tls_1.default.connect(proxy);
-            }
-            else {
-                debug('Creating `net.Socket`: %o', proxy);
-                socket = net_1.default.connect(proxy);
-            }
-            // At this point, the http ClientRequest's internal `_header` field
-            // might have already been set. If this is the case then we'll need
-            // to re-generate the string since we just changed the `req.path`.
-            if (req._header) {
-                let first;
-                let endOfHeaders;
-                debug('Regenerating stored HTTP header string for request');
-                req._header = null;
-                req._implicitHeader();
-                if (req.output && req.output.length > 0) {
-                    // Node < 12
-                    debug('Patching connection write() output buffer with updated header');
-                    first = req.output[0];
-                    endOfHeaders = first.indexOf('\r\n\r\n') + 4;
-                    req.output[0] = req._header + first.substring(endOfHeaders);
-                    debug('Output buffer: %o', req.output);
-                }
-                else if (req.outputData && req.outputData.length > 0) {
-                    // Node >= 12
-                    debug('Patching connection write() output buffer with updated header');
-                    first = req.outputData[0].data;
-                    endOfHeaders = first.indexOf('\r\n\r\n') + 4;
-                    req.outputData[0].data =
-                        req._header + first.substring(endOfHeaders);
-                    debug('Output buffer: %o', req.outputData[0].data);
-                }
-            }
-            // Wait for the socket's `connect` event, so that this `callback()`
-            // function throws instead of the `http` request machinery. This is
-            // important for i.e. `PacProxyAgent` which determines a failed proxy
-            // connection via the `callback()` function throwing.
-            yield (0, once_1.default)(socket, 'connect');
-            return socket;
-        });
-    }
-}
-exports["default"] = HttpProxyAgent;
-//# sourceMappingURL=agent.js.map
-
-/***/ }),
-
-/***/ 875:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const agent_1 = __importDefault(__nccwpck_require__(3034));
-function createHttpProxyAgent(opts) {
-    return new agent_1.default(opts);
-}
-(function (createHttpProxyAgent) {
-    createHttpProxyAgent.HttpProxyAgent = agent_1.default;
-    createHttpProxyAgent.prototype = agent_1.default.prototype;
-})(createHttpProxyAgent || (createHttpProxyAgent = {}));
-module.exports = createHttpProxyAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 5299:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const net_1 = __importDefault(__nccwpck_require__(9278));
-const tls_1 = __importDefault(__nccwpck_require__(4756));
-const url_1 = __importDefault(__nccwpck_require__(7016));
-const assert_1 = __importDefault(__nccwpck_require__(2613));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const agent_base_1 = __nccwpck_require__(7954);
-const parse_proxy_response_1 = __importDefault(__nccwpck_require__(7742));
-const debug = debug_1.default('https-proxy-agent:agent');
-/**
- * The `HttpsProxyAgent` implements an HTTP Agent subclass that connects to
- * the specified "HTTP(s) proxy server" in order to proxy HTTPS requests.
- *
- * Outgoing HTTP requests are first tunneled through the proxy server using the
- * `CONNECT` HTTP request method to establish a connection to the proxy server,
- * and then the proxy server connects to the destination target and issues the
- * HTTP request from the proxy server.
- *
- * `https:` requests have their socket connection upgraded to TLS once
- * the connection to the proxy server has been established.
- *
- * @api public
- */
-class HttpsProxyAgent extends agent_base_1.Agent {
-    constructor(_opts) {
-        let opts;
-        if (typeof _opts === 'string') {
-            opts = url_1.default.parse(_opts);
-        }
-        else {
-            opts = _opts;
-        }
-        if (!opts) {
-            throw new Error('an HTTP(S) proxy server `host` and `port` must be specified!');
-        }
-        debug('creating new HttpsProxyAgent instance: %o', opts);
-        super(opts);
-        const proxy = Object.assign({}, opts);
-        // If `true`, then connect to the proxy server over TLS.
-        // Defaults to `false`.
-        this.secureProxy = opts.secureProxy || isHTTPS(proxy.protocol);
-        // Prefer `hostname` over `host`, and set the `port` if needed.
-        proxy.host = proxy.hostname || proxy.host;
-        if (typeof proxy.port === 'string') {
-            proxy.port = parseInt(proxy.port, 10);
-        }
-        if (!proxy.port && proxy.host) {
-            proxy.port = this.secureProxy ? 443 : 80;
-        }
-        // ALPN is supported by Node.js >= v5.
-        // attempt to negotiate http/1.1 for proxy servers that support http/2
-        if (this.secureProxy && !('ALPNProtocols' in proxy)) {
-            proxy.ALPNProtocols = ['http 1.1'];
-        }
-        if (proxy.host && proxy.path) {
-            // If both a `host` and `path` are specified then it's most likely
-            // the result of a `url.parse()` call... we need to remove the
-            // `path` portion so that `net.connect()` doesn't attempt to open
-            // that as a Unix socket file.
-            delete proxy.path;
-            delete proxy.pathname;
-        }
-        this.proxy = proxy;
-    }
-    /**
-     * Called when the node-core HTTP client library is creating a
-     * new HTTP request.
-     *
-     * @api protected
-     */
-    callback(req, opts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { proxy, secureProxy } = this;
-            // Create a socket connection to the proxy server.
-            let socket;
-            if (secureProxy) {
-                debug('Creating `tls.Socket`: %o', proxy);
-                socket = tls_1.default.connect(proxy);
-            }
-            else {
-                debug('Creating `net.Socket`: %o', proxy);
-                socket = net_1.default.connect(proxy);
-            }
-            const headers = Object.assign({}, proxy.headers);
-            const hostname = `${opts.host}:${opts.port}`;
-            let payload = `CONNECT ${hostname} HTTP/1.1\r\n`;
-            // Inject the `Proxy-Authorization` header if necessary.
-            if (proxy.auth) {
-                headers['Proxy-Authorization'] = `Basic ${Buffer.from(proxy.auth).toString('base64')}`;
-            }
-            // The `Host` header should only include the port
-            // number when it is not the default port.
-            let { host, port, secureEndpoint } = opts;
-            if (!isDefaultPort(port, secureEndpoint)) {
-                host += `:${port}`;
-            }
-            headers.Host = host;
-            headers.Connection = 'close';
-            for (const name of Object.keys(headers)) {
-                payload += `${name}: ${headers[name]}\r\n`;
-            }
-            const proxyResponsePromise = parse_proxy_response_1.default(socket);
-            socket.write(`${payload}\r\n`);
-            const { statusCode, buffered } = yield proxyResponsePromise;
-            if (statusCode === 200) {
-                req.once('socket', resume);
-                if (opts.secureEndpoint) {
-                    // The proxy is connecting to a TLS server, so upgrade
-                    // this socket connection to a TLS connection.
-                    debug('Upgrading socket connection to TLS');
-                    const servername = opts.servername || opts.host;
-                    return tls_1.default.connect(Object.assign(Object.assign({}, omit(opts, 'host', 'hostname', 'path', 'port')), { socket,
-                        servername }));
-                }
-                return socket;
-            }
-            // Some other status code that's not 200... need to re-play the HTTP
-            // header "data" events onto the socket once the HTTP machinery is
-            // attached so that the node core `http` can parse and handle the
-            // error status code.
-            // Close the original socket, and a new "fake" socket is returned
-            // instead, so that the proxy doesn't get the HTTP request
-            // written to it (which may contain `Authorization` headers or other
-            // sensitive data).
-            //
-            // See: https://hackerone.com/reports/541502
-            socket.destroy();
-            const fakeSocket = new net_1.default.Socket({ writable: false });
-            fakeSocket.readable = true;
-            // Need to wait for the "socket" event to re-play the "data" events.
-            req.once('socket', (s) => {
-                debug('replaying proxy buffer for failed request');
-                assert_1.default(s.listenerCount('data') > 0);
-                // Replay the "buffered" Buffer onto the fake `socket`, since at
-                // this point the HTTP module machinery has been hooked up for
-                // the user.
-                s.push(buffered);
-                s.push(null);
-            });
-            return fakeSocket;
-        });
-    }
-}
-exports["default"] = HttpsProxyAgent;
-function resume(socket) {
-    socket.resume();
-}
-function isDefaultPort(port, secure) {
-    return Boolean((!secure && port === 80) || (secure && port === 443));
-}
-function isHTTPS(protocol) {
-    return typeof protocol === 'string' ? /^https:?$/i.test(protocol) : false;
-}
-function omit(obj, ...keys) {
-    const ret = {};
-    let key;
-    for (key in obj) {
-        if (!keys.includes(key)) {
-            ret[key] = obj[key];
-        }
-    }
-    return ret;
-}
-//# sourceMappingURL=agent.js.map
-
-/***/ }),
-
-/***/ 6518:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const agent_1 = __importDefault(__nccwpck_require__(5299));
-function createHttpsProxyAgent(opts) {
-    return new agent_1.default(opts);
-}
-(function (createHttpsProxyAgent) {
-    createHttpsProxyAgent.HttpsProxyAgent = agent_1.default;
-    createHttpsProxyAgent.prototype = agent_1.default.prototype;
-})(createHttpsProxyAgent || (createHttpsProxyAgent = {}));
-module.exports = createHttpsProxyAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 7742:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const debug = debug_1.default('https-proxy-agent:parse-proxy-response');
-function parseProxyResponse(socket) {
-    return new Promise((resolve, reject) => {
-        // we need to buffer any HTTP traffic that happens with the proxy before we get
-        // the CONNECT response, so that if the response is anything other than an "200"
-        // response code, then we can re-play the "data" events on the socket once the
-        // HTTP parser is hooked up...
-        let buffersLength = 0;
-        const buffers = [];
-        function read() {
-            const b = socket.read();
-            if (b)
-                ondata(b);
-            else
-                socket.once('readable', read);
-        }
-        function cleanup() {
-            socket.removeListener('end', onend);
-            socket.removeListener('error', onerror);
-            socket.removeListener('close', onclose);
-            socket.removeListener('readable', read);
-        }
-        function onclose(err) {
-            debug('onclose had error %o', err);
-        }
-        function onend() {
-            debug('onend');
-        }
-        function onerror(err) {
-            cleanup();
-            debug('onerror %o', err);
-            reject(err);
-        }
-        function ondata(b) {
-            buffers.push(b);
-            buffersLength += b.length;
-            const buffered = Buffer.concat(buffers, buffersLength);
-            const endOfHeaders = buffered.indexOf('\r\n\r\n');
-            if (endOfHeaders === -1) {
-                // keep buffering
-                debug('have not received end of HTTP headers yet...');
-                read();
-                return;
-            }
-            const firstLine = buffered.toString('ascii', 0, buffered.indexOf('\r\n'));
-            const statusCode = +firstLine.split(' ')[1];
-            debug('got proxy server response: %o', firstLine);
-            resolve({
-                statusCode,
-                buffered
-            });
-        }
-        socket.on('error', onerror);
-        socket.on('close', onclose);
-        socket.on('end', onend);
-        read();
-    });
-}
-exports["default"] = parseProxyResponse;
-//# sourceMappingURL=parse-proxy-response.js.map
 
 /***/ }),
 
@@ -62003,671 +61276,6 @@ module.exports = __nccwpck_require__(9023).deprecate;
 
 /***/ }),
 
-/***/ 2048:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(6415));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(1697));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(4676));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(9771));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(7723));
-
-var _version = _interopRequireDefault(__nccwpck_require__(5868));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(7597));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(7267));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 216:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 4221:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var _default = {
-  randomUUID: _crypto.default.randomUUID
-};
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7723:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7267:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7879:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2973:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 507:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7597:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-exports.unsafeStringify = unsafeStringify;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).slice(1));
-}
-
-function unsafeStringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
-}
-
-function stringify(arr, offset = 0) {
-  const uuid = unsafeStringify(arr, offset); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6415:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(2973));
-
-var _stringify = __nccwpck_require__(7597);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.unsafeStringify)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 1697:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(2930));
-
-var _md = _interopRequireDefault(__nccwpck_require__(216));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2930:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.URL = exports.DNS = void 0;
-exports["default"] = v35;
-
-var _stringify = __nccwpck_require__(7597);
-
-var _parse = _interopRequireDefault(__nccwpck_require__(7267));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function v35(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    var _namespace;
-
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (((_namespace = namespace) === null || _namespace === void 0 ? void 0 : _namespace.length) !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.unsafeStringify)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 4676:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _native = _interopRequireDefault(__nccwpck_require__(4221));
-
-var _rng = _interopRequireDefault(__nccwpck_require__(2973));
-
-var _stringify = __nccwpck_require__(7597);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  if (_native.default.randomUUID && !buf && !options) {
-    return _native.default.randomUUID();
-  }
-
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.unsafeStringify)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 9771:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(2930));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(507));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6200:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(7879));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5868:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.slice(14, 15), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
 /***/ 7125:
 /***/ ((module) => {
 
@@ -64873,6 +63481,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:events"
 
 /***/ }),
 
+/***/ 3024:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+
+/***/ }),
+
 /***/ 7067:
 /***/ ((module) => {
 
@@ -64887,10 +63502,24 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:http2")
 
 /***/ }),
 
+/***/ 4708:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:https");
+
+/***/ }),
+
 /***/ 7030:
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:net");
+
+/***/ }),
+
+/***/ 6760:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 
 /***/ }),
 
@@ -64919,6 +63548,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:queryst
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream");
+
+/***/ }),
+
+/***/ 7830:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream/web");
 
 /***/ }),
 
@@ -65034,6 +63670,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 
 /***/ }),
 
+/***/ 8167:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("worker_threads");
+
+/***/ }),
+
 /***/ 3106:
 /***/ ((module) => {
 
@@ -65133,7 +63776,7 @@ module.exports = /*#__PURE__*/JSON.parse('{"name":"@actions/cache","version":"6.
 /***/ 2721:
 /***/ ((module) => {
 
-module.exports = /*#__PURE__*/JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.21.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=14"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mocha build/esm/system-test --timeout 600000 --exit","system-test":"mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\'--no-deprecation\' c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.10","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.3.1","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
+module.exports = /*#__PURE__*/JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"8.0.1","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=22"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mkdir -p $HOME/.config && mocha build/esm/system-test --timeout 600000 --exit","system-test":"mkdir -p $HOME/.config && mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\\"--require ./scripts/preload-yargs.cjs --no-deprecation\\" c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^7.0.1","@google-cloud/projectify":"^6.0.1","@google-cloud/promisify":"^6.0.1","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^9.0.1","teeny-request":"^11.0.1"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^6.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.35","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^2.0.1","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^6.0.0","jsdoc-region-tag":"^5.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^5.0.1","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.7.2","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
 
 /***/ }),
 
@@ -65190,6 +63833,9 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 	return module.exports;
 /******/ }
 /******/ 
+/******/ // expose the modules object (__webpack_modules__)
+/******/ __nccwpck_require__.m = __webpack_modules__;
+/******/ 
 /************************************************************************/
 /******/ /* webpack/runtime/compat get default export */
 /******/ (() => {
@@ -65245,6 +63891,28 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 	};
 /******/ })();
 /******/ 
+/******/ /* webpack/runtime/ensure chunk */
+/******/ (() => {
+/******/ 	__nccwpck_require__.f = {};
+/******/ 	// This file contains only the entry chunk.
+/******/ 	// The chunk loading function for additional chunks
+/******/ 	__nccwpck_require__.e = (chunkId) => {
+/******/ 		return Promise.all(Object.keys(__nccwpck_require__.f).reduce((promises, key) => {
+/******/ 			__nccwpck_require__.f[key](chunkId, promises);
+/******/ 			return promises;
+/******/ 		}, []));
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/get javascript chunk filename */
+/******/ (() => {
+/******/ 	// This function allow to reference async chunks
+/******/ 	__nccwpck_require__.u = (chunkId) => {
+/******/ 		// return url for filenames based on template
+/******/ 		return "" + chunkId + ".index.js";
+/******/ 	};
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/hasOwnProperty shorthand */
 /******/ (() => {
 /******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
@@ -65264,6 +63932,69 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ /* webpack/runtime/compat */
 /******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
+/******/ /* webpack/runtime/import chunk loading */
+/******/ (() => {
+/******/ 	// no baseURI
+/******/ 	
+/******/ 	// object to store loaded and loading chunks
+/******/ 	// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 	// [resolve, Promise] = chunk loading, 0 = chunk loaded
+/******/ 	var installedChunks = {
+/******/ 		792: 0
+/******/ 	};
+/******/ 	
+/******/ 	var installChunk = (data) => {
+/******/ 		var {ids, modules, runtime} = data;
+/******/ 		// add "modules" to the modules object,
+/******/ 		// then flag all "ids" as loaded and fire callback
+/******/ 		var moduleId, chunkId, i = 0;
+/******/ 		for(moduleId in modules) {
+/******/ 			if(__nccwpck_require__.o(modules, moduleId)) {
+/******/ 				__nccwpck_require__.m[moduleId] = modules[moduleId];
+/******/ 			}
+/******/ 		}
+/******/ 		if(runtime) runtime(__nccwpck_require__);
+/******/ 		for(;i < ids.length; i++) {
+/******/ 			chunkId = ids[i];
+/******/ 			if(__nccwpck_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 				installedChunks[chunkId][0]();
+/******/ 			}
+/******/ 			installedChunks[ids[i]] = 0;
+/******/ 		}
+/******/ 	
+/******/ 	}
+/******/ 	
+/******/ 	__nccwpck_require__.f.j = (chunkId, promises) => {
+/******/ 			// import() chunk loading for javascript
+/******/ 			var installedChunkData = __nccwpck_require__.o(installedChunks, chunkId) ? installedChunks[chunkId] : undefined;
+/******/ 			if(installedChunkData !== 0) { // 0 means "already installed".
+/******/ 	
+/******/ 				// a Promise means "currently loading".
+/******/ 				if(installedChunkData) {
+/******/ 					promises.push(installedChunkData[1]);
+/******/ 				} else {
+/******/ 					if(true) { // all chunks have JS
+/******/ 						// setup Promise in chunk cache
+/******/ 						var promise = import("./" + __nccwpck_require__.u(chunkId)).then(installChunk, (e) => {
+/******/ 							if(installedChunks[chunkId] !== 0) installedChunks[chunkId] = undefined;
+/******/ 							throw e;
+/******/ 						});
+/******/ 						var promise = Promise.race([promise, new Promise((resolve) => (installedChunkData = installedChunks[chunkId] = [resolve]))])
+/******/ 						promises.push(installedChunkData[1] = promise);
+/******/ 					}
+/******/ 				}
+/******/ 			}
+/******/ 	};
+/******/ 	
+/******/ 	// no prefetching
+/******/ 	
+/******/ 	// no preloaded
+/******/ 	
+/******/ 	// no external install chunk
+/******/ 	
+/******/ 	// no on chunks loaded
+/******/ })();
 /******/ 
 /************************************************************************/
 var __webpack_exports__ = {};
@@ -70721,8 +69452,8 @@ function restError_isRestError(e) {
 //# sourceMappingURL=restError.js.map
 // EXTERNAL MODULE: external "node:http"
 var external_node_http_ = __nccwpck_require__(7067);
-;// CONCATENATED MODULE: external "node:https"
-const external_node_https_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:https");
+// EXTERNAL MODULE: external "node:https"
+var external_node_https_ = __nccwpck_require__(4708);
 // EXTERNAL MODULE: external "node:zlib"
 var external_node_zlib_ = __nccwpck_require__(8522);
 // EXTERNAL MODULE: external "node:stream"
@@ -70927,7 +69658,7 @@ class NodeHttpClient {
             ...request.requestOverrides,
         };
         return new Promise((resolve, reject) => {
-            const req = isInsecure ? external_node_http_.request(options, resolve) : external_node_https_namespaceObject.request(options, resolve);
+            const req = isInsecure ? external_node_http_.request(options, resolve) : external_node_https_.request(options, resolve);
             req.once("error", (err) => {
                 reject(new restError_RestError(err.message, { code: err.code ?? restError_RestError.REQUEST_SEND_ERROR, request }));
             });
@@ -70977,7 +69708,7 @@ class NodeHttpClient {
             if (disableKeepAlive && !request.tlsSettings) {
                 // When there are no tlsSettings and keepAlive is false
                 // we don't need a custom agent
-                return external_node_https_namespaceObject.globalAgent;
+                return external_node_https_.globalAgent;
             }
             // We use the tlsSettings to index cached clients
             const tlsSettings = request.tlsSettings ?? DEFAULT_TLS_SETTINGS;
@@ -70988,7 +69719,7 @@ class NodeHttpClient {
                 return agent;
             }
             log_logger.info("No cached TLS Agent exist, creating a new Agent");
-            agent = new external_node_https_namespaceObject.Agent({
+            agent = new external_node_https_.Agent({
                 // keepAlive is true if disableKeepAlive is false.
                 keepAlive: !disableKeepAlive,
                 // Since we are spreading, if no tslSettings were provided, nothing is added to the agent options.
@@ -112257,8 +110988,8 @@ class Batch {
     }
 }
 //# sourceMappingURL=Batch.js.map
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
 ;// CONCATENATED MODULE: ./node_modules/@azure/storage-blob/dist/esm/utils/utils.js
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
@@ -112383,7 +111114,7 @@ async function streamToBuffer3(readableStream, encoding) {
  */
 async function readStreamToLocalFile(rs, file) {
     return new Promise((resolve, reject) => {
-        const ws = external_node_fs_namespaceObject.createWriteStream(file);
+        const ws = external_node_fs_.createWriteStream(file);
         rs.on("error", (err) => {
             reject(err);
         });
@@ -112399,8 +111130,8 @@ async function readStreamToLocalFile(rs, file) {
  *
  * Promisified version of fs.stat().
  */
-const fsStat = external_node_util_.promisify(external_node_fs_namespaceObject.stat);
-const fsCreateReadStream = external_node_fs_namespaceObject.createReadStream;
+const fsStat = external_node_util_.promisify(external_node_fs_.stat);
+const fsCreateReadStream = external_node_fs_.createReadStream;
 //# sourceMappingURL=utils.js.map
 ;// CONCATENATED MODULE: ./node_modules/@azure/storage-blob/dist/esm/Clients.js
 // Copyright (c) Microsoft Corporation.
@@ -122323,6 +121054,20 @@ class Util {
             delete reqOpts.json.autoPaginate;
             delete reqOpts.json.autoPaginateVal;
             reqOpts.json = (0,projectify_build_src/* replaceProjectIdToken */.e$)(reqOpts.json, projectId);
+            const headers = reqOpts.headers || {};
+            if (typeof headers.set === 'function' &&
+                typeof headers.has === 'function') {
+                if (!headers.has('content-type')) {
+                    headers.set('Content-Type', 'application/json');
+                }
+                reqOpts.headers = headers;
+            }
+            else {
+                const hasContentType = Object.keys(headers).some(key => key.toLowerCase() === 'content-type');
+                reqOpts.headers = hasContentType
+                    ? headers
+                    : { ...headers, 'Content-Type': 'application/json' };
+            }
         }
         reqOpts.uri = (0,projectify_build_src/* replaceProjectIdToken */.e$)(reqOpts.uri, projectId);
         return reqOpts;
@@ -124825,7 +123570,7 @@ class Upload extends external_stream_.Writable {
             else {
                 const retryDelay = this.getRetryDelay();
                 if (retryDelay <= 0) {
-                    this.destroy(new Error(`Retry total time limit exceeded - ${JSON.stringify(resp.data)}`));
+                    this.destroy(buildRetryError('Retry total time limit exceeded', resp));
                     return;
                 }
                 // Unshift the local cache back in case it's needed for the next request.
@@ -124843,7 +123588,7 @@ class Upload extends external_stream_.Writable {
             this.numRetries++;
         }
         else {
-            this.destroy(new Error(`Retry limit exceeded - ${JSON.stringify(resp.data)}`));
+            this.destroy(buildRetryError('Retry limit exceeded', resp));
         }
     }
     /**
@@ -124920,6 +123665,62 @@ _Upload_hashValidator = new WeakMap(), _Upload_clientCrc32c = new WeakMap(), _Up
         headers['X-Goog-Hash'] = checksums.join(',');
     }
 };
+function buildRetryError(prefix, resp) {
+    var _a, _b, _c, _d;
+    const parts = [];
+    if (typeof resp.status === 'number' && !isNaN(resp.status)) {
+        parts.push(`status: ${resp.status}`);
+    }
+    const err = resp.data;
+    if (err !== undefined && err !== null) {
+        if (typeof err === 'object') {
+            const gaxiosErrLike = err;
+            const errParts = [];
+            if (gaxiosErrLike.message) {
+                errParts.push(String(gaxiosErrLike.message));
+            }
+            const status = (_a = gaxiosErrLike.status) !== null && _a !== void 0 ? _a : (_b = gaxiosErrLike.response) === null || _b === void 0 ? void 0 : _b.status;
+            if (typeof status === 'number' && !isNaN(status) && status !== resp.status) {
+                errParts.push(`status: ${status}`);
+            }
+            const statusText = (_c = gaxiosErrLike.response) === null || _c === void 0 ? void 0 : _c.statusText;
+            if (statusText) {
+                errParts.push(`statusText: ${statusText}`);
+            }
+            const responseData = (_d = gaxiosErrLike.response) === null || _d === void 0 ? void 0 : _d.data;
+            if (responseData !== undefined && responseData !== null && responseData !== '') {
+                errParts.push(`response: ${typeof responseData === 'object'
+                    ? JSON.stringify(responseData)
+                    : responseData}`);
+            }
+            if (gaxiosErrLike.code) {
+                errParts.push(`code: ${String(gaxiosErrLike.code)}`);
+            }
+            if (errParts.length > 0) {
+                parts.push(...errParts);
+            }
+            else if (err instanceof Error) {
+                parts.push(err.toString() || err.name || 'Unknown Error');
+            }
+            else {
+                const stringified = JSON.stringify(err);
+                if (stringified && stringified !== '{}') {
+                    parts.push(stringified);
+                }
+            }
+        }
+        else if (typeof err === 'string') {
+            if (err !== '') {
+                parts.push(err);
+            }
+        }
+        else {
+            parts.push(String(err));
+        }
+    }
+    const suffix = parts.join(' - ');
+    return new Error(`${prefix} - ${suffix || 'Unknown Error'}`);
+}
 function upload(cfg) {
     return new Upload(cfg);
 }
@@ -126763,6 +125564,27 @@ class file_File extends ServiceObject {
             }
             // remove temporary noop listener as we now create a pipeline that handles the errors
             emitStream.removeListener('error', noop);
+            if (fileWriteStream.destroyed) {
+                let callbackCalled = false;
+                const onError = (err) => {
+                    if (!callbackCalled) {
+                        callbackCalled = true;
+                        pipelineCallback(err);
+                    }
+                };
+                fileWriteStream.once('error', onError);
+                emitStream.destroy();
+                process.nextTick(() => {
+                    fileWriteStream.removeListener('error', onError);
+                    if (!callbackCalled) {
+                        callbackCalled = true;
+                        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+                        const err = fileWriteStream.errored || new Error('Write stream destroyed');
+                        pipelineCallback(err);
+                    }
+                });
+                return;
+            }
             (0,external_stream_.pipeline)(emitStream, ...transformStreams, fileWriteStream, async (e) => {
                 if (e) {
                     return pipelineCallback(e);
@@ -127629,6 +126451,7 @@ class file_File extends ServiceObject {
             contentMd5: cfg.contentMd5,
             contentType: cfg.contentType,
             host: cfg.host,
+            signingEndpoint: cfg.signingEndpoint,
         };
         if (cfg.cname) {
             signConfig.cname = cfg.cname;
@@ -129438,6 +128261,15 @@ class Notification extends ServiceObject {
 
 
 
+class ComposeCleanupError extends Error {
+    constructor(message, errors, newFile, apiResponse) {
+        super(message);
+        this.name = 'ComposeCleanupError';
+        this.errors = errors;
+        this.newFile = newFile;
+        this.apiResponse = apiResponse;
+    }
+}
 var BucketActionToHTTPMethod;
 (function (BucketActionToHTTPMethod) {
     BucketActionToHTTPMethod["list"] = "GET";
@@ -130400,7 +129232,9 @@ class Bucket extends ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @property {string} [userProject] The ID of the project which will be
      *     billed for the request.
-     */
+      * @property {boolean} [deleteSourceObjects] If true, the source objects
+      *     will be permanently deleted after a successful compose operation.
+      */
     /**
      * @callback CombineCallback
      * @param {?Error} err Request error, if any.
@@ -130433,7 +129267,8 @@ class Bucket extends ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @param {string} [options.userProject] The ID of the project which will be
      *     billed for the request.
-  
+     * @param {boolean} [options.deleteSourceObjects] If true, the source objects
+     *     will be permanently deleted after a successful compose operation.
      * @param {CombineCallback} [callback] Callback function.
      * @returns {Promise<CombineResponse>}
      *
@@ -130510,8 +129345,11 @@ class Bucket extends ServiceObject {
                 IdempotencyStrategy.RetryNever) {
             maxRetries = 0;
         }
-        if (options.ifGenerationMatch === undefined) {
-            Object.assign(options, destinationFile.instancePreconditionOpts, options);
+        const deleteSourceObjects = options.deleteSourceObjects;
+        const requestQueryObject = Object.assign({}, options);
+        delete requestQueryObject.deleteSourceObjects;
+        if (requestQueryObject.ifGenerationMatch === undefined) {
+            Object.assign(requestQueryObject, destinationFile.instancePreconditionOpts, requestQueryObject);
         }
         // Make the request from the destination File object.
         destinationFile.request({
@@ -130522,26 +129360,55 @@ class Bucket extends ServiceObject {
                 destination: {
                     contentType: destinationFile.metadata.contentType,
                     contentEncoding: destinationFile.metadata.contentEncoding,
-                    contexts: options.contexts || destinationFile.metadata.contexts,
+                    contexts: requestQueryObject.contexts || destinationFile.metadata.contexts,
                 },
                 sourceObjects: sources.map(source => {
+                    var _a, _b;
                     const sourceObject = {
                         name: source.name,
                     };
-                    if (source.metadata && source.metadata.generation) {
-                        sourceObject.generation = parseInt(source.metadata.generation.toString());
+                    const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                    if (generation !== undefined) {
+                        sourceObject.generation = parseInt(generation.toString());
                     }
                     return sourceObject;
                 }),
             },
-            qs: options,
+            qs: requestQueryObject,
         }, (err, resp) => {
             this.storage.retryOptions.autoRetry = this.instanceRetryValue;
             if (err) {
                 callback(err, null, resp);
                 return;
             }
-            callback(null, destinationFile, resp);
+            if (deleteSourceObjects) {
+                const deletePromises = sources.map(source => {
+                    var _a, _b;
+                    const deleteOptions = {
+                        ignoreNotFound: true,
+                        userProject: options.userProject,
+                    };
+                    const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                    if (generation !== undefined) {
+                        deleteOptions.ifGenerationMatch = generation;
+                    }
+                    return source
+                        .delete(deleteOptions)
+                        .catch(deleteErr => deleteErr);
+                });
+                Promise.all(deletePromises).then(results => {
+                    const errors = results.filter((res) => res instanceof Error);
+                    if (errors.length > 0) {
+                        const cleanupErr = new ComposeCleanupError(`Compose operation succeeded, but cleaning up source objects failed. Failed to delete ${errors.length} source object(s).`, errors, destinationFile, resp);
+                        callback(cleanupErr, destinationFile, resp);
+                        return;
+                    }
+                    callback(null, destinationFile, resp);
+                });
+            }
+            else {
+                callback(null, destinationFile, resp);
+            }
         });
     }
     /**
@@ -132803,10 +131670,16 @@ class Bucket extends ServiceObject {
                     if (options.onUploadProgress) {
                         writable.on('progress', options.onUploadProgress);
                     }
-                    external_fs_.createReadStream(pathString)
-                        .on('error', bail)
+                    const readStream = external_fs_.createReadStream(pathString);
+                    readStream
+                        .on('error', err => {
+                        readStream.destroy();
+                        writable.destroy();
+                        bail(err);
+                    })
                         .pipe(writable)
                         .on('error', err => {
+                        readStream.destroy();
                         if (this.storage.retryOptions.autoRetry &&
                             this.storage.retryOptions.retryableErrorFn(err)) {
                             return reject(err);
