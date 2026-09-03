@@ -135538,6 +135538,7 @@ async function run() {
         const cacheCompiled = getInput('cache-compiled') === 'true';
         const cacheScratchspaces = getInput('cache-scratchspaces') === 'true';
         const cacheLogs = getInput('cache-logs') === 'true';
+        const cacheObjcache = getInput('cache-objcache') === 'true';
         const deleteOldCachesMode = parseDeleteOldCachesMode(getInput('delete-old-caches'));
         const token = getInput('token');
         const saveAlways = getInput('save-always') === 'true';
@@ -135577,6 +135578,7 @@ async function run() {
         const compiledPath = `${depotPath}/compiled`;
         const scratchspacesPath = `${depotPath}/scratchspaces`;
         const logsPath = `${depotPath}/logs`;
+        const objcachePath = `${depotPath}/cache`;
         if (cacheArtifacts)
             cachePaths.push(artifactsPath);
         if (cachePackages)
@@ -135595,6 +135597,8 @@ async function run() {
             cachePaths.push(scratchspacesPath);
         if (cacheLogs)
             cachePaths.push(logsPath);
+        if (cacheObjcache)
+            cachePaths.push(objcachePath);
         // Exclude stale pidfiles – they are auto-cleaned but should not be cached.
         // Each pattern targets only the specific depth where Julia/Pkg places them.
         // Both .pid and .pidfile extensions are matched for forward-compatibility.
@@ -135612,6 +135616,8 @@ async function run() {
         cachePaths.push(`!${depotPath}/registries/*/.pidfile`);
         cachePaths.push(`!${depotPath}/logs/*.pid`); // Pkg usage file locks
         cachePaths.push(`!${depotPath}/logs/*.pidfile`);
+        // LMDB reader-lock tables are per-machine state and recreated on open.
+        cachePaths.push(`!${depotPath}/cache/v*.*/*/lock.mdb`); // Julia objcache LMDB lock files
         setOutput('cache-paths', cachePaths.join('\n'));
         // Generate cache keys
         const runnerOS = getInput('_runner-os') || process.env.RUNNER_OS;
