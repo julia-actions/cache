@@ -40,6 +40,7 @@ By default all depot directories called out below are cached.
 - `cache-compiled` - Whether to cache the depot's `compiled` directory. Defaults to `true`.
 - `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
 - `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
+- `cache-objcache` - Whether to cache the depot's `cache` directory. Defaults to `true`. On Julia 1.14 and later this holds the LLVM object cache (`objcache`), which stores native code for compiled LLVM IR so it does not have to be regenerated in later runs. Its size is bounded by Julia (512 MB by default, see `JULIA_OBJCACHE_CAPACITY`).
 - `save-always` - Whether to save the cache even if the job fails. Defaults to `true`.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
