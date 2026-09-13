@@ -95,6 +95,7 @@ async function run() {
         const cacheCompiled = core.getInput('cache-compiled') === 'true';
         const cacheScratchspaces = core.getInput('cache-scratchspaces') === 'true';
         const cacheLogs = core.getInput('cache-logs') === 'true';
+        const cacheObjcache = core.getInput('cache-objcache') === 'true';
         const deleteOldCachesMode = parseDeleteOldCachesMode(core.getInput('delete-old-caches'));
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
@@ -138,6 +139,7 @@ async function run() {
         const compiledPath = `${depotPath}/compiled`;
         const scratchspacesPath = `${depotPath}/scratchspaces`;
         const logsPath = `${depotPath}/logs`;
+        const objcachePath = `${depotPath}/cache`;
 
         if (cacheArtifacts) cachePaths.push(artifactsPath);
         if (cachePackages) cachePaths.push(packagesPath);
@@ -151,6 +153,7 @@ async function run() {
         if (cacheCompiled) cachePaths.push(compiledPath);
         if (cacheScratchspaces) cachePaths.push(scratchspacesPath);
         if (cacheLogs) cachePaths.push(logsPath);
+        if (cacheObjcache) cachePaths.push(objcachePath);
 
         // Exclude stale pidfiles – they are auto-cleaned but should not be cached.
         // Each pattern targets only the specific depth where Julia/Pkg places them.
@@ -169,6 +172,8 @@ async function run() {
         cachePaths.push(`!${depotPath}/registries/*/.pidfile`);
         cachePaths.push(`!${depotPath}/logs/*.pid`);                          // Pkg usage file locks
         cachePaths.push(`!${depotPath}/logs/*.pidfile`);
+        // LMDB reader-lock tables are per-machine state and recreated on open.
+        cachePaths.push(`!${depotPath}/cache/v*.*/*/lock.mdb`);              // Julia objcache LMDB lock files
 
         core.setOutput('cache-paths', cachePaths.join('\n'));
 

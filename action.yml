@@ -45,6 +45,9 @@ inputs:
   cache-logs:
     description: Whether to cache the depot's `logs` directory. This helps automatic `Pkg.gc()` keep the cache size down.
     default: 'true'
+  cache-objcache:
+    description: Whether to cache the depot's `cache` directory, which holds the LLVM object cache (`objcache`) used by Julia 1.14 and later.
+    default: 'true'
   delete-old-caches:
     description: Whether to delete old caches for the given key.
     default: 'true'

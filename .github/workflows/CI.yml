@@ -171,6 +171,10 @@ jobs:
         @assert !isempty(readdir(scratchspaces_dir))
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
+        if VERSION >= v"1.14-"
+            objcache_dir = joinpath(first(DEPOT_PATH), "cache")
+            @assert !isempty(readdir(objcache_dir))
+        end
 
   # Do tests with no matrix also given the matrix is auto-included in cache key
   test-save-nomatrix:
@@ -244,6 +248,10 @@ jobs:
         @assert !isempty(readdir(scratchspaces_dir))
         logs_dir = joinpath(first(DEPOT_PATH), "logs")
         @assert !isempty(readdir(logs_dir))
+        if VERSION >= v"1.14-"
+            objcache_dir = joinpath(first(DEPOT_PATH), "cache")
+            @assert !isempty(readdir(objcache_dir))
+        end
 
   test-save-cloned-registry:
     needs: generate-prefix
