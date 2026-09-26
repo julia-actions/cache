@@ -83,6 +83,25 @@ function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promis
     });
 }
 
+// Removes the cache paths a failed restore created, so later steps do not pick
+// up half-extracted files. Paths that existed before the restore are kept: tar
+// may have overwritten files in them, but removing them would take the user's
+// own data with it.
+function discardPartialRestore(includedPaths: string[], preexistingPaths: Set<string>): void {
+    for (const p of includedPaths) {
+        if (preexistingPaths.has(p)) {
+            core.warning(`${p} existed before the restore and may hold partially restored files`);
+            continue;
+        }
+        try {
+            fs.rmSync(p, { recursive: true, force: true });
+            core.info(`Removed partially restored ${p}`);
+        } catch (error) {
+            core.warning(`Failed to remove partially restored ${p}: ${getErrorMessage(error)}`);
+        }
+    }
+}
+
 async function run() {
     try {
         // Get inputs
@@ -266,12 +285,28 @@ async function run() {
                     }
 
                     if (restoredKey && fileToStream) {
+                        core.info(`Restoring cache from GCS key: ${restoredKey}`);
+                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
+                        // tar writes straight into the depot as the archive streams in, so if
+                        // the stream breaks part-way the depot is left holding whatever had
+                        // arrived, including files cut short mid-write. Remember which of the
+                        // cache paths existed beforehand so the rest can be removed on failure.
+                        const includedPaths = cachePaths.filter(p => !p.startsWith('!'));
+                        const preexistingPaths = new Set(includedPaths.filter(p => fs.existsSync(p)));
+                        try {
+                            const inStream = fileToStream.createReadStream();
+                            await streamRestore({ inStream, useZstd, cwd });
+                        } catch (error) {
+                            discardPartialRestore(includedPaths, preexistingPaths);
+                            // Do not let the post step save this depot: a truncated file in it
+                            // would be re-saved under the restore key and restored by every job
+                            // that follows.
+                            core.saveState('restore-failed', 'true');
+                            throw error;
+                        }
                         cacheHit = restoredKey === key ? 'true' : '';
                         core.info(`Cache restored from GCS key: ${restoredKey}`);
                         core.saveState('cache-matched-key', restoredKey);
-                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        const inStream = fileToStream.createReadStream();
-                        await streamRestore({ inStream, useZstd, cwd });
                     } else {
                         core.info('No cache found in GCS');
                     }
