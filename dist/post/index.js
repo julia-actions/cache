@@ -135545,9 +135545,8 @@ async function run() {
         const requireOldCacheDeletion = deleteOldCachesMode === DeleteOldCachesMode.Required;
         const cachePaths = JSON.parse(cachePathsJson);
         // A restore that failed part-way may have left truncated files in the
-        // depot. Saving it would publish them under the restore key for every
-        // following job, whatever save-always says.
-        if (getState('restore-failed') === 'true') {
+        // depot. We don't want to re-save those files.
+        if (getState('restore-failed-partway') === 'true') {
             info('Cache restore failed part-way through; skipping cache save so a partially restored depot is not re-saved.');
             return;
         }
