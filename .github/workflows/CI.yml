@@ -278,8 +278,14 @@ jobs:
       env:
         JULIA_PKG_SERVER: ""
     # Set the registry worktree to an older state to simulate the cache storing an old version of the registry.
+    # Pkg clones registries with --depth=1 from Julia 1.13 on, so fetch enough history for the reset first.
     - name: Use outdated General worktree
-      run: git -C ~/.julia/registries/General reset --hard HEAD~20
+      run: |
+        registry=~/.julia/registries/General
+        if [ "$(git -C "$registry" rev-parse --is-shallow-repository)" = true ]; then
+          git -C "$registry" fetch --deepen=20
+        fi
+        git -C "$registry" reset --hard HEAD~20
 
   test-restore-cloned-registry:
     needs: test-save-cloned-registry
