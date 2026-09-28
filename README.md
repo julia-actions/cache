@@ -109,10 +109,10 @@ By default, this action saves the cache even if the job fails (`save-always: tru
 
 If you prefer the old behavior where caches are only saved on successful jobs, set `save-always: false`.
 
-If restoring the cache fails part-way through (for example the connection to Google Cloud Storage drops while the archive is streaming in), the paths the restore created are removed and no cache is saved at the end of the job, regardless of `save-always`. A partially restored depot can hold truncated files, and saving it would hand them to every job that restores the cache afterwards.
-
 > [!NOTE]
 > This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`. See https://github.com/julia-actions/cache/pull/169.
+
+Google Cloud-specific: if restoring the cache from Google Cloud Storage fails part-way through (for example the connection drops while the archive is streaming in), the files the restore wrote are removed and no cache is saved at the end of the job, regardless of `save-always`. A partially restored depot can hold truncated files, and saving it would hand them to every job that restores the cache afterwards.
 
 ### Cache Garbage Collection
 

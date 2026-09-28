@@ -15,6 +15,9 @@ interface StreamRestoreOptions {
     inStream: Readable;
     useZstd: boolean;
     cwd: string;
+    // Filled with the absolute path of every archive member tar started to
+    // extract, in extraction order.
+    extracted: string[];
 }
 
 function getErrorMessage(error: unknown): string {
@@ -41,13 +44,36 @@ function parseGcpCompressionInput(inputVal: string): GcpCompression {
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
 
-function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promise<void> {
+// Records the archive members tar reports extracting: GNU tar lists them on
+// stdout, bsdtar on stderr prefixed with "x ". Anything else on stderr is a tar
+// diagnostic and is passed through.
+function recordTarEntries(stream: Readable, cwd: string, extracted: string[]): void {
+    let pending = '';
+    stream.on('data', (chunk: Buffer) => {
+        pending += chunk.toString();
+        const lines = pending.split('\n');
+        pending = lines.pop() ?? '';
+        for (const line of lines) {
+            if (line === '') continue;
+            if (line.startsWith('tar: ') || line.startsWith('bsdtar: ')) {
+                process.stderr.write(`${line}\n`);
+                continue;
+            }
+            const name = line.startsWith('x ') ? line.slice(2) : line;
+            extracted.push(path.resolve(cwd, name));
+        }
+    });
+}
+
+function streamRestore({ inStream, useZstd, cwd, extracted }: StreamRestoreOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
         const decompressProc = spawn(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
 
-        const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
+        const tarProc = spawn('tar', ['-xvf', '-'], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
+        recordTarEntries(tarProc.stdout, cwd, extracted);
+        recordTarEntries(tarProc.stderr, cwd, extracted);
 
         let errorOccurred = false;
         const onError = (err: Error): void => {
@@ -83,23 +109,30 @@ function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promis
     });
 }
 
-// Removes the cache paths a failed restore created, so later steps do not pick
-// up half-extracted files. Paths that existed before the restore are kept: tar
-// may have overwritten files in them, but removing them would take the user's
-// own data with it.
-function discardPartialRestore(includedPaths: string[], preexistingPaths: Set<string>): void {
-    for (const p of includedPaths) {
-        if (preexistingPaths.has(p)) {
-            core.warning(`${p} existed before the restore and may hold partially restored files`);
-            continue;
-        }
+// Only used by the Google Cloud Storage pathway: removes everything a failed
+// streamRestore wrote into the depot, so later steps do not pick up
+// half-extracted files. tar lists a directory before its contents, so walking
+// the list backwards removes files first; a directory is only removed once it
+// is empty, which leaves alone anything that was in it before the restore, and
+// the cache paths that existed beforehand are kept even when empty.
+function discardPartialGcsRestore(extracted: string[], keep: Set<string>): void {
+    let removed = 0;
+    for (let i = extracted.length - 1; i >= 0; i--) {
+        const p = extracted[i];
         try {
-            fs.rmSync(p, { recursive: true, force: true });
-            core.info(`Removed partially restored ${p}`);
+            if (fs.lstatSync(p).isDirectory()) {
+                if (!keep.has(p) && fs.readdirSync(p).length === 0) fs.rmdirSync(p);
+            } else {
+                fs.unlinkSync(p);
+                removed++;
+            }
         } catch (error) {
-            core.warning(`Failed to remove partially restored ${p}: ${getErrorMessage(error)}`);
+            if ((error as NodeJS.ErrnoException).code !== 'ENOENT') {
+                core.warning(`Failed to remove partially restored ${p}: ${getErrorMessage(error)}`);
+            }
         }
     }
+    core.info(`Removed ${removed} partially restored files`);
 }
 
 async function run() {
@@ -287,21 +320,19 @@ async function run() {
                     if (restoredKey && fileToStream) {
                         core.info(`Restoring cache from GCS key: ${restoredKey}`);
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        // tar writes straight into the depot as the archive streams in, so if
-                        // the stream breaks part-way the depot is left holding whatever had
-                        // arrived, including files cut short mid-write. Remember which of the
-                        // cache paths existed beforehand so the rest can be removed on failure.
-                        const includedPaths = cachePaths.filter(p => !p.startsWith('!'));
-                        const preexistingPaths = new Set(includedPaths.filter(p => fs.existsSync(p)));
+                        // tar writes straight into the depot as the archive streams in. Thus, if
+                        // the stream breaks part-way, the depot is left holding whatever had
+                        // arrived, including files cut short mid-write. Therefore, we record
+                        // every file tar extracts, so that they can be removed on failure.
+                        const extracted: string[] = [];
+                        const preexistingPaths = new Set(cachePaths.filter(p => !p.startsWith('!') && fs.existsSync(p)));
                         try {
                             const inStream = fileToStream.createReadStream();
-                            await streamRestore({ inStream, useZstd, cwd });
+                            await streamRestore({ inStream, useZstd, cwd, extracted });
                         } catch (error) {
-                            discardPartialRestore(includedPaths, preexistingPaths);
-                            // Do not let the post step save this depot: a truncated file in it
-                            // would be re-saved under the restore key and restored by every job
-                            // that follows.
-                            core.saveState('restore-failed', 'true');
+                            discardPartialGcsRestore(extracted, preexistingPaths);
+                            // Do not let the post step save a potentially-broken depot
+                            core.saveState('restore-failed-partway', 'true');
                             throw error;
                         }
                         cacheHit = restoredKey === key ? 'true' : '';
