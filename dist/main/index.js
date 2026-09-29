@@ -135677,6 +135677,11 @@ async function run() {
         saveState('gcp-compression', gcpCompression);
         // Restore cache
         let cacheHit = '';
+        // Whether the depot is in a consistent state, i.e., the restore either completed or
+        // did not start. Only then may the post step save it: if restoring failed, or if the job
+        // gets cancelled while restoring, the depot may contain partially extracted files, and
+        // saving it would poison the cache for later runs.
+        let restoreComplete = true;
         if (cachePaths.length > 0) {
             if (gcpBucket) {
                 try {
@@ -135713,6 +135718,7 @@ async function run() {
                     }
                 }
                 catch (error) {
+                    restoreComplete = false;
                     warning(`Failed to restore cache from GCS: ${main_getErrorMessage(error)}`);
                 }
             }
@@ -135729,9 +135735,13 @@ async function run() {
                     }
                 }
                 catch (error) {
+                    restoreComplete = false;
                     warning(`Failed to restore cache: ${main_getErrorMessage(error)}`);
                 }
             }
+        }
+        if (restoreComplete) {
+            saveState('restore-complete', 'true');
         }
         setOutput('cache-hit', cacheHit);
         // Create depot directory if it doesn't exist.
