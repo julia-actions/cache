@@ -11,7 +11,7 @@ import { parseDeleteOldCachesMode } from './delete-old-caches.js';
 
 type GcpCompression = 'zstd' | 'gzip';
 
-interface StreamRestoreOptions {
+interface StreamGcsRestoreOptions {
     inStream: Readable;
     useZstd: boolean;
     cwd: string;
@@ -65,7 +65,9 @@ function recordTarEntries(stream: Readable, cwd: string, extracted: string[]): v
     });
 }
 
-function streamRestore({ inStream, useZstd, cwd, extracted }: StreamRestoreOptions): Promise<void> {
+// Only used by the Google Cloud Storage pathway: streams the archive through the
+// decompressor and tar straight into the depot.
+function streamGcsRestore({ inStream, useZstd, cwd, extracted }: StreamGcsRestoreOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
@@ -110,7 +112,7 @@ function streamRestore({ inStream, useZstd, cwd, extracted }: StreamRestoreOptio
 }
 
 // Only used by the Google Cloud Storage pathway: removes everything a failed
-// streamRestore wrote into the depot, so later steps do not pick up
+// streamGcsRestore wrote into the depot, so later steps do not pick up
 // half-extracted files. tar lists a directory before its contents, so walking
 // the list backwards removes files first; a directory is only removed once it
 // is empty, which leaves alone anything that was in it before the restore, and
@@ -328,7 +330,7 @@ async function run() {
                         const preexistingPaths = new Set(cachePaths.filter(p => !p.startsWith('!') && fs.existsSync(p)));
                         try {
                             const inStream = fileToStream.createReadStream();
-                            await streamRestore({ inStream, useZstd, cwd, extracted });
+                            await streamGcsRestore({ inStream, useZstd, cwd, extracted });
                         } catch (error) {
                             discardPartialGcsRestore(extracted, preexistingPaths);
                             // Do not let the post step save a potentially-broken depot
