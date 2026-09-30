@@ -135512,7 +135512,9 @@ function recordTarEntries(stream, cwd, extracted) {
         }
     });
 }
-function streamRestore({ inStream, useZstd, cwd, extracted }) {
+// Only used by the Google Cloud Storage pathway: streams the archive through the
+// decompressor and tar straight into the depot.
+function streamGcsRestore({ inStream, useZstd, cwd, extracted }) {
     return new Promise((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
@@ -135552,7 +135554,7 @@ function streamRestore({ inStream, useZstd, cwd, extracted }) {
     });
 }
 // Only used by the Google Cloud Storage pathway: removes everything a failed
-// streamRestore wrote into the depot, so later steps do not pick up
+// streamGcsRestore wrote into the depot, so later steps do not pick up
 // half-extracted files. tar lists a directory before its contents, so walking
 // the list backwards removes files first; a directory is only removed once it
 // is empty, which leaves alone anything that was in it before the restore, and
@@ -135764,7 +135766,7 @@ async function run() {
                         const preexistingPaths = new Set(cachePaths.filter(p => !p.startsWith('!') && external_fs_default().existsSync(p)));
                         try {
                             const inStream = fileToStream.createReadStream();
-                            await streamRestore({ inStream, useZstd, cwd, extracted });
+                            await streamGcsRestore({ inStream, useZstd, cwd, extracted });
                         }
                         catch (error) {
                             discardPartialGcsRestore(extracted, preexistingPaths);
