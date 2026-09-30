@@ -135491,44 +135491,14 @@ function parseGcpCompressionInput(inputVal) {
     }
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
-// Keeps the listing tar prints while extracting (`-v`), as raw chunks so that
-// a restore of many files costs only the bytes of the listing, and passes
-// tar's own diagnostics through to the log as they arrive.
-function recordTarOutput(stream, chunks) {
-    let pending = '';
-    stream.on('data', (chunk) => {
-        chunks.push(chunk);
-        pending += chunk.toString();
-        const lines = pending.split('\n');
-        pending = lines.pop() ?? '';
-        for (const line of lines) {
-            if (line.startsWith('tar: ') || line.startsWith('bsdtar: ')) {
-                process.stderr.write(`${line}\n`);
-            }
-        }
-    });
-}
-// The absolute path of every archive member tar reported extracting, in
-// extraction order. GNU tar lists a member as its name, bsdtar as "x name".
-function extractedEntries(chunks, cwd) {
-    const entries = [];
-    for (const line of Buffer.concat(chunks).toString().split('\n')) {
-        if (line === '' || line.startsWith('tar: ') || line.startsWith('bsdtar: '))
-            continue;
-        entries.push(external_path_default().resolve(cwd, line.startsWith('x ') ? line.slice(2) : line));
-    }
-    return entries;
-}
 // Only used by the Google Cloud Storage pathway: streams the archive through the
 // decompressor and tar straight into the depot.
-function streamGcsRestore({ inStream, useZstd, cwd, tarOutput }) {
+function streamGcsRestore({ inStream, useZstd, cwd }) {
     return new Promise((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
         const decompressProc = (0,external_child_process_.spawn)(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
-        const tarProc = (0,external_child_process_.spawn)('tar', ['-xvf', '-'], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-        recordTarOutput(tarProc.stdout, tarOutput);
-        recordTarOutput(tarProc.stderr, tarOutput);
+        const tarProc = (0,external_child_process_.spawn)('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
         let errorOccurred = false;
         const onError = (err) => {
             if (!errorOccurred) {
@@ -135560,33 +135530,31 @@ function streamGcsRestore({ inStream, useZstd, cwd, tarOutput }) {
         decompressProc.stdout.pipe(tarProc.stdin);
     });
 }
-// Only used by the Google Cloud Storage pathway: removes everything a failed
-// streamGcsRestore wrote into the depot, so later steps do not pick up
-// half-extracted files. tar lists a directory before its contents, so walking
-// the list backwards removes files first; a directory is only removed once it
-// is empty, which leaves alone anything that was in it before the restore, and
-// the cache paths that existed beforehand are kept even when empty.
-function discardPartialGcsRestore(extracted, keep) {
-    let removed = 0;
-    for (let i = extracted.length - 1; i >= 0; i--) {
-        const p = extracted[i];
-        try {
-            if (external_fs_default().lstatSync(p).isDirectory()) {
-                if (!keep.has(p) && external_fs_default().readdirSync(p).length === 0)
-                    external_fs_default().rmdirSync(p);
-            }
-            else {
-                external_fs_default().unlinkSync(p);
-                removed++;
-            }
-        }
-        catch (error) {
-            if (error.code !== 'ENOENT') {
-                warning(`Failed to remove partially restored ${p}: ${main_getErrorMessage(error)}`);
-            }
-        }
+// Only used by the Google Cloud Storage pathway: moves what a restore unpacked
+// under src to dst, merging into directories that already exist there and
+// replacing files that do. src and dst are on the same filesystem, so this is
+// a rename per subtree that has no counterpart in dst.
+function moveInto(src, dst) {
+    let dstStat;
+    try {
+        dstStat = external_fs_default().lstatSync(dst);
     }
-    info(`Removed ${removed} partially restored files`);
+    catch {
+        dstStat = undefined;
+    }
+    if (dstStat === undefined) {
+        external_fs_default().renameSync(src, dst);
+    }
+    else if (dstStat.isDirectory() && external_fs_default().lstatSync(src).isDirectory()) {
+        for (const name of external_fs_default().readdirSync(src)) {
+            moveInto(external_path_default().join(src, name), external_path_default().join(dst, name));
+        }
+        external_fs_default().rmdirSync(src);
+    }
+    else {
+        external_fs_default().rmSync(dst, { recursive: true, force: true });
+        external_fs_default().renameSync(src, dst);
+    }
 }
 async function run() {
     try {
@@ -135764,22 +135732,28 @@ async function run() {
                     }
                     if (restoredKey && fileToStream) {
                         info(`Restoring cache from GCS key: ${restoredKey}`);
-                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        // tar writes straight into the depot as the archive streams in. Thus, if
-                        // the stream breaks part-way, the depot is left holding whatever had
-                        // arrived, including files cut short mid-write. Therefore, we keep
-                        // tar's listing of what it extracts, so that it can be removed on failure.
-                        const tarOutput = [];
-                        const preexistingPaths = new Set(cachePaths.filter(p => !p.startsWith('!') && external_fs_default().existsSync(p)));
+                        // The archive holds the cache paths relative to the filesystem root.
+                        const root = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
+                        // Unpack into a staging directory inside the depot (so it is on the
+                        // same filesystem) and only move the result into place once the
+                        // whole archive has arrived. A stream that breaks part-way would
+                        // otherwise leave truncated files in the depot, which the post step
+                        // would then save under the restore key for every following job.
+                        external_fs_default().mkdirSync(depotPath, { recursive: true });
+                        const staging = external_fs_default().mkdtempSync(external_path_default().join(depotPath, '.restore-'));
                         try {
                             const inStream = fileToStream.createReadStream();
-                            await streamGcsRestore({ inStream, useZstd, cwd, tarOutput });
+                            await streamGcsRestore({ inStream, useZstd, cwd: staging });
+                            for (const p of cachePaths) {
+                                if (p.startsWith('!'))
+                                    continue;
+                                const unpacked = external_path_default().join(staging, external_path_default().relative(root, p));
+                                if (external_fs_default().existsSync(unpacked))
+                                    moveInto(unpacked, p);
+                            }
                         }
-                        catch (error) {
-                            discardPartialGcsRestore(extractedEntries(tarOutput, cwd), preexistingPaths);
-                            // Do not let the post step save a potentially-broken depot
-                            saveState('restore-failed-partway', 'true');
-                            throw error;
+                        finally {
+                            external_fs_default().rmSync(staging, { recursive: true, force: true });
                         }
                         cacheHit = restoredKey === key ? 'true' : '';
                         info(`Cache restored from GCS key: ${restoredKey}`);
