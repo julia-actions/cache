@@ -135491,37 +135491,44 @@ function parseGcpCompressionInput(inputVal) {
     }
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
-// Records the archive members tar reports extracting: GNU tar lists them on
-// stdout, bsdtar on stderr prefixed with "x ". Anything else on stderr is a tar
-// diagnostic and is passed through.
-function recordTarEntries(stream, cwd, extracted) {
+// Keeps the listing tar prints while extracting (`-v`), as raw chunks so that
+// a restore of many files costs only the bytes of the listing, and passes
+// tar's own diagnostics through to the log as they arrive.
+function recordTarOutput(stream, chunks) {
     let pending = '';
     stream.on('data', (chunk) => {
+        chunks.push(chunk);
         pending += chunk.toString();
         const lines = pending.split('\n');
         pending = lines.pop() ?? '';
         for (const line of lines) {
-            if (line === '')
-                continue;
             if (line.startsWith('tar: ') || line.startsWith('bsdtar: ')) {
                 process.stderr.write(`${line}\n`);
-                continue;
             }
-            const name = line.startsWith('x ') ? line.slice(2) : line;
-            extracted.push(external_path_default().resolve(cwd, name));
         }
     });
 }
+// The absolute path of every archive member tar reported extracting, in
+// extraction order. GNU tar lists a member as its name, bsdtar as "x name".
+function extractedEntries(chunks, cwd) {
+    const entries = [];
+    for (const line of Buffer.concat(chunks).toString().split('\n')) {
+        if (line === '' || line.startsWith('tar: ') || line.startsWith('bsdtar: '))
+            continue;
+        entries.push(external_path_default().resolve(cwd, line.startsWith('x ') ? line.slice(2) : line));
+    }
+    return entries;
+}
 // Only used by the Google Cloud Storage pathway: streams the archive through the
 // decompressor and tar straight into the depot.
-function streamGcsRestore({ inStream, useZstd, cwd, extracted }) {
+function streamGcsRestore({ inStream, useZstd, cwd, tarOutput }) {
     return new Promise((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
         const decompressProc = (0,external_child_process_.spawn)(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
         const tarProc = (0,external_child_process_.spawn)('tar', ['-xvf', '-'], { cwd, stdio: ['pipe', 'pipe', 'pipe'] });
-        recordTarEntries(tarProc.stdout, cwd, extracted);
-        recordTarEntries(tarProc.stderr, cwd, extracted);
+        recordTarOutput(tarProc.stdout, tarOutput);
+        recordTarOutput(tarProc.stderr, tarOutput);
         let errorOccurred = false;
         const onError = (err) => {
             if (!errorOccurred) {
@@ -135760,16 +135767,16 @@ async function run() {
                         const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
                         // tar writes straight into the depot as the archive streams in. Thus, if
                         // the stream breaks part-way, the depot is left holding whatever had
-                        // arrived, including files cut short mid-write. Therefore, we record
-                        // every file tar extracts, so that they can be removed on failure.
-                        const extracted = [];
+                        // arrived, including files cut short mid-write. Therefore, we keep
+                        // tar's listing of what it extracts, so that it can be removed on failure.
+                        const tarOutput = [];
                         const preexistingPaths = new Set(cachePaths.filter(p => !p.startsWith('!') && external_fs_default().existsSync(p)));
                         try {
                             const inStream = fileToStream.createReadStream();
-                            await streamGcsRestore({ inStream, useZstd, cwd, extracted });
+                            await streamGcsRestore({ inStream, useZstd, cwd, tarOutput });
                         }
                         catch (error) {
-                            discardPartialGcsRestore(extracted, preexistingPaths);
+                            discardPartialGcsRestore(extractedEntries(tarOutput, cwd), preexistingPaths);
                             // Do not let the post step save a potentially-broken depot
                             saveState('restore-failed-partway', 'true');
                             throw error;
