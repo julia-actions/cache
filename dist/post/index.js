@@ -26,7 +26,6 @@ __webpack_unused_export__ = exports.KY = __webpack_unused_export__ = void 0;
 /*!
  * @module common/paginator
  */
-const arrify = __nccwpck_require__(6251);
 const extend = __nccwpck_require__(3860);
 const resource_stream_1 = __nccwpck_require__(7618);
 __webpack_unused_export__ = ({ enumerable: true, get: function () { return resource_stream_1.ResourceStream; } });
@@ -57,7 +56,9 @@ class Paginator {
      */
     // tslint:disable-next-line:variable-name
     extend(Class, methodNames) {
-        methodNames = arrify(methodNames);
+        if (typeof methodNames === 'string') {
+            methodNames = [methodNames];
+        }
         methodNames.forEach(methodName => {
             const originalMethod = Class.prototype[methodName];
             // map the original method to a private member
@@ -241,6 +242,14 @@ Object.defineProperty(exports, "__esModule", ({ value: true }));
 exports.ResourceStream = void 0;
 const stream_1 = __nccwpck_require__(2203);
 class ResourceStream extends stream_1.Transform {
+    _ended;
+    _maxApiCalls;
+    _nextQuery;
+    _otherArgs;
+    _reading;
+    _requestFn;
+    _requestsMade;
+    _resultsToSend;
     constructor(args, requestFn) {
         const options = Object.assign({ objectMode: true }, args.streamOptions);
         super(options);
@@ -312,7 +321,8 @@ exports.ResourceStream = ResourceStream;
 var __webpack_unused_export__;
 
 __webpack_unused_export__ = ({ value: true });
-exports.$d = exports.e$ = void 0;
+exports.$d = void 0;
+exports.e$ = replaceProjectIdToken;
 const stream_1 = __nccwpck_require__(2203);
 // Copyright 2014 Google LLC
 //
@@ -362,17 +372,13 @@ function replaceProjectIdToken(value, projectId) {
     }
     return value;
 }
-exports.e$ = replaceProjectIdToken;
 /**
  * Custom error type for missing project ID errors.
  */
 class MissingProjectIdError extends Error {
-    constructor() {
-        super(...arguments);
-        this.message = `Sorry, we cannot connect to Cloud Services without a project
+    message = `Sorry, we cannot connect to Cloud Services without a project
     ID. You may specify one with an environment variable named
     "GOOGLE_CLOUD_PROJECT".`.replace(/ +/g, ' ');
-    }
 }
 exports.$d = MissingProjectIdError;
 //# sourceMappingURL=index.js.map
@@ -385,7 +391,10 @@ exports.$d = MissingProjectIdError;
 
 /* eslint-disable prefer-rest-params */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.callbackifyAll = exports.callbackify = exports.promisifyAll = exports.promisify = void 0;
+exports.promisify = promisify;
+exports.promisifyAll = promisifyAll;
+exports.callbackify = callbackify;
+exports.callbackifyAll = callbackifyAll;
 /**
  * Wraps a callback style function to conditionally return a promise.
  *
@@ -444,7 +453,6 @@ function promisify(originalMethod, options) {
     wrapper.promisified_ = true;
     return wrapper;
 }
-exports.promisify = promisify;
 /**
  * Promisifies certain Class methods. This will not promisify private or
  * streaming methods.
@@ -471,7 +479,6 @@ function promisifyAll(Class, options) {
         }
     });
 }
-exports.promisifyAll = promisifyAll;
 /**
  * Wraps a promisy type function to conditionally call a callback function.
  *
@@ -500,7 +507,6 @@ function callbackify(originalMethod) {
     wrapper.callbackified_ = true;
     return wrapper;
 }
-exports.callbackify = callbackify;
 /**
  * Callbackifies certain Class methods. This will not callbackify private or
  * streaming methods.
@@ -528,7 +534,6 @@ Class, options) {
         }
     });
 }
-exports.callbackifyAll = callbackifyAll;
 //# sourceMappingURL=index.js.map
 
 /***/ }),
@@ -5430,46 +5435,6 @@ exports.ReflectionTypeCheck = ReflectionTypeCheck;
 
 /***/ }),
 
-/***/ 8662:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-function once(emitter, name, { signal } = {}) {
-    return new Promise((resolve, reject) => {
-        function cleanup() {
-            signal === null || signal === void 0 ? void 0 : signal.removeEventListener('abort', onAbort);
-            emitter.removeListener(name, onEvent);
-            emitter.removeListener('error', onError);
-        }
-        function onEvent(...args) {
-            cleanup();
-            resolve(args);
-        }
-        function onError(err) {
-            cleanup();
-            reject(err);
-        }
-        function onAbort() {
-            cleanup();
-            const err = new Error('The operation was aborted');
-            err.name = 'AbortError';
-            reject(err);
-        }
-        if (signal === null || signal === void 0 ? void 0 : signal.aborted) {
-            onAbort();
-            return;
-        }
-        signal === null || signal === void 0 ? void 0 : signal.addEventListener('abort', onAbort);
-        emitter.on(name, onEvent);
-        emitter.on('error', onError);
-    });
-}
-exports["default"] = once;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
 /***/ 7413:
 /***/ ((module, exports, __nccwpck_require__) => {
 
@@ -5857,36 +5822,6 @@ class Agent extends http.Agent {
 }
 exports.Agent = Agent;
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 6251:
-/***/ ((module) => {
-
-
-
-const arrify = value => {
-	if (value === null || value === undefined) {
-		return [];
-	}
-
-	if (Array.isArray(value)) {
-		return value;
-	}
-
-	if (typeof value === 'string') {
-		return [value];
-	}
-
-	if (typeof value[Symbol.iterator] === 'function') {
-		return [...value];
-	}
-
-	return [value];
-};
-
-module.exports = arrify;
-
 
 /***/ }),
 
@@ -22639,135 +22574,6 @@ module.exports = VerifyStream;
 
 /***/ }),
 
-/***/ 4402:
-/***/ ((module) => {
-
-
-
-/**
- * @param typeMap [Object] Map of MIME type -> Array[extensions]
- * @param ...
- */
-function Mime() {
-  this._types = Object.create(null);
-  this._extensions = Object.create(null);
-
-  for (let i = 0; i < arguments.length; i++) {
-    this.define(arguments[i]);
-  }
-
-  this.define = this.define.bind(this);
-  this.getType = this.getType.bind(this);
-  this.getExtension = this.getExtension.bind(this);
-}
-
-/**
- * Define mimetype -> extension mappings.  Each key is a mime-type that maps
- * to an array of extensions associated with the type.  The first extension is
- * used as the default extension for the type.
- *
- * e.g. mime.define({'audio/ogg', ['oga', 'ogg', 'spx']});
- *
- * If a type declares an extension that has already been defined, an error will
- * be thrown.  To suppress this error and force the extension to be associated
- * with the new type, pass `force`=true.  Alternatively, you may prefix the
- * extension with "*" to map the type to extension, without mapping the
- * extension to the type.
- *
- * e.g. mime.define({'audio/wav', ['wav']}, {'audio/x-wav', ['*wav']});
- *
- *
- * @param map (Object) type definitions
- * @param force (Boolean) if true, force overriding of existing definitions
- */
-Mime.prototype.define = function(typeMap, force) {
-  for (let type in typeMap) {
-    let extensions = typeMap[type].map(function(t) {
-      return t.toLowerCase();
-    });
-    type = type.toLowerCase();
-
-    for (let i = 0; i < extensions.length; i++) {
-      const ext = extensions[i];
-
-      // '*' prefix = not the preferred type for this extension.  So fixup the
-      // extension, and skip it.
-      if (ext[0] === '*') {
-        continue;
-      }
-
-      if (!force && (ext in this._types)) {
-        throw new Error(
-          'Attempt to change mapping for "' + ext +
-          '" extension from "' + this._types[ext] + '" to "' + type +
-          '". Pass `force=true` to allow this, otherwise remove "' + ext +
-          '" from the list of extensions for "' + type + '".'
-        );
-      }
-
-      this._types[ext] = type;
-    }
-
-    // Use first extension as default
-    if (force || !this._extensions[type]) {
-      const ext = extensions[0];
-      this._extensions[type] = (ext[0] !== '*') ? ext : ext.substr(1);
-    }
-  }
-};
-
-/**
- * Lookup a mime type based on extension
- */
-Mime.prototype.getType = function(path) {
-  path = String(path);
-  let last = path.replace(/^.*[/\\]/, '').toLowerCase();
-  let ext = last.replace(/^.*\./, '').toLowerCase();
-
-  let hasPath = last.length < path.length;
-  let hasDot = ext.length < last.length - 1;
-
-  return (hasDot || !hasPath) && this._types[ext] || null;
-};
-
-/**
- * Return file extension associated with a mime type
- */
-Mime.prototype.getExtension = function(type) {
-  type = /^\s*([^;\s]*)/.test(type) && RegExp.$1;
-  return type && this._extensions[type.toLowerCase()] || null;
-};
-
-module.exports = Mime;
-
-
-/***/ }),
-
-/***/ 4900:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-
-
-let Mime = __nccwpck_require__(4402);
-module.exports = new Mime(__nccwpck_require__(3725), __nccwpck_require__(8548));
-
-
-/***/ }),
-
-/***/ 8548:
-/***/ ((module) => {
-
-module.exports = {"application/prs.cww":["cww"],"application/vnd.1000minds.decision-model+xml":["1km"],"application/vnd.3gpp.pic-bw-large":["plb"],"application/vnd.3gpp.pic-bw-small":["psb"],"application/vnd.3gpp.pic-bw-var":["pvb"],"application/vnd.3gpp2.tcap":["tcap"],"application/vnd.3m.post-it-notes":["pwn"],"application/vnd.accpac.simply.aso":["aso"],"application/vnd.accpac.simply.imp":["imp"],"application/vnd.acucobol":["acu"],"application/vnd.acucorp":["atc","acutc"],"application/vnd.adobe.air-application-installer-package+zip":["air"],"application/vnd.adobe.formscentral.fcdt":["fcdt"],"application/vnd.adobe.fxp":["fxp","fxpl"],"application/vnd.adobe.xdp+xml":["xdp"],"application/vnd.adobe.xfdf":["xfdf"],"application/vnd.ahead.space":["ahead"],"application/vnd.airzip.filesecure.azf":["azf"],"application/vnd.airzip.filesecure.azs":["azs"],"application/vnd.amazon.ebook":["azw"],"application/vnd.americandynamics.acc":["acc"],"application/vnd.amiga.ami":["ami"],"application/vnd.android.package-archive":["apk"],"application/vnd.anser-web-certificate-issue-initiation":["cii"],"application/vnd.anser-web-funds-transfer-initiation":["fti"],"application/vnd.antix.game-component":["atx"],"application/vnd.apple.installer+xml":["mpkg"],"application/vnd.apple.keynote":["key"],"application/vnd.apple.mpegurl":["m3u8"],"application/vnd.apple.numbers":["numbers"],"application/vnd.apple.pages":["pages"],"application/vnd.apple.pkpass":["pkpass"],"application/vnd.aristanetworks.swi":["swi"],"application/vnd.astraea-software.iota":["iota"],"application/vnd.audiograph":["aep"],"application/vnd.balsamiq.bmml+xml":["bmml"],"application/vnd.blueice.multipass":["mpm"],"application/vnd.bmi":["bmi"],"application/vnd.businessobjects":["rep"],"application/vnd.chemdraw+xml":["cdxml"],"application/vnd.chipnuts.karaoke-mmd":["mmd"],"application/vnd.cinderella":["cdy"],"application/vnd.citationstyles.style+xml":["csl"],"application/vnd.claymore":["cla"],"application/vnd.cloanto.rp9":["rp9"],"application/vnd.clonk.c4group":["c4g","c4d","c4f","c4p","c4u"],"application/vnd.cluetrust.cartomobile-config":["c11amc"],"application/vnd.cluetrust.cartomobile-config-pkg":["c11amz"],"application/vnd.commonspace":["csp"],"application/vnd.contact.cmsg":["cdbcmsg"],"application/vnd.cosmocaller":["cmc"],"application/vnd.crick.clicker":["clkx"],"application/vnd.crick.clicker.keyboard":["clkk"],"application/vnd.crick.clicker.palette":["clkp"],"application/vnd.crick.clicker.template":["clkt"],"application/vnd.crick.clicker.wordbank":["clkw"],"application/vnd.criticaltools.wbs+xml":["wbs"],"application/vnd.ctc-posml":["pml"],"application/vnd.cups-ppd":["ppd"],"application/vnd.curl.car":["car"],"application/vnd.curl.pcurl":["pcurl"],"application/vnd.dart":["dart"],"application/vnd.data-vision.rdz":["rdz"],"application/vnd.dbf":["dbf"],"application/vnd.dece.data":["uvf","uvvf","uvd","uvvd"],"application/vnd.dece.ttml+xml":["uvt","uvvt"],"application/vnd.dece.unspecified":["uvx","uvvx"],"application/vnd.dece.zip":["uvz","uvvz"],"application/vnd.denovo.fcselayout-link":["fe_launch"],"application/vnd.dna":["dna"],"application/vnd.dolby.mlp":["mlp"],"application/vnd.dpgraph":["dpg"],"application/vnd.dreamfactory":["dfac"],"application/vnd.ds-keypoint":["kpxx"],"application/vnd.dvb.ait":["ait"],"application/vnd.dvb.service":["svc"],"application/vnd.dynageo":["geo"],"application/vnd.ecowin.chart":["mag"],"application/vnd.enliven":["nml"],"application/vnd.epson.esf":["esf"],"application/vnd.epson.msf":["msf"],"application/vnd.epson.quickanime":["qam"],"application/vnd.epson.salt":["slt"],"application/vnd.epson.ssf":["ssf"],"application/vnd.eszigno3+xml":["es3","et3"],"application/vnd.ezpix-album":["ez2"],"application/vnd.ezpix-package":["ez3"],"application/vnd.fdf":["fdf"],"application/vnd.fdsn.mseed":["mseed"],"application/vnd.fdsn.seed":["seed","dataless"],"application/vnd.flographit":["gph"],"application/vnd.fluxtime.clip":["ftc"],"application/vnd.framemaker":["fm","frame","maker","book"],"application/vnd.frogans.fnc":["fnc"],"application/vnd.frogans.ltf":["ltf"],"application/vnd.fsc.weblaunch":["fsc"],"application/vnd.fujitsu.oasys":["oas"],"application/vnd.fujitsu.oasys2":["oa2"],"application/vnd.fujitsu.oasys3":["oa3"],"application/vnd.fujitsu.oasysgp":["fg5"],"application/vnd.fujitsu.oasysprs":["bh2"],"application/vnd.fujixerox.ddd":["ddd"],"application/vnd.fujixerox.docuworks":["xdw"],"application/vnd.fujixerox.docuworks.binder":["xbd"],"application/vnd.fuzzysheet":["fzs"],"application/vnd.genomatix.tuxedo":["txd"],"application/vnd.geogebra.file":["ggb"],"application/vnd.geogebra.tool":["ggt"],"application/vnd.geometry-explorer":["gex","gre"],"application/vnd.geonext":["gxt"],"application/vnd.geoplan":["g2w"],"application/vnd.geospace":["g3w"],"application/vnd.gmx":["gmx"],"application/vnd.google-apps.document":["gdoc"],"application/vnd.google-apps.presentation":["gslides"],"application/vnd.google-apps.spreadsheet":["gsheet"],"application/vnd.google-earth.kml+xml":["kml"],"application/vnd.google-earth.kmz":["kmz"],"application/vnd.grafeq":["gqf","gqs"],"application/vnd.groove-account":["gac"],"application/vnd.groove-help":["ghf"],"application/vnd.groove-identity-message":["gim"],"application/vnd.groove-injector":["grv"],"application/vnd.groove-tool-message":["gtm"],"application/vnd.groove-tool-template":["tpl"],"application/vnd.groove-vcard":["vcg"],"application/vnd.hal+xml":["hal"],"application/vnd.handheld-entertainment+xml":["zmm"],"application/vnd.hbci":["hbci"],"application/vnd.hhe.lesson-player":["les"],"application/vnd.hp-hpgl":["hpgl"],"application/vnd.hp-hpid":["hpid"],"application/vnd.hp-hps":["hps"],"application/vnd.hp-jlyt":["jlt"],"application/vnd.hp-pcl":["pcl"],"application/vnd.hp-pclxl":["pclxl"],"application/vnd.hydrostatix.sof-data":["sfd-hdstx"],"application/vnd.ibm.minipay":["mpy"],"application/vnd.ibm.modcap":["afp","listafp","list3820"],"application/vnd.ibm.rights-management":["irm"],"application/vnd.ibm.secure-container":["sc"],"application/vnd.iccprofile":["icc","icm"],"application/vnd.igloader":["igl"],"application/vnd.immervision-ivp":["ivp"],"application/vnd.immervision-ivu":["ivu"],"application/vnd.insors.igm":["igm"],"application/vnd.intercon.formnet":["xpw","xpx"],"application/vnd.intergeo":["i2g"],"application/vnd.intu.qbo":["qbo"],"application/vnd.intu.qfx":["qfx"],"application/vnd.ipunplugged.rcprofile":["rcprofile"],"application/vnd.irepository.package+xml":["irp"],"application/vnd.is-xpr":["xpr"],"application/vnd.isac.fcs":["fcs"],"application/vnd.jam":["jam"],"application/vnd.jcp.javame.midlet-rms":["rms"],"application/vnd.jisp":["jisp"],"application/vnd.joost.joda-archive":["joda"],"application/vnd.kahootz":["ktz","ktr"],"application/vnd.kde.karbon":["karbon"],"application/vnd.kde.kchart":["chrt"],"application/vnd.kde.kformula":["kfo"],"application/vnd.kde.kivio":["flw"],"application/vnd.kde.kontour":["kon"],"application/vnd.kde.kpresenter":["kpr","kpt"],"application/vnd.kde.kspread":["ksp"],"application/vnd.kde.kword":["kwd","kwt"],"application/vnd.kenameaapp":["htke"],"application/vnd.kidspiration":["kia"],"application/vnd.kinar":["kne","knp"],"application/vnd.koan":["skp","skd","skt","skm"],"application/vnd.kodak-descriptor":["sse"],"application/vnd.las.las+xml":["lasxml"],"application/vnd.llamagraphics.life-balance.desktop":["lbd"],"application/vnd.llamagraphics.life-balance.exchange+xml":["lbe"],"application/vnd.lotus-1-2-3":["123"],"application/vnd.lotus-approach":["apr"],"application/vnd.lotus-freelance":["pre"],"application/vnd.lotus-notes":["nsf"],"application/vnd.lotus-organizer":["org"],"application/vnd.lotus-screencam":["scm"],"application/vnd.lotus-wordpro":["lwp"],"application/vnd.macports.portpkg":["portpkg"],"application/vnd.mapbox-vector-tile":["mvt"],"application/vnd.mcd":["mcd"],"application/vnd.medcalcdata":["mc1"],"application/vnd.mediastation.cdkey":["cdkey"],"application/vnd.mfer":["mwf"],"application/vnd.mfmp":["mfm"],"application/vnd.micrografx.flo":["flo"],"application/vnd.micrografx.igx":["igx"],"application/vnd.mif":["mif"],"application/vnd.mobius.daf":["daf"],"application/vnd.mobius.dis":["dis"],"application/vnd.mobius.mbk":["mbk"],"application/vnd.mobius.mqy":["mqy"],"application/vnd.mobius.msl":["msl"],"application/vnd.mobius.plc":["plc"],"application/vnd.mobius.txf":["txf"],"application/vnd.mophun.application":["mpn"],"application/vnd.mophun.certificate":["mpc"],"application/vnd.mozilla.xul+xml":["xul"],"application/vnd.ms-artgalry":["cil"],"application/vnd.ms-cab-compressed":["cab"],"application/vnd.ms-excel":["xls","xlm","xla","xlc","xlt","xlw"],"application/vnd.ms-excel.addin.macroenabled.12":["xlam"],"application/vnd.ms-excel.sheet.binary.macroenabled.12":["xlsb"],"application/vnd.ms-excel.sheet.macroenabled.12":["xlsm"],"application/vnd.ms-excel.template.macroenabled.12":["xltm"],"application/vnd.ms-fontobject":["eot"],"application/vnd.ms-htmlhelp":["chm"],"application/vnd.ms-ims":["ims"],"application/vnd.ms-lrm":["lrm"],"application/vnd.ms-officetheme":["thmx"],"application/vnd.ms-outlook":["msg"],"application/vnd.ms-pki.seccat":["cat"],"application/vnd.ms-pki.stl":["*stl"],"application/vnd.ms-powerpoint":["ppt","pps","pot"],"application/vnd.ms-powerpoint.addin.macroenabled.12":["ppam"],"application/vnd.ms-powerpoint.presentation.macroenabled.12":["pptm"],"application/vnd.ms-powerpoint.slide.macroenabled.12":["sldm"],"application/vnd.ms-powerpoint.slideshow.macroenabled.12":["ppsm"],"application/vnd.ms-powerpoint.template.macroenabled.12":["potm"],"application/vnd.ms-project":["mpp","mpt"],"application/vnd.ms-word.document.macroenabled.12":["docm"],"application/vnd.ms-word.template.macroenabled.12":["dotm"],"application/vnd.ms-works":["wps","wks","wcm","wdb"],"application/vnd.ms-wpl":["wpl"],"application/vnd.ms-xpsdocument":["xps"],"application/vnd.mseq":["mseq"],"application/vnd.musician":["mus"],"application/vnd.muvee.style":["msty"],"application/vnd.mynfc":["taglet"],"application/vnd.neurolanguage.nlu":["nlu"],"application/vnd.nitf":["ntf","nitf"],"application/vnd.noblenet-directory":["nnd"],"application/vnd.noblenet-sealer":["nns"],"application/vnd.noblenet-web":["nnw"],"application/vnd.nokia.n-gage.ac+xml":["*ac"],"application/vnd.nokia.n-gage.data":["ngdat"],"application/vnd.nokia.n-gage.symbian.install":["n-gage"],"application/vnd.nokia.radio-preset":["rpst"],"application/vnd.nokia.radio-presets":["rpss"],"application/vnd.novadigm.edm":["edm"],"application/vnd.novadigm.edx":["edx"],"application/vnd.novadigm.ext":["ext"],"application/vnd.oasis.opendocument.chart":["odc"],"application/vnd.oasis.opendocument.chart-template":["otc"],"application/vnd.oasis.opendocument.database":["odb"],"application/vnd.oasis.opendocument.formula":["odf"],"application/vnd.oasis.opendocument.formula-template":["odft"],"application/vnd.oasis.opendocument.graphics":["odg"],"application/vnd.oasis.opendocument.graphics-template":["otg"],"application/vnd.oasis.opendocument.image":["odi"],"application/vnd.oasis.opendocument.image-template":["oti"],"application/vnd.oasis.opendocument.presentation":["odp"],"application/vnd.oasis.opendocument.presentation-template":["otp"],"application/vnd.oasis.opendocument.spreadsheet":["ods"],"application/vnd.oasis.opendocument.spreadsheet-template":["ots"],"application/vnd.oasis.opendocument.text":["odt"],"application/vnd.oasis.opendocument.text-master":["odm"],"application/vnd.oasis.opendocument.text-template":["ott"],"application/vnd.oasis.opendocument.text-web":["oth"],"application/vnd.olpc-sugar":["xo"],"application/vnd.oma.dd2+xml":["dd2"],"application/vnd.openblox.game+xml":["obgx"],"application/vnd.openofficeorg.extension":["oxt"],"application/vnd.openstreetmap.data+xml":["osm"],"application/vnd.openxmlformats-officedocument.presentationml.presentation":["pptx"],"application/vnd.openxmlformats-officedocument.presentationml.slide":["sldx"],"application/vnd.openxmlformats-officedocument.presentationml.slideshow":["ppsx"],"application/vnd.openxmlformats-officedocument.presentationml.template":["potx"],"application/vnd.openxmlformats-officedocument.spreadsheetml.sheet":["xlsx"],"application/vnd.openxmlformats-officedocument.spreadsheetml.template":["xltx"],"application/vnd.openxmlformats-officedocument.wordprocessingml.document":["docx"],"application/vnd.openxmlformats-officedocument.wordprocessingml.template":["dotx"],"application/vnd.osgeo.mapguide.package":["mgp"],"application/vnd.osgi.dp":["dp"],"application/vnd.osgi.subsystem":["esa"],"application/vnd.palm":["pdb","pqa","oprc"],"application/vnd.pawaafile":["paw"],"application/vnd.pg.format":["str"],"application/vnd.pg.osasli":["ei6"],"application/vnd.picsel":["efif"],"application/vnd.pmi.widget":["wg"],"application/vnd.pocketlearn":["plf"],"application/vnd.powerbuilder6":["pbd"],"application/vnd.previewsystems.box":["box"],"application/vnd.proteus.magazine":["mgz"],"application/vnd.publishare-delta-tree":["qps"],"application/vnd.pvi.ptid1":["ptid"],"application/vnd.quark.quarkxpress":["qxd","qxt","qwd","qwt","qxl","qxb"],"application/vnd.rar":["rar"],"application/vnd.realvnc.bed":["bed"],"application/vnd.recordare.musicxml":["mxl"],"application/vnd.recordare.musicxml+xml":["musicxml"],"application/vnd.rig.cryptonote":["cryptonote"],"application/vnd.rim.cod":["cod"],"application/vnd.rn-realmedia":["rm"],"application/vnd.rn-realmedia-vbr":["rmvb"],"application/vnd.route66.link66+xml":["link66"],"application/vnd.sailingtracker.track":["st"],"application/vnd.seemail":["see"],"application/vnd.sema":["sema"],"application/vnd.semd":["semd"],"application/vnd.semf":["semf"],"application/vnd.shana.informed.formdata":["ifm"],"application/vnd.shana.informed.formtemplate":["itp"],"application/vnd.shana.informed.interchange":["iif"],"application/vnd.shana.informed.package":["ipk"],"application/vnd.simtech-mindmapper":["twd","twds"],"application/vnd.smaf":["mmf"],"application/vnd.smart.teacher":["teacher"],"application/vnd.software602.filler.form+xml":["fo"],"application/vnd.solent.sdkm+xml":["sdkm","sdkd"],"application/vnd.spotfire.dxp":["dxp"],"application/vnd.spotfire.sfs":["sfs"],"application/vnd.stardivision.calc":["sdc"],"application/vnd.stardivision.draw":["sda"],"application/vnd.stardivision.impress":["sdd"],"application/vnd.stardivision.math":["smf"],"application/vnd.stardivision.writer":["sdw","vor"],"application/vnd.stardivision.writer-global":["sgl"],"application/vnd.stepmania.package":["smzip"],"application/vnd.stepmania.stepchart":["sm"],"application/vnd.sun.wadl+xml":["wadl"],"application/vnd.sun.xml.calc":["sxc"],"application/vnd.sun.xml.calc.template":["stc"],"application/vnd.sun.xml.draw":["sxd"],"application/vnd.sun.xml.draw.template":["std"],"application/vnd.sun.xml.impress":["sxi"],"application/vnd.sun.xml.impress.template":["sti"],"application/vnd.sun.xml.math":["sxm"],"application/vnd.sun.xml.writer":["sxw"],"application/vnd.sun.xml.writer.global":["sxg"],"application/vnd.sun.xml.writer.template":["stw"],"application/vnd.sus-calendar":["sus","susp"],"application/vnd.svd":["svd"],"application/vnd.symbian.install":["sis","sisx"],"application/vnd.syncml+xml":["xsm"],"application/vnd.syncml.dm+wbxml":["bdm"],"application/vnd.syncml.dm+xml":["xdm"],"application/vnd.syncml.dmddf+xml":["ddf"],"application/vnd.tao.intent-module-archive":["tao"],"application/vnd.tcpdump.pcap":["pcap","cap","dmp"],"application/vnd.tmobile-livetv":["tmo"],"application/vnd.trid.tpt":["tpt"],"application/vnd.triscape.mxs":["mxs"],"application/vnd.trueapp":["tra"],"application/vnd.ufdl":["ufd","ufdl"],"application/vnd.uiq.theme":["utz"],"application/vnd.umajin":["umj"],"application/vnd.unity":["unityweb"],"application/vnd.uoml+xml":["uoml"],"application/vnd.vcx":["vcx"],"application/vnd.visio":["vsd","vst","vss","vsw"],"application/vnd.visionary":["vis"],"application/vnd.vsf":["vsf"],"application/vnd.wap.wbxml":["wbxml"],"application/vnd.wap.wmlc":["wmlc"],"application/vnd.wap.wmlscriptc":["wmlsc"],"application/vnd.webturbo":["wtb"],"application/vnd.wolfram.player":["nbp"],"application/vnd.wordperfect":["wpd"],"application/vnd.wqd":["wqd"],"application/vnd.wt.stf":["stf"],"application/vnd.xara":["xar"],"application/vnd.xfdl":["xfdl"],"application/vnd.yamaha.hv-dic":["hvd"],"application/vnd.yamaha.hv-script":["hvs"],"application/vnd.yamaha.hv-voice":["hvp"],"application/vnd.yamaha.openscoreformat":["osf"],"application/vnd.yamaha.openscoreformat.osfpvg+xml":["osfpvg"],"application/vnd.yamaha.smaf-audio":["saf"],"application/vnd.yamaha.smaf-phrase":["spf"],"application/vnd.yellowriver-custom-menu":["cmp"],"application/vnd.zul":["zir","zirz"],"application/vnd.zzazz.deck+xml":["zaz"],"application/x-7z-compressed":["7z"],"application/x-abiword":["abw"],"application/x-ace-compressed":["ace"],"application/x-apple-diskimage":["*dmg"],"application/x-arj":["arj"],"application/x-authorware-bin":["aab","x32","u32","vox"],"application/x-authorware-map":["aam"],"application/x-authorware-seg":["aas"],"application/x-bcpio":["bcpio"],"application/x-bdoc":["*bdoc"],"application/x-bittorrent":["torrent"],"application/x-blorb":["blb","blorb"],"application/x-bzip":["bz"],"application/x-bzip2":["bz2","boz"],"application/x-cbr":["cbr","cba","cbt","cbz","cb7"],"application/x-cdlink":["vcd"],"application/x-cfs-compressed":["cfs"],"application/x-chat":["chat"],"application/x-chess-pgn":["pgn"],"application/x-chrome-extension":["crx"],"application/x-cocoa":["cco"],"application/x-conference":["nsc"],"application/x-cpio":["cpio"],"application/x-csh":["csh"],"application/x-debian-package":["*deb","udeb"],"application/x-dgc-compressed":["dgc"],"application/x-director":["dir","dcr","dxr","cst","cct","cxt","w3d","fgd","swa"],"application/x-doom":["wad"],"application/x-dtbncx+xml":["ncx"],"application/x-dtbook+xml":["dtb"],"application/x-dtbresource+xml":["res"],"application/x-dvi":["dvi"],"application/x-envoy":["evy"],"application/x-eva":["eva"],"application/x-font-bdf":["bdf"],"application/x-font-ghostscript":["gsf"],"application/x-font-linux-psf":["psf"],"application/x-font-pcf":["pcf"],"application/x-font-snf":["snf"],"application/x-font-type1":["pfa","pfb","pfm","afm"],"application/x-freearc":["arc"],"application/x-futuresplash":["spl"],"application/x-gca-compressed":["gca"],"application/x-glulx":["ulx"],"application/x-gnumeric":["gnumeric"],"application/x-gramps-xml":["gramps"],"application/x-gtar":["gtar"],"application/x-hdf":["hdf"],"application/x-httpd-php":["php"],"application/x-install-instructions":["install"],"application/x-iso9660-image":["*iso"],"application/x-iwork-keynote-sffkey":["*key"],"application/x-iwork-numbers-sffnumbers":["*numbers"],"application/x-iwork-pages-sffpages":["*pages"],"application/x-java-archive-diff":["jardiff"],"application/x-java-jnlp-file":["jnlp"],"application/x-keepass2":["kdbx"],"application/x-latex":["latex"],"application/x-lua-bytecode":["luac"],"application/x-lzh-compressed":["lzh","lha"],"application/x-makeself":["run"],"application/x-mie":["mie"],"application/x-mobipocket-ebook":["prc","mobi"],"application/x-ms-application":["application"],"application/x-ms-shortcut":["lnk"],"application/x-ms-wmd":["wmd"],"application/x-ms-wmz":["wmz"],"application/x-ms-xbap":["xbap"],"application/x-msaccess":["mdb"],"application/x-msbinder":["obd"],"application/x-mscardfile":["crd"],"application/x-msclip":["clp"],"application/x-msdos-program":["*exe"],"application/x-msdownload":["*exe","*dll","com","bat","*msi"],"application/x-msmediaview":["mvb","m13","m14"],"application/x-msmetafile":["*wmf","*wmz","*emf","emz"],"application/x-msmoney":["mny"],"application/x-mspublisher":["pub"],"application/x-msschedule":["scd"],"application/x-msterminal":["trm"],"application/x-mswrite":["wri"],"application/x-netcdf":["nc","cdf"],"application/x-ns-proxy-autoconfig":["pac"],"application/x-nzb":["nzb"],"application/x-perl":["pl","pm"],"application/x-pilot":["*prc","*pdb"],"application/x-pkcs12":["p12","pfx"],"application/x-pkcs7-certificates":["p7b","spc"],"application/x-pkcs7-certreqresp":["p7r"],"application/x-rar-compressed":["*rar"],"application/x-redhat-package-manager":["rpm"],"application/x-research-info-systems":["ris"],"application/x-sea":["sea"],"application/x-sh":["sh"],"application/x-shar":["shar"],"application/x-shockwave-flash":["swf"],"application/x-silverlight-app":["xap"],"application/x-sql":["sql"],"application/x-stuffit":["sit"],"application/x-stuffitx":["sitx"],"application/x-subrip":["srt"],"application/x-sv4cpio":["sv4cpio"],"application/x-sv4crc":["sv4crc"],"application/x-t3vm-image":["t3"],"application/x-tads":["gam"],"application/x-tar":["tar"],"application/x-tcl":["tcl","tk"],"application/x-tex":["tex"],"application/x-tex-tfm":["tfm"],"application/x-texinfo":["texinfo","texi"],"application/x-tgif":["*obj"],"application/x-ustar":["ustar"],"application/x-virtualbox-hdd":["hdd"],"application/x-virtualbox-ova":["ova"],"application/x-virtualbox-ovf":["ovf"],"application/x-virtualbox-vbox":["vbox"],"application/x-virtualbox-vbox-extpack":["vbox-extpack"],"application/x-virtualbox-vdi":["vdi"],"application/x-virtualbox-vhd":["vhd"],"application/x-virtualbox-vmdk":["vmdk"],"application/x-wais-source":["src"],"application/x-web-app-manifest+json":["webapp"],"application/x-x509-ca-cert":["der","crt","pem"],"application/x-xfig":["fig"],"application/x-xliff+xml":["*xlf"],"application/x-xpinstall":["xpi"],"application/x-xz":["xz"],"application/x-zmachine":["z1","z2","z3","z4","z5","z6","z7","z8"],"audio/vnd.dece.audio":["uva","uvva"],"audio/vnd.digital-winds":["eol"],"audio/vnd.dra":["dra"],"audio/vnd.dts":["dts"],"audio/vnd.dts.hd":["dtshd"],"audio/vnd.lucent.voice":["lvp"],"audio/vnd.ms-playready.media.pya":["pya"],"audio/vnd.nuera.ecelp4800":["ecelp4800"],"audio/vnd.nuera.ecelp7470":["ecelp7470"],"audio/vnd.nuera.ecelp9600":["ecelp9600"],"audio/vnd.rip":["rip"],"audio/x-aac":["aac"],"audio/x-aiff":["aif","aiff","aifc"],"audio/x-caf":["caf"],"audio/x-flac":["flac"],"audio/x-m4a":["*m4a"],"audio/x-matroska":["mka"],"audio/x-mpegurl":["m3u"],"audio/x-ms-wax":["wax"],"audio/x-ms-wma":["wma"],"audio/x-pn-realaudio":["ram","ra"],"audio/x-pn-realaudio-plugin":["rmp"],"audio/x-realaudio":["*ra"],"audio/x-wav":["*wav"],"chemical/x-cdx":["cdx"],"chemical/x-cif":["cif"],"chemical/x-cmdf":["cmdf"],"chemical/x-cml":["cml"],"chemical/x-csml":["csml"],"chemical/x-xyz":["xyz"],"image/prs.btif":["btif"],"image/prs.pti":["pti"],"image/vnd.adobe.photoshop":["psd"],"image/vnd.airzip.accelerator.azv":["azv"],"image/vnd.dece.graphic":["uvi","uvvi","uvg","uvvg"],"image/vnd.djvu":["djvu","djv"],"image/vnd.dvb.subtitle":["*sub"],"image/vnd.dwg":["dwg"],"image/vnd.dxf":["dxf"],"image/vnd.fastbidsheet":["fbs"],"image/vnd.fpx":["fpx"],"image/vnd.fst":["fst"],"image/vnd.fujixerox.edmics-mmr":["mmr"],"image/vnd.fujixerox.edmics-rlc":["rlc"],"image/vnd.microsoft.icon":["ico"],"image/vnd.ms-dds":["dds"],"image/vnd.ms-modi":["mdi"],"image/vnd.ms-photo":["wdp"],"image/vnd.net-fpx":["npx"],"image/vnd.pco.b16":["b16"],"image/vnd.tencent.tap":["tap"],"image/vnd.valve.source.texture":["vtf"],"image/vnd.wap.wbmp":["wbmp"],"image/vnd.xiff":["xif"],"image/vnd.zbrush.pcx":["pcx"],"image/x-3ds":["3ds"],"image/x-cmu-raster":["ras"],"image/x-cmx":["cmx"],"image/x-freehand":["fh","fhc","fh4","fh5","fh7"],"image/x-icon":["*ico"],"image/x-jng":["jng"],"image/x-mrsid-image":["sid"],"image/x-ms-bmp":["*bmp"],"image/x-pcx":["*pcx"],"image/x-pict":["pic","pct"],"image/x-portable-anymap":["pnm"],"image/x-portable-bitmap":["pbm"],"image/x-portable-graymap":["pgm"],"image/x-portable-pixmap":["ppm"],"image/x-rgb":["rgb"],"image/x-tga":["tga"],"image/x-xbitmap":["xbm"],"image/x-xpixmap":["xpm"],"image/x-xwindowdump":["xwd"],"message/vnd.wfa.wsc":["wsc"],"model/vnd.collada+xml":["dae"],"model/vnd.dwf":["dwf"],"model/vnd.gdl":["gdl"],"model/vnd.gtw":["gtw"],"model/vnd.mts":["mts"],"model/vnd.opengex":["ogex"],"model/vnd.parasolid.transmit.binary":["x_b"],"model/vnd.parasolid.transmit.text":["x_t"],"model/vnd.sap.vds":["vds"],"model/vnd.usdz+zip":["usdz"],"model/vnd.valve.source.compiled-map":["bsp"],"model/vnd.vtu":["vtu"],"text/prs.lines.tag":["dsc"],"text/vnd.curl":["curl"],"text/vnd.curl.dcurl":["dcurl"],"text/vnd.curl.mcurl":["mcurl"],"text/vnd.curl.scurl":["scurl"],"text/vnd.dvb.subtitle":["sub"],"text/vnd.fly":["fly"],"text/vnd.fmi.flexstor":["flx"],"text/vnd.graphviz":["gv"],"text/vnd.in3d.3dml":["3dml"],"text/vnd.in3d.spot":["spot"],"text/vnd.sun.j2me.app-descriptor":["jad"],"text/vnd.wap.wml":["wml"],"text/vnd.wap.wmlscript":["wmls"],"text/x-asm":["s","asm"],"text/x-c":["c","cc","cxx","cpp","h","hh","dic"],"text/x-component":["htc"],"text/x-fortran":["f","for","f77","f90"],"text/x-handlebars-template":["hbs"],"text/x-java-source":["java"],"text/x-lua":["lua"],"text/x-markdown":["mkd"],"text/x-nfo":["nfo"],"text/x-opml":["opml"],"text/x-org":["*org"],"text/x-pascal":["p","pas"],"text/x-processing":["pde"],"text/x-sass":["sass"],"text/x-scss":["scss"],"text/x-setext":["etx"],"text/x-sfv":["sfv"],"text/x-suse-ymp":["ymp"],"text/x-uuencode":["uu"],"text/x-vcalendar":["vcs"],"text/x-vcard":["vcf"],"video/vnd.dece.hd":["uvh","uvvh"],"video/vnd.dece.mobile":["uvm","uvvm"],"video/vnd.dece.pd":["uvp","uvvp"],"video/vnd.dece.sd":["uvs","uvvs"],"video/vnd.dece.video":["uvv","uvvv"],"video/vnd.dvb.file":["dvb"],"video/vnd.fvt":["fvt"],"video/vnd.mpegurl":["mxu","m4u"],"video/vnd.ms-playready.media.pyv":["pyv"],"video/vnd.uvvu.mp4":["uvu","uvvu"],"video/vnd.vivo":["viv"],"video/x-f4v":["f4v"],"video/x-fli":["fli"],"video/x-flv":["flv"],"video/x-m4v":["m4v"],"video/x-matroska":["mkv","mk3d","mks"],"video/x-mng":["mng"],"video/x-ms-asf":["asf","asx"],"video/x-ms-vob":["vob"],"video/x-ms-wm":["wm"],"video/x-ms-wmv":["wmv"],"video/x-ms-wmx":["wmx"],"video/x-ms-wvx":["wvx"],"video/x-msvideo":["avi"],"video/x-sgi-movie":["movie"],"video/x-smv":["smv"],"x-conference/x-cooltalk":["ice"]};
-
-/***/ }),
-
-/***/ 3725:
-/***/ ((module) => {
-
-module.exports = {"application/andrew-inset":["ez"],"application/applixware":["aw"],"application/atom+xml":["atom"],"application/atomcat+xml":["atomcat"],"application/atomdeleted+xml":["atomdeleted"],"application/atomsvc+xml":["atomsvc"],"application/atsc-dwd+xml":["dwd"],"application/atsc-held+xml":["held"],"application/atsc-rsat+xml":["rsat"],"application/bdoc":["bdoc"],"application/calendar+xml":["xcs"],"application/ccxml+xml":["ccxml"],"application/cdfx+xml":["cdfx"],"application/cdmi-capability":["cdmia"],"application/cdmi-container":["cdmic"],"application/cdmi-domain":["cdmid"],"application/cdmi-object":["cdmio"],"application/cdmi-queue":["cdmiq"],"application/cu-seeme":["cu"],"application/dash+xml":["mpd"],"application/davmount+xml":["davmount"],"application/docbook+xml":["dbk"],"application/dssc+der":["dssc"],"application/dssc+xml":["xdssc"],"application/ecmascript":["es","ecma"],"application/emma+xml":["emma"],"application/emotionml+xml":["emotionml"],"application/epub+zip":["epub"],"application/exi":["exi"],"application/express":["exp"],"application/fdt+xml":["fdt"],"application/font-tdpfr":["pfr"],"application/geo+json":["geojson"],"application/gml+xml":["gml"],"application/gpx+xml":["gpx"],"application/gxf":["gxf"],"application/gzip":["gz"],"application/hjson":["hjson"],"application/hyperstudio":["stk"],"application/inkml+xml":["ink","inkml"],"application/ipfix":["ipfix"],"application/its+xml":["its"],"application/java-archive":["jar","war","ear"],"application/java-serialized-object":["ser"],"application/java-vm":["class"],"application/javascript":["js","mjs"],"application/json":["json","map"],"application/json5":["json5"],"application/jsonml+json":["jsonml"],"application/ld+json":["jsonld"],"application/lgr+xml":["lgr"],"application/lost+xml":["lostxml"],"application/mac-binhex40":["hqx"],"application/mac-compactpro":["cpt"],"application/mads+xml":["mads"],"application/manifest+json":["webmanifest"],"application/marc":["mrc"],"application/marcxml+xml":["mrcx"],"application/mathematica":["ma","nb","mb"],"application/mathml+xml":["mathml"],"application/mbox":["mbox"],"application/mediaservercontrol+xml":["mscml"],"application/metalink+xml":["metalink"],"application/metalink4+xml":["meta4"],"application/mets+xml":["mets"],"application/mmt-aei+xml":["maei"],"application/mmt-usd+xml":["musd"],"application/mods+xml":["mods"],"application/mp21":["m21","mp21"],"application/mp4":["mp4s","m4p"],"application/msword":["doc","dot"],"application/mxf":["mxf"],"application/n-quads":["nq"],"application/n-triples":["nt"],"application/node":["cjs"],"application/octet-stream":["bin","dms","lrf","mar","so","dist","distz","pkg","bpk","dump","elc","deploy","exe","dll","deb","dmg","iso","img","msi","msp","msm","buffer"],"application/oda":["oda"],"application/oebps-package+xml":["opf"],"application/ogg":["ogx"],"application/omdoc+xml":["omdoc"],"application/onenote":["onetoc","onetoc2","onetmp","onepkg"],"application/oxps":["oxps"],"application/p2p-overlay+xml":["relo"],"application/patch-ops-error+xml":["xer"],"application/pdf":["pdf"],"application/pgp-encrypted":["pgp"],"application/pgp-signature":["asc","sig"],"application/pics-rules":["prf"],"application/pkcs10":["p10"],"application/pkcs7-mime":["p7m","p7c"],"application/pkcs7-signature":["p7s"],"application/pkcs8":["p8"],"application/pkix-attr-cert":["ac"],"application/pkix-cert":["cer"],"application/pkix-crl":["crl"],"application/pkix-pkipath":["pkipath"],"application/pkixcmp":["pki"],"application/pls+xml":["pls"],"application/postscript":["ai","eps","ps"],"application/provenance+xml":["provx"],"application/pskc+xml":["pskcxml"],"application/raml+yaml":["raml"],"application/rdf+xml":["rdf","owl"],"application/reginfo+xml":["rif"],"application/relax-ng-compact-syntax":["rnc"],"application/resource-lists+xml":["rl"],"application/resource-lists-diff+xml":["rld"],"application/rls-services+xml":["rs"],"application/route-apd+xml":["rapd"],"application/route-s-tsid+xml":["sls"],"application/route-usd+xml":["rusd"],"application/rpki-ghostbusters":["gbr"],"application/rpki-manifest":["mft"],"application/rpki-roa":["roa"],"application/rsd+xml":["rsd"],"application/rss+xml":["rss"],"application/rtf":["rtf"],"application/sbml+xml":["sbml"],"application/scvp-cv-request":["scq"],"application/scvp-cv-response":["scs"],"application/scvp-vp-request":["spq"],"application/scvp-vp-response":["spp"],"application/sdp":["sdp"],"application/senml+xml":["senmlx"],"application/sensml+xml":["sensmlx"],"application/set-payment-initiation":["setpay"],"application/set-registration-initiation":["setreg"],"application/shf+xml":["shf"],"application/sieve":["siv","sieve"],"application/smil+xml":["smi","smil"],"application/sparql-query":["rq"],"application/sparql-results+xml":["srx"],"application/srgs":["gram"],"application/srgs+xml":["grxml"],"application/sru+xml":["sru"],"application/ssdl+xml":["ssdl"],"application/ssml+xml":["ssml"],"application/swid+xml":["swidtag"],"application/tei+xml":["tei","teicorpus"],"application/thraud+xml":["tfi"],"application/timestamped-data":["tsd"],"application/toml":["toml"],"application/trig":["trig"],"application/ttml+xml":["ttml"],"application/ubjson":["ubj"],"application/urc-ressheet+xml":["rsheet"],"application/urc-targetdesc+xml":["td"],"application/voicexml+xml":["vxml"],"application/wasm":["wasm"],"application/widget":["wgt"],"application/winhlp":["hlp"],"application/wsdl+xml":["wsdl"],"application/wspolicy+xml":["wspolicy"],"application/xaml+xml":["xaml"],"application/xcap-att+xml":["xav"],"application/xcap-caps+xml":["xca"],"application/xcap-diff+xml":["xdf"],"application/xcap-el+xml":["xel"],"application/xcap-ns+xml":["xns"],"application/xenc+xml":["xenc"],"application/xhtml+xml":["xhtml","xht"],"application/xliff+xml":["xlf"],"application/xml":["xml","xsl","xsd","rng"],"application/xml-dtd":["dtd"],"application/xop+xml":["xop"],"application/xproc+xml":["xpl"],"application/xslt+xml":["*xsl","xslt"],"application/xspf+xml":["xspf"],"application/xv+xml":["mxml","xhvml","xvml","xvm"],"application/yang":["yang"],"application/yin+xml":["yin"],"application/zip":["zip"],"audio/3gpp":["*3gpp"],"audio/adpcm":["adp"],"audio/amr":["amr"],"audio/basic":["au","snd"],"audio/midi":["mid","midi","kar","rmi"],"audio/mobile-xmf":["mxmf"],"audio/mp3":["*mp3"],"audio/mp4":["m4a","mp4a"],"audio/mpeg":["mpga","mp2","mp2a","mp3","m2a","m3a"],"audio/ogg":["oga","ogg","spx","opus"],"audio/s3m":["s3m"],"audio/silk":["sil"],"audio/wav":["wav"],"audio/wave":["*wav"],"audio/webm":["weba"],"audio/xm":["xm"],"font/collection":["ttc"],"font/otf":["otf"],"font/ttf":["ttf"],"font/woff":["woff"],"font/woff2":["woff2"],"image/aces":["exr"],"image/apng":["apng"],"image/avif":["avif"],"image/bmp":["bmp"],"image/cgm":["cgm"],"image/dicom-rle":["drle"],"image/emf":["emf"],"image/fits":["fits"],"image/g3fax":["g3"],"image/gif":["gif"],"image/heic":["heic"],"image/heic-sequence":["heics"],"image/heif":["heif"],"image/heif-sequence":["heifs"],"image/hej2k":["hej2"],"image/hsj2":["hsj2"],"image/ief":["ief"],"image/jls":["jls"],"image/jp2":["jp2","jpg2"],"image/jpeg":["jpeg","jpg","jpe"],"image/jph":["jph"],"image/jphc":["jhc"],"image/jpm":["jpm"],"image/jpx":["jpx","jpf"],"image/jxr":["jxr"],"image/jxra":["jxra"],"image/jxrs":["jxrs"],"image/jxs":["jxs"],"image/jxsc":["jxsc"],"image/jxsi":["jxsi"],"image/jxss":["jxss"],"image/ktx":["ktx"],"image/ktx2":["ktx2"],"image/png":["png"],"image/sgi":["sgi"],"image/svg+xml":["svg","svgz"],"image/t38":["t38"],"image/tiff":["tif","tiff"],"image/tiff-fx":["tfx"],"image/webp":["webp"],"image/wmf":["wmf"],"message/disposition-notification":["disposition-notification"],"message/global":["u8msg"],"message/global-delivery-status":["u8dsn"],"message/global-disposition-notification":["u8mdn"],"message/global-headers":["u8hdr"],"message/rfc822":["eml","mime"],"model/3mf":["3mf"],"model/gltf+json":["gltf"],"model/gltf-binary":["glb"],"model/iges":["igs","iges"],"model/mesh":["msh","mesh","silo"],"model/mtl":["mtl"],"model/obj":["obj"],"model/step+xml":["stpx"],"model/step+zip":["stpz"],"model/step-xml+zip":["stpxz"],"model/stl":["stl"],"model/vrml":["wrl","vrml"],"model/x3d+binary":["*x3db","x3dbz"],"model/x3d+fastinfoset":["x3db"],"model/x3d+vrml":["*x3dv","x3dvz"],"model/x3d+xml":["x3d","x3dz"],"model/x3d-vrml":["x3dv"],"text/cache-manifest":["appcache","manifest"],"text/calendar":["ics","ifb"],"text/coffeescript":["coffee","litcoffee"],"text/css":["css"],"text/csv":["csv"],"text/html":["html","htm","shtml"],"text/jade":["jade"],"text/jsx":["jsx"],"text/less":["less"],"text/markdown":["markdown","md"],"text/mathml":["mml"],"text/mdx":["mdx"],"text/n3":["n3"],"text/plain":["txt","text","conf","def","list","log","in","ini"],"text/richtext":["rtx"],"text/rtf":["*rtf"],"text/sgml":["sgml","sgm"],"text/shex":["shex"],"text/slim":["slim","slm"],"text/spdx":["spdx"],"text/stylus":["stylus","styl"],"text/tab-separated-values":["tsv"],"text/troff":["t","tr","roff","man","me","ms"],"text/turtle":["ttl"],"text/uri-list":["uri","uris","urls"],"text/vcard":["vcard"],"text/vtt":["vtt"],"text/xml":["*xml"],"text/yaml":["yaml","yml"],"video/3gpp":["3gp","3gpp"],"video/3gpp2":["3g2"],"video/h261":["h261"],"video/h263":["h263"],"video/h264":["h264"],"video/iso.segment":["m4s"],"video/jpeg":["jpgv"],"video/jpm":["*jpm","jpgm"],"video/mj2":["mj2","mjp2"],"video/mp2t":["ts"],"video/mp4":["mp4","mp4v","mpg4"],"video/mpeg":["mpeg","mpg","mpe","m1v","m2v"],"video/ogg":["ogv"],"video/quicktime":["qt","mov"],"video/webm":["webm"]};
-
-/***/ }),
-
 /***/ 3772:
 /***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
 
@@ -25788,84 +25594,6 @@ function onceStrict (fn) {
   f.called = false
   return f
 }
-
-
-/***/ }),
-
-/***/ 8890:
-/***/ ((module, __unused_webpack_exports, __nccwpck_require__) => {
-
-
-const Queue = __nccwpck_require__(538);
-
-const pLimit = concurrency => {
-	if (!((Number.isInteger(concurrency) || concurrency === Infinity) && concurrency > 0)) {
-		throw new TypeError('Expected `concurrency` to be a number from 1 and up');
-	}
-
-	const queue = new Queue();
-	let activeCount = 0;
-
-	const next = () => {
-		activeCount--;
-
-		if (queue.size > 0) {
-			queue.dequeue()();
-		}
-	};
-
-	const run = async (fn, resolve, ...args) => {
-		activeCount++;
-
-		const result = (async () => fn(...args))();
-
-		resolve(result);
-
-		try {
-			await result;
-		} catch {}
-
-		next();
-	};
-
-	const enqueue = (fn, resolve, ...args) => {
-		queue.enqueue(run.bind(null, fn, resolve, ...args));
-
-		(async () => {
-			// This function needs to wait until the next microtask before comparing
-			// `activeCount` to `concurrency`, because `activeCount` is updated asynchronously
-			// when the run function is dequeued and called. The comparison in the if-statement
-			// needs to happen asynchronously as well to get an up-to-date value for `activeCount`.
-			await Promise.resolve();
-
-			if (activeCount < concurrency && queue.size > 0) {
-				queue.dequeue()();
-			}
-		})();
-	};
-
-	const generator = (fn, ...args) => new Promise(resolve => {
-		enqueue(fn, resolve, ...args);
-	});
-
-	Object.defineProperties(generator, {
-		activeCount: {
-			get: () => activeCount
-		},
-		pendingCount: {
-			get: () => queue.size
-		},
-		clearQueue: {
-			value: () => {
-				queue.clear();
-			}
-		}
-	});
-
-	return generator;
-};
-
-module.exports = pLimit;
 
 
 /***/ }),
@@ -29113,7 +28841,7 @@ function getNextRetryDelay(config) {
   return Math.min(
     calculatedNextRetryDelay,
     maxAllowableDelayMs,
-    maxRetryDelayMs
+    maxRetryDelayMs,
   );
 }
 
@@ -32681,20 +32409,20 @@ exports.TeenyStatistics = exports.TeenyStatisticsWarning = void 0;
  * @see process.emitWarning
  */
 class TeenyStatisticsWarning extends Error {
+    static CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning';
+    threshold = 0;
+    type = '';
+    value = 0;
     /**
      * @param {string} message
      */
     constructor(message) {
         super(message);
-        this.threshold = 0;
-        this.type = '';
-        this.value = 0;
         this.name = this.constructor.name;
         Error.captureStackTrace(this, this.constructor);
     }
 }
 exports.TeenyStatisticsWarning = TeenyStatisticsWarning;
-TeenyStatisticsWarning.CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning';
 /**
  * @class TeenyStatistics
  * @description Maintain various statistics internal to teeny-request. Tracking
@@ -32702,21 +32430,35 @@ TeenyStatisticsWarning.CONCURRENT_REQUESTS = 'ConcurrentRequestsExceededWarning'
  */
 class TeenyStatistics {
     /**
+     * @description A default threshold representing when to warn about excessive
+     *   in-flight/concurrent requests.
+     * @type {number}
+     * @static
+     * @readonly
+     * @default 5000
+     */
+    static DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
+    /**
+     * @type {TeenyStatisticsConfig}
+     * @private
+     */
+    _options;
+    /**
+     * @type {number}
+     * @private
+     * @default 0
+     */
+    _concurrentRequests = 0;
+    /**
+     * @type {boolean}
+     * @private
+     * @default false
+     */
+    _didConcurrentRequestWarn = false;
+    /**
      * @param {TeenyStatisticsOptions} [opts]
      */
     constructor(opts) {
-        /**
-         * @type {number}
-         * @private
-         * @default 0
-         */
-        this._concurrentRequests = 0;
-        /**
-         * @type {boolean}
-         * @private
-         * @default false
-         */
-        this._didConcurrentRequestWarn = false;
         this._options = TeenyStatistics._prepareOptions(opts);
     }
     /**
@@ -32800,15 +32542,6 @@ class TeenyStatistics {
     }
 }
 exports.TeenyStatistics = TeenyStatistics;
-/**
- * @description A default threshold representing when to warn about excessive
- *   in-flight/concurrent requests.
- * @type {number}
- * @static
- * @readonly
- * @default 5000
- */
-TeenyStatistics.DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
 //# sourceMappingURL=TeenyStatistics.js.map
 
 /***/ }),
@@ -32834,11 +32567,10 @@ TeenyStatistics.DEFAULT_WARN_CONCURRENT_REQUESTS = 5000;
  * limitations under the License.
  */
 Object.defineProperty(exports, "__esModule", ({ value: true }));
-exports.getAgent = exports.pool = void 0;
+exports.pool = void 0;
+exports.getAgent = getAgent;
 const http_1 = __nccwpck_require__(8611);
 const https_1 = __nccwpck_require__(5692);
-// eslint-disable-next-line node/no-deprecated-api
-const url_1 = __nccwpck_require__(7016);
 exports.pool = new Map();
 /**
  * Determines if a proxy should be considered based on the environment.
@@ -32886,11 +32618,10 @@ function getAgent(uri, reqOpts) {
     const shouldUseProxy = manuallyProvidedProxy || shouldUseProxyForURI(uri);
     if (proxy && shouldUseProxy) {
         // tslint:disable-next-line variable-name
-        const Agent = isHttp
-            ? __nccwpck_require__(875)
-            : __nccwpck_require__(6518);
-        const proxyOpts = { ...(0, url_1.parse)(proxy), ...poolOptions };
-        return new Agent(proxyOpts);
+        const { HttpProxyAgent } = __nccwpck_require__(1970);
+        const { HttpsProxyAgent } = __nccwpck_require__(3669);
+        const Agent = isHttp ? HttpProxyAgent : HttpsProxyAgent;
+        return new Agent(proxy, poolOptions);
     }
     let key = isHttp ? 'http' : 'https';
     if (reqOpts.forever) {
@@ -32903,7 +32634,6 @@ function getAgent(uri, reqOpts) {
     }
     return exports.pool.get(key);
 }
-exports.getAgent = getAgent;
 //# sourceMappingURL=agents.js.map
 
 /***/ }),
@@ -32930,15 +32660,17 @@ var __webpack_unused_export__;
  * limitations under the License.
  */
 __webpack_unused_export__ = ({ value: true });
-exports.V6 = __webpack_unused_export__ = void 0;
-const node_fetch_1 = __nccwpck_require__(6705);
+__webpack_unused_export__ = void 0;
+exports.V6 = teenyRequest;
 const stream_1 = __nccwpck_require__(2203);
-const uuid = __nccwpck_require__(2048);
 const agents_1 = __nccwpck_require__(4003);
 const TeenyStatistics_1 = __nccwpck_require__(7745);
+const crypto_1 = __nccwpck_require__(6982);
 // eslint-disable-next-line @typescript-eslint/no-var-requires
 const streamEvents = __nccwpck_require__(1546);
+const fetch = (...args) => __nccwpck_require__.e(/* import() */ 674).then(__nccwpck_require__.bind(__nccwpck_require__, 674)).then(({ default: fetch }) => fetch(...args));
 class RequestError extends Error {
+    code;
 }
 __webpack_unused_export__ = RequestError;
 /**
@@ -32955,7 +32687,12 @@ function requestToFetchOptions(reqOpts) {
     if (typeof reqOpts.json === 'object') {
         // Add Content-type: application/json header
         reqOpts.headers = reqOpts.headers || {};
-        reqOpts.headers['Content-Type'] = 'application/json';
+        if (reqOpts.headers instanceof globalThis.Headers) {
+            reqOpts.headers.set('Content-Type', 'application/json');
+        }
+        else {
+            reqOpts.headers['Content-Type'] = 'application/json';
+        }
         // Set body to JSON representation of value
         options.body = JSON.stringify(reqOpts.json);
     }
@@ -32970,8 +32707,16 @@ function requestToFetchOptions(reqOpts) {
             options.body = reqOpts.body;
         }
     }
-    // eslint-disable-next-line @typescript-eslint/no-explicit-any
-    options.headers = reqOpts.headers;
+    if (reqOpts.headers instanceof globalThis.Headers) {
+        options.headers = {};
+        for (const pair of reqOpts.headers.entries()) {
+            options.headers[pair[0]] = pair[1];
+        }
+    }
+    else {
+        // eslint-disable-next-line @typescript-eslint/no-explicit-any
+        options.headers = reqOpts.headers;
+    }
     let uri = (reqOpts.uri ||
         reqOpts.url);
     if (!uri) {
@@ -33046,12 +32791,13 @@ function teenyRequest(reqOpts, callback) {
             // TODO: add support for multipart uploads through streaming
             throw new Error('Multipart without callback is not implemented.');
         }
-        const boundary = uuid.v4();
-        options.headers['Content-Type'] = `multipart/related; boundary=${boundary}`;
+        const boundary = (0, crypto_1.randomUUID)();
+        options.headers['Content-Type'] =
+            `multipart/related; boundary=${boundary}`;
         options.body = createMultipartStream(boundary, multipart);
         // Multipart upload
         teenyRequest.stats.requestStarting();
-        (0, node_fetch_1.default)(uri, options).then(res => {
+        fetch(uri, options).then(res => {
             teenyRequest.stats.requestFinished();
             const header = res.headers.get('content-type');
             const response = fetchToRequestResponse(options, res);
@@ -33095,7 +32841,7 @@ function teenyRequest(reqOpts, callback) {
         });
         options.compress = false;
         teenyRequest.stats.requestStarting();
-        (0, node_fetch_1.default)(uri, options).then(res => {
+        fetch(uri, options).then(res => {
             teenyRequest.stats.requestFinished();
             responseStream = res.body;
             responseStream.on('error', (err) => {
@@ -33114,7 +32860,7 @@ function teenyRequest(reqOpts, callback) {
     }
     // GET or POST with callback
     teenyRequest.stats.requestStarting();
-    (0, node_fetch_1.default)(uri, options).then(res => {
+    fetch(uri, options).then(res => {
         teenyRequest.stats.requestFinished();
         const header = res.headers.get('content-type');
         const response = fetchToRequestResponse(options, res);
@@ -33147,7 +32893,6 @@ function teenyRequest(reqOpts, callback) {
     });
     return;
 }
-exports.V6 = teenyRequest;
 teenyRequest.defaults = (defaults) => {
     return (reqOpts, callback) => {
         const opts = { ...defaults, ...reqOpts };
@@ -33165,685 +32910,6 @@ teenyRequest.resetStats = () => {
     teenyRequest.stats = new TeenyStatistics_1.TeenyStatistics(teenyRequest.stats.getOptions());
 };
 //# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 7954:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const events_1 = __nccwpck_require__(4434);
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const promisify_1 = __importDefault(__nccwpck_require__(4446));
-const debug = debug_1.default('agent-base');
-function isAgent(v) {
-    return Boolean(v) && typeof v.addRequest === 'function';
-}
-function isSecureEndpoint() {
-    const { stack } = new Error();
-    if (typeof stack !== 'string')
-        return false;
-    return stack.split('\n').some(l => l.indexOf('(https.js:') !== -1 || l.indexOf('node:https:') !== -1);
-}
-function createAgent(callback, opts) {
-    return new createAgent.Agent(callback, opts);
-}
-(function (createAgent) {
-    /**
-     * Base `http.Agent` implementation.
-     * No pooling/keep-alive is implemented by default.
-     *
-     * @param {Function} callback
-     * @api public
-     */
-    class Agent extends events_1.EventEmitter {
-        constructor(callback, _opts) {
-            super();
-            let opts = _opts;
-            if (typeof callback === 'function') {
-                this.callback = callback;
-            }
-            else if (callback) {
-                opts = callback;
-            }
-            // Timeout for the socket to be returned from the callback
-            this.timeout = null;
-            if (opts && typeof opts.timeout === 'number') {
-                this.timeout = opts.timeout;
-            }
-            // These aren't actually used by `agent-base`, but are required
-            // for the TypeScript definition files in `@types/node` :/
-            this.maxFreeSockets = 1;
-            this.maxSockets = 1;
-            this.maxTotalSockets = Infinity;
-            this.sockets = {};
-            this.freeSockets = {};
-            this.requests = {};
-            this.options = {};
-        }
-        get defaultPort() {
-            if (typeof this.explicitDefaultPort === 'number') {
-                return this.explicitDefaultPort;
-            }
-            return isSecureEndpoint() ? 443 : 80;
-        }
-        set defaultPort(v) {
-            this.explicitDefaultPort = v;
-        }
-        get protocol() {
-            if (typeof this.explicitProtocol === 'string') {
-                return this.explicitProtocol;
-            }
-            return isSecureEndpoint() ? 'https:' : 'http:';
-        }
-        set protocol(v) {
-            this.explicitProtocol = v;
-        }
-        callback(req, opts, fn) {
-            throw new Error('"agent-base" has no default implementation, you must subclass and override `callback()`');
-        }
-        /**
-         * Called by node-core's "_http_client.js" module when creating
-         * a new HTTP request with this Agent instance.
-         *
-         * @api public
-         */
-        addRequest(req, _opts) {
-            const opts = Object.assign({}, _opts);
-            if (typeof opts.secureEndpoint !== 'boolean') {
-                opts.secureEndpoint = isSecureEndpoint();
-            }
-            if (opts.host == null) {
-                opts.host = 'localhost';
-            }
-            if (opts.port == null) {
-                opts.port = opts.secureEndpoint ? 443 : 80;
-            }
-            if (opts.protocol == null) {
-                opts.protocol = opts.secureEndpoint ? 'https:' : 'http:';
-            }
-            if (opts.host && opts.path) {
-                // If both a `host` and `path` are specified then it's most
-                // likely the result of a `url.parse()` call... we need to
-                // remove the `path` portion so that `net.connect()` doesn't
-                // attempt to open that as a unix socket file.
-                delete opts.path;
-            }
-            delete opts.agent;
-            delete opts.hostname;
-            delete opts._defaultAgent;
-            delete opts.defaultPort;
-            delete opts.createConnection;
-            // Hint to use "Connection: close"
-            // XXX: non-documented `http` module API :(
-            req._last = true;
-            req.shouldKeepAlive = false;
-            let timedOut = false;
-            let timeoutId = null;
-            const timeoutMs = opts.timeout || this.timeout;
-            const onerror = (err) => {
-                if (req._hadError)
-                    return;
-                req.emit('error', err);
-                // For Safety. Some additional errors might fire later on
-                // and we need to make sure we don't double-fire the error event.
-                req._hadError = true;
-            };
-            const ontimeout = () => {
-                timeoutId = null;
-                timedOut = true;
-                const err = new Error(`A "socket" was not created for HTTP request before ${timeoutMs}ms`);
-                err.code = 'ETIMEOUT';
-                onerror(err);
-            };
-            const callbackError = (err) => {
-                if (timedOut)
-                    return;
-                if (timeoutId !== null) {
-                    clearTimeout(timeoutId);
-                    timeoutId = null;
-                }
-                onerror(err);
-            };
-            const onsocket = (socket) => {
-                if (timedOut)
-                    return;
-                if (timeoutId != null) {
-                    clearTimeout(timeoutId);
-                    timeoutId = null;
-                }
-                if (isAgent(socket)) {
-                    // `socket` is actually an `http.Agent` instance, so
-                    // relinquish responsibility for this `req` to the Agent
-                    // from here on
-                    debug('Callback returned another Agent instance %o', socket.constructor.name);
-                    socket.addRequest(req, opts);
-                    return;
-                }
-                if (socket) {
-                    socket.once('free', () => {
-                        this.freeSocket(socket, opts);
-                    });
-                    req.onSocket(socket);
-                    return;
-                }
-                const err = new Error(`no Duplex stream was returned to agent-base for \`${req.method} ${req.path}\``);
-                onerror(err);
-            };
-            if (typeof this.callback !== 'function') {
-                onerror(new Error('`callback` is not defined'));
-                return;
-            }
-            if (!this.promisifiedCallback) {
-                if (this.callback.length >= 3) {
-                    debug('Converting legacy callback function to promise');
-                    this.promisifiedCallback = promisify_1.default(this.callback);
-                }
-                else {
-                    this.promisifiedCallback = this.callback;
-                }
-            }
-            if (typeof timeoutMs === 'number' && timeoutMs > 0) {
-                timeoutId = setTimeout(ontimeout, timeoutMs);
-            }
-            if ('port' in opts && typeof opts.port !== 'number') {
-                opts.port = Number(opts.port);
-            }
-            try {
-                debug('Resolving socket for %o request: %o', opts.protocol, `${req.method} ${req.path}`);
-                Promise.resolve(this.promisifiedCallback(req, opts)).then(onsocket, callbackError);
-            }
-            catch (err) {
-                Promise.reject(err).catch(callbackError);
-            }
-        }
-        freeSocket(socket, opts) {
-            debug('Freeing socket %o %o', socket.constructor.name, opts);
-            socket.destroy();
-        }
-        destroy() {
-            debug('Destroying agent %o', this.constructor.name);
-        }
-    }
-    createAgent.Agent = Agent;
-    // So that `instanceof` works correctly
-    createAgent.prototype = createAgent.Agent.prototype;
-})(createAgent || (createAgent = {}));
-module.exports = createAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 4446:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-function promisify(fn) {
-    return function (req, opts) {
-        return new Promise((resolve, reject) => {
-            fn.call(this, req, opts, (err, rtn) => {
-                if (err) {
-                    reject(err);
-                }
-                else {
-                    resolve(rtn);
-                }
-            });
-        });
-    };
-}
-exports["default"] = promisify;
-//# sourceMappingURL=promisify.js.map
-
-/***/ }),
-
-/***/ 3034:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const net_1 = __importDefault(__nccwpck_require__(9278));
-const tls_1 = __importDefault(__nccwpck_require__(4756));
-const url_1 = __importDefault(__nccwpck_require__(7016));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const once_1 = __importDefault(__nccwpck_require__(8662));
-const agent_base_1 = __nccwpck_require__(7954);
-const debug = (0, debug_1.default)('http-proxy-agent');
-function isHTTPS(protocol) {
-    return typeof protocol === 'string' ? /^https:?$/i.test(protocol) : false;
-}
-/**
- * The `HttpProxyAgent` implements an HTTP Agent subclass that connects
- * to the specified "HTTP proxy server" in order to proxy HTTP requests.
- *
- * @api public
- */
-class HttpProxyAgent extends agent_base_1.Agent {
-    constructor(_opts) {
-        let opts;
-        if (typeof _opts === 'string') {
-            opts = url_1.default.parse(_opts);
-        }
-        else {
-            opts = _opts;
-        }
-        if (!opts) {
-            throw new Error('an HTTP(S) proxy server `host` and `port` must be specified!');
-        }
-        debug('Creating new HttpProxyAgent instance: %o', opts);
-        super(opts);
-        const proxy = Object.assign({}, opts);
-        // If `true`, then connect to the proxy server over TLS.
-        // Defaults to `false`.
-        this.secureProxy = opts.secureProxy || isHTTPS(proxy.protocol);
-        // Prefer `hostname` over `host`, and set the `port` if needed.
-        proxy.host = proxy.hostname || proxy.host;
-        if (typeof proxy.port === 'string') {
-            proxy.port = parseInt(proxy.port, 10);
-        }
-        if (!proxy.port && proxy.host) {
-            proxy.port = this.secureProxy ? 443 : 80;
-        }
-        if (proxy.host && proxy.path) {
-            // If both a `host` and `path` are specified then it's most likely
-            // the result of a `url.parse()` call... we need to remove the
-            // `path` portion so that `net.connect()` doesn't attempt to open
-            // that as a Unix socket file.
-            delete proxy.path;
-            delete proxy.pathname;
-        }
-        this.proxy = proxy;
-    }
-    /**
-     * Called when the node-core HTTP client library is creating a
-     * new HTTP request.
-     *
-     * @api protected
-     */
-    callback(req, opts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { proxy, secureProxy } = this;
-            const parsed = url_1.default.parse(req.path);
-            if (!parsed.protocol) {
-                parsed.protocol = 'http:';
-            }
-            if (!parsed.hostname) {
-                parsed.hostname = opts.hostname || opts.host || null;
-            }
-            if (parsed.port == null && typeof opts.port) {
-                parsed.port = String(opts.port);
-            }
-            if (parsed.port === '80') {
-                // if port is 80, then we can remove the port so that the
-                // ":80" portion is not on the produced URL
-                parsed.port = '';
-            }
-            // Change the `http.ClientRequest` instance's "path" field
-            // to the absolute path of the URL that will be requested.
-            req.path = url_1.default.format(parsed);
-            // Inject the `Proxy-Authorization` header if necessary.
-            if (proxy.auth) {
-                req.setHeader('Proxy-Authorization', `Basic ${Buffer.from(proxy.auth).toString('base64')}`);
-            }
-            // Create a socket connection to the proxy server.
-            let socket;
-            if (secureProxy) {
-                debug('Creating `tls.Socket`: %o', proxy);
-                socket = tls_1.default.connect(proxy);
-            }
-            else {
-                debug('Creating `net.Socket`: %o', proxy);
-                socket = net_1.default.connect(proxy);
-            }
-            // At this point, the http ClientRequest's internal `_header` field
-            // might have already been set. If this is the case then we'll need
-            // to re-generate the string since we just changed the `req.path`.
-            if (req._header) {
-                let first;
-                let endOfHeaders;
-                debug('Regenerating stored HTTP header string for request');
-                req._header = null;
-                req._implicitHeader();
-                if (req.output && req.output.length > 0) {
-                    // Node < 12
-                    debug('Patching connection write() output buffer with updated header');
-                    first = req.output[0];
-                    endOfHeaders = first.indexOf('\r\n\r\n') + 4;
-                    req.output[0] = req._header + first.substring(endOfHeaders);
-                    debug('Output buffer: %o', req.output);
-                }
-                else if (req.outputData && req.outputData.length > 0) {
-                    // Node >= 12
-                    debug('Patching connection write() output buffer with updated header');
-                    first = req.outputData[0].data;
-                    endOfHeaders = first.indexOf('\r\n\r\n') + 4;
-                    req.outputData[0].data =
-                        req._header + first.substring(endOfHeaders);
-                    debug('Output buffer: %o', req.outputData[0].data);
-                }
-            }
-            // Wait for the socket's `connect` event, so that this `callback()`
-            // function throws instead of the `http` request machinery. This is
-            // important for i.e. `PacProxyAgent` which determines a failed proxy
-            // connection via the `callback()` function throwing.
-            yield (0, once_1.default)(socket, 'connect');
-            return socket;
-        });
-    }
-}
-exports["default"] = HttpProxyAgent;
-//# sourceMappingURL=agent.js.map
-
-/***/ }),
-
-/***/ 875:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const agent_1 = __importDefault(__nccwpck_require__(3034));
-function createHttpProxyAgent(opts) {
-    return new agent_1.default(opts);
-}
-(function (createHttpProxyAgent) {
-    createHttpProxyAgent.HttpProxyAgent = agent_1.default;
-    createHttpProxyAgent.prototype = agent_1.default.prototype;
-})(createHttpProxyAgent || (createHttpProxyAgent = {}));
-module.exports = createHttpProxyAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 5299:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __awaiter = (this && this.__awaiter) || function (thisArg, _arguments, P, generator) {
-    function adopt(value) { return value instanceof P ? value : new P(function (resolve) { resolve(value); }); }
-    return new (P || (P = Promise))(function (resolve, reject) {
-        function fulfilled(value) { try { step(generator.next(value)); } catch (e) { reject(e); } }
-        function rejected(value) { try { step(generator["throw"](value)); } catch (e) { reject(e); } }
-        function step(result) { result.done ? resolve(result.value) : adopt(result.value).then(fulfilled, rejected); }
-        step((generator = generator.apply(thisArg, _arguments || [])).next());
-    });
-};
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const net_1 = __importDefault(__nccwpck_require__(9278));
-const tls_1 = __importDefault(__nccwpck_require__(4756));
-const url_1 = __importDefault(__nccwpck_require__(7016));
-const assert_1 = __importDefault(__nccwpck_require__(2613));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const agent_base_1 = __nccwpck_require__(7954);
-const parse_proxy_response_1 = __importDefault(__nccwpck_require__(7742));
-const debug = debug_1.default('https-proxy-agent:agent');
-/**
- * The `HttpsProxyAgent` implements an HTTP Agent subclass that connects to
- * the specified "HTTP(s) proxy server" in order to proxy HTTPS requests.
- *
- * Outgoing HTTP requests are first tunneled through the proxy server using the
- * `CONNECT` HTTP request method to establish a connection to the proxy server,
- * and then the proxy server connects to the destination target and issues the
- * HTTP request from the proxy server.
- *
- * `https:` requests have their socket connection upgraded to TLS once
- * the connection to the proxy server has been established.
- *
- * @api public
- */
-class HttpsProxyAgent extends agent_base_1.Agent {
-    constructor(_opts) {
-        let opts;
-        if (typeof _opts === 'string') {
-            opts = url_1.default.parse(_opts);
-        }
-        else {
-            opts = _opts;
-        }
-        if (!opts) {
-            throw new Error('an HTTP(S) proxy server `host` and `port` must be specified!');
-        }
-        debug('creating new HttpsProxyAgent instance: %o', opts);
-        super(opts);
-        const proxy = Object.assign({}, opts);
-        // If `true`, then connect to the proxy server over TLS.
-        // Defaults to `false`.
-        this.secureProxy = opts.secureProxy || isHTTPS(proxy.protocol);
-        // Prefer `hostname` over `host`, and set the `port` if needed.
-        proxy.host = proxy.hostname || proxy.host;
-        if (typeof proxy.port === 'string') {
-            proxy.port = parseInt(proxy.port, 10);
-        }
-        if (!proxy.port && proxy.host) {
-            proxy.port = this.secureProxy ? 443 : 80;
-        }
-        // ALPN is supported by Node.js >= v5.
-        // attempt to negotiate http/1.1 for proxy servers that support http/2
-        if (this.secureProxy && !('ALPNProtocols' in proxy)) {
-            proxy.ALPNProtocols = ['http 1.1'];
-        }
-        if (proxy.host && proxy.path) {
-            // If both a `host` and `path` are specified then it's most likely
-            // the result of a `url.parse()` call... we need to remove the
-            // `path` portion so that `net.connect()` doesn't attempt to open
-            // that as a Unix socket file.
-            delete proxy.path;
-            delete proxy.pathname;
-        }
-        this.proxy = proxy;
-    }
-    /**
-     * Called when the node-core HTTP client library is creating a
-     * new HTTP request.
-     *
-     * @api protected
-     */
-    callback(req, opts) {
-        return __awaiter(this, void 0, void 0, function* () {
-            const { proxy, secureProxy } = this;
-            // Create a socket connection to the proxy server.
-            let socket;
-            if (secureProxy) {
-                debug('Creating `tls.Socket`: %o', proxy);
-                socket = tls_1.default.connect(proxy);
-            }
-            else {
-                debug('Creating `net.Socket`: %o', proxy);
-                socket = net_1.default.connect(proxy);
-            }
-            const headers = Object.assign({}, proxy.headers);
-            const hostname = `${opts.host}:${opts.port}`;
-            let payload = `CONNECT ${hostname} HTTP/1.1\r\n`;
-            // Inject the `Proxy-Authorization` header if necessary.
-            if (proxy.auth) {
-                headers['Proxy-Authorization'] = `Basic ${Buffer.from(proxy.auth).toString('base64')}`;
-            }
-            // The `Host` header should only include the port
-            // number when it is not the default port.
-            let { host, port, secureEndpoint } = opts;
-            if (!isDefaultPort(port, secureEndpoint)) {
-                host += `:${port}`;
-            }
-            headers.Host = host;
-            headers.Connection = 'close';
-            for (const name of Object.keys(headers)) {
-                payload += `${name}: ${headers[name]}\r\n`;
-            }
-            const proxyResponsePromise = parse_proxy_response_1.default(socket);
-            socket.write(`${payload}\r\n`);
-            const { statusCode, buffered } = yield proxyResponsePromise;
-            if (statusCode === 200) {
-                req.once('socket', resume);
-                if (opts.secureEndpoint) {
-                    // The proxy is connecting to a TLS server, so upgrade
-                    // this socket connection to a TLS connection.
-                    debug('Upgrading socket connection to TLS');
-                    const servername = opts.servername || opts.host;
-                    return tls_1.default.connect(Object.assign(Object.assign({}, omit(opts, 'host', 'hostname', 'path', 'port')), { socket,
-                        servername }));
-                }
-                return socket;
-            }
-            // Some other status code that's not 200... need to re-play the HTTP
-            // header "data" events onto the socket once the HTTP machinery is
-            // attached so that the node core `http` can parse and handle the
-            // error status code.
-            // Close the original socket, and a new "fake" socket is returned
-            // instead, so that the proxy doesn't get the HTTP request
-            // written to it (which may contain `Authorization` headers or other
-            // sensitive data).
-            //
-            // See: https://hackerone.com/reports/541502
-            socket.destroy();
-            const fakeSocket = new net_1.default.Socket({ writable: false });
-            fakeSocket.readable = true;
-            // Need to wait for the "socket" event to re-play the "data" events.
-            req.once('socket', (s) => {
-                debug('replaying proxy buffer for failed request');
-                assert_1.default(s.listenerCount('data') > 0);
-                // Replay the "buffered" Buffer onto the fake `socket`, since at
-                // this point the HTTP module machinery has been hooked up for
-                // the user.
-                s.push(buffered);
-                s.push(null);
-            });
-            return fakeSocket;
-        });
-    }
-}
-exports["default"] = HttpsProxyAgent;
-function resume(socket) {
-    socket.resume();
-}
-function isDefaultPort(port, secure) {
-    return Boolean((!secure && port === 80) || (secure && port === 443));
-}
-function isHTTPS(protocol) {
-    return typeof protocol === 'string' ? /^https:?$/i.test(protocol) : false;
-}
-function omit(obj, ...keys) {
-    const ret = {};
-    let key;
-    for (key in obj) {
-        if (!keys.includes(key)) {
-            ret[key] = obj[key];
-        }
-    }
-    return ret;
-}
-//# sourceMappingURL=agent.js.map
-
-/***/ }),
-
-/***/ 6518:
-/***/ (function(module, __unused_webpack_exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-const agent_1 = __importDefault(__nccwpck_require__(5299));
-function createHttpsProxyAgent(opts) {
-    return new agent_1.default(opts);
-}
-(function (createHttpsProxyAgent) {
-    createHttpsProxyAgent.HttpsProxyAgent = agent_1.default;
-    createHttpsProxyAgent.prototype = agent_1.default.prototype;
-})(createHttpsProxyAgent || (createHttpsProxyAgent = {}));
-module.exports = createHttpsProxyAgent;
-//# sourceMappingURL=index.js.map
-
-/***/ }),
-
-/***/ 7742:
-/***/ (function(__unused_webpack_module, exports, __nccwpck_require__) {
-
-
-var __importDefault = (this && this.__importDefault) || function (mod) {
-    return (mod && mod.__esModule) ? mod : { "default": mod };
-};
-Object.defineProperty(exports, "__esModule", ({ value: true }));
-const debug_1 = __importDefault(__nccwpck_require__(2830));
-const debug = debug_1.default('https-proxy-agent:parse-proxy-response');
-function parseProxyResponse(socket) {
-    return new Promise((resolve, reject) => {
-        // we need to buffer any HTTP traffic that happens with the proxy before we get
-        // the CONNECT response, so that if the response is anything other than an "200"
-        // response code, then we can re-play the "data" events on the socket once the
-        // HTTP parser is hooked up...
-        let buffersLength = 0;
-        const buffers = [];
-        function read() {
-            const b = socket.read();
-            if (b)
-                ondata(b);
-            else
-                socket.once('readable', read);
-        }
-        function cleanup() {
-            socket.removeListener('end', onend);
-            socket.removeListener('error', onerror);
-            socket.removeListener('close', onclose);
-            socket.removeListener('readable', read);
-        }
-        function onclose(err) {
-            debug('onclose had error %o', err);
-        }
-        function onend() {
-            debug('onend');
-        }
-        function onerror(err) {
-            cleanup();
-            debug('onerror %o', err);
-            reject(err);
-        }
-        function ondata(b) {
-            buffers.push(b);
-            buffersLength += b.length;
-            const buffered = Buffer.concat(buffers, buffersLength);
-            const endOfHeaders = buffered.indexOf('\r\n\r\n');
-            if (endOfHeaders === -1) {
-                // keep buffering
-                debug('have not received end of HTTP headers yet...');
-                read();
-                return;
-            }
-            const firstLine = buffered.toString('ascii', 0, buffered.indexOf('\r\n'));
-            const statusCode = +firstLine.split(' ')[1];
-            debug('got proxy server response: %o', firstLine);
-            resolve({
-                statusCode,
-                buffered
-            });
-        }
-        socket.on('error', onerror);
-        socket.on('close', onclose);
-        socket.on('end', onend);
-        read();
-    });
-}
-exports["default"] = parseProxyResponse;
-//# sourceMappingURL=parse-proxy-response.js.map
 
 /***/ }),
 
@@ -62325,671 +61391,6 @@ module.exports = __nccwpck_require__(9023).deprecate;
 
 /***/ }),
 
-/***/ 2048:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-Object.defineProperty(exports, "NIL", ({
-  enumerable: true,
-  get: function () {
-    return _nil.default;
-  }
-}));
-Object.defineProperty(exports, "parse", ({
-  enumerable: true,
-  get: function () {
-    return _parse.default;
-  }
-}));
-Object.defineProperty(exports, "stringify", ({
-  enumerable: true,
-  get: function () {
-    return _stringify.default;
-  }
-}));
-Object.defineProperty(exports, "v1", ({
-  enumerable: true,
-  get: function () {
-    return _v.default;
-  }
-}));
-Object.defineProperty(exports, "v3", ({
-  enumerable: true,
-  get: function () {
-    return _v2.default;
-  }
-}));
-Object.defineProperty(exports, "v4", ({
-  enumerable: true,
-  get: function () {
-    return _v3.default;
-  }
-}));
-Object.defineProperty(exports, "v5", ({
-  enumerable: true,
-  get: function () {
-    return _v4.default;
-  }
-}));
-Object.defineProperty(exports, "validate", ({
-  enumerable: true,
-  get: function () {
-    return _validate.default;
-  }
-}));
-Object.defineProperty(exports, "version", ({
-  enumerable: true,
-  get: function () {
-    return _version.default;
-  }
-}));
-
-var _v = _interopRequireDefault(__nccwpck_require__(6415));
-
-var _v2 = _interopRequireDefault(__nccwpck_require__(1697));
-
-var _v3 = _interopRequireDefault(__nccwpck_require__(4676));
-
-var _v4 = _interopRequireDefault(__nccwpck_require__(9771));
-
-var _nil = _interopRequireDefault(__nccwpck_require__(7723));
-
-var _version = _interopRequireDefault(__nccwpck_require__(5868));
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-var _stringify = _interopRequireDefault(__nccwpck_require__(7597));
-
-var _parse = _interopRequireDefault(__nccwpck_require__(7267));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/***/ }),
-
-/***/ 216:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function md5(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('md5').update(bytes).digest();
-}
-
-var _default = md5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 4221:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-var _default = {
-  randomUUID: _crypto.default.randomUUID
-};
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7723:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = '00000000-0000-0000-0000-000000000000';
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7267:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function parse(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  let v;
-  const arr = new Uint8Array(16); // Parse ########-....-....-....-............
-
-  arr[0] = (v = parseInt(uuid.slice(0, 8), 16)) >>> 24;
-  arr[1] = v >>> 16 & 0xff;
-  arr[2] = v >>> 8 & 0xff;
-  arr[3] = v & 0xff; // Parse ........-####-....-....-............
-
-  arr[4] = (v = parseInt(uuid.slice(9, 13), 16)) >>> 8;
-  arr[5] = v & 0xff; // Parse ........-....-####-....-............
-
-  arr[6] = (v = parseInt(uuid.slice(14, 18), 16)) >>> 8;
-  arr[7] = v & 0xff; // Parse ........-....-....-####-............
-
-  arr[8] = (v = parseInt(uuid.slice(19, 23), 16)) >>> 8;
-  arr[9] = v & 0xff; // Parse ........-....-....-....-############
-  // (Use "/" to avoid 32-bit truncation when bit-shifting high-order bytes)
-
-  arr[10] = (v = parseInt(uuid.slice(24, 36), 16)) / 0x10000000000 & 0xff;
-  arr[11] = v / 0x100000000 & 0xff;
-  arr[12] = v >>> 24 & 0xff;
-  arr[13] = v >>> 16 & 0xff;
-  arr[14] = v >>> 8 & 0xff;
-  arr[15] = v & 0xff;
-  return arr;
-}
-
-var _default = parse;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7879:
-/***/ ((__unused_webpack_module, exports) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-var _default = /^(?:[0-9a-f]{8}-[0-9a-f]{4}-[1-5][0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}|00000000-0000-0000-0000-000000000000)$/i;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2973:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = rng;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const rnds8Pool = new Uint8Array(256); // # of random values to pre-allocate
-
-let poolPtr = rnds8Pool.length;
-
-function rng() {
-  if (poolPtr > rnds8Pool.length - 16) {
-    _crypto.default.randomFillSync(rnds8Pool);
-
-    poolPtr = 0;
-  }
-
-  return rnds8Pool.slice(poolPtr, poolPtr += 16);
-}
-
-/***/ }),
-
-/***/ 507:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _crypto = _interopRequireDefault(__nccwpck_require__(6982));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function sha1(bytes) {
-  if (Array.isArray(bytes)) {
-    bytes = Buffer.from(bytes);
-  } else if (typeof bytes === 'string') {
-    bytes = Buffer.from(bytes, 'utf8');
-  }
-
-  return _crypto.default.createHash('sha1').update(bytes).digest();
-}
-
-var _default = sha1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 7597:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-exports.unsafeStringify = unsafeStringify;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-/**
- * Convert array of 16 byte values to UUID string format of the form:
- * XXXXXXXX-XXXX-XXXX-XXXX-XXXXXXXXXXXX
- */
-const byteToHex = [];
-
-for (let i = 0; i < 256; ++i) {
-  byteToHex.push((i + 0x100).toString(16).slice(1));
-}
-
-function unsafeStringify(arr, offset = 0) {
-  // Note: Be careful editing this code!  It's been tuned for performance
-  // and works in ways you may not expect. See https://github.com/uuidjs/uuid/pull/434
-  return byteToHex[arr[offset + 0]] + byteToHex[arr[offset + 1]] + byteToHex[arr[offset + 2]] + byteToHex[arr[offset + 3]] + '-' + byteToHex[arr[offset + 4]] + byteToHex[arr[offset + 5]] + '-' + byteToHex[arr[offset + 6]] + byteToHex[arr[offset + 7]] + '-' + byteToHex[arr[offset + 8]] + byteToHex[arr[offset + 9]] + '-' + byteToHex[arr[offset + 10]] + byteToHex[arr[offset + 11]] + byteToHex[arr[offset + 12]] + byteToHex[arr[offset + 13]] + byteToHex[arr[offset + 14]] + byteToHex[arr[offset + 15]];
-}
-
-function stringify(arr, offset = 0) {
-  const uuid = unsafeStringify(arr, offset); // Consistency check for valid UUID.  If this throws, it's likely due to one
-  // of the following:
-  // - One or more input array values don't map to a hex octet (leading to
-  // "undefined" in the uuid)
-  // - Invalid input values for the RFC `version` or `variant` fields
-
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Stringified UUID is invalid');
-  }
-
-  return uuid;
-}
-
-var _default = stringify;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6415:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _rng = _interopRequireDefault(__nccwpck_require__(2973));
-
-var _stringify = __nccwpck_require__(7597);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-// **`v1()` - Generate time-based UUID**
-//
-// Inspired by https://github.com/LiosK/UUID.js
-// and http://docs.python.org/library/uuid.html
-let _nodeId;
-
-let _clockseq; // Previous uuid creation time
-
-
-let _lastMSecs = 0;
-let _lastNSecs = 0; // See https://github.com/uuidjs/uuid for API details
-
-function v1(options, buf, offset) {
-  let i = buf && offset || 0;
-  const b = buf || new Array(16);
-  options = options || {};
-  let node = options.node || _nodeId;
-  let clockseq = options.clockseq !== undefined ? options.clockseq : _clockseq; // node and clockseq need to be initialized to random values if they're not
-  // specified.  We do this lazily to minimize issues related to insufficient
-  // system entropy.  See #189
-
-  if (node == null || clockseq == null) {
-    const seedBytes = options.random || (options.rng || _rng.default)();
-
-    if (node == null) {
-      // Per 4.5, create and 48-bit node id, (47 random bits + multicast bit = 1)
-      node = _nodeId = [seedBytes[0] | 0x01, seedBytes[1], seedBytes[2], seedBytes[3], seedBytes[4], seedBytes[5]];
-    }
-
-    if (clockseq == null) {
-      // Per 4.2.2, randomize (14 bit) clockseq
-      clockseq = _clockseq = (seedBytes[6] << 8 | seedBytes[7]) & 0x3fff;
-    }
-  } // UUID timestamps are 100 nano-second units since the Gregorian epoch,
-  // (1582-10-15 00:00).  JSNumbers aren't precise enough for this, so
-  // time is handled internally as 'msecs' (integer milliseconds) and 'nsecs'
-  // (100-nanoseconds offset from msecs) since unix epoch, 1970-01-01 00:00.
-
-
-  let msecs = options.msecs !== undefined ? options.msecs : Date.now(); // Per 4.2.1.2, use count of uuid's generated during the current clock
-  // cycle to simulate higher resolution clock
-
-  let nsecs = options.nsecs !== undefined ? options.nsecs : _lastNSecs + 1; // Time since last uuid creation (in msecs)
-
-  const dt = msecs - _lastMSecs + (nsecs - _lastNSecs) / 10000; // Per 4.2.1.2, Bump clockseq on clock regression
-
-  if (dt < 0 && options.clockseq === undefined) {
-    clockseq = clockseq + 1 & 0x3fff;
-  } // Reset nsecs if clock regresses (new clockseq) or we've moved onto a new
-  // time interval
-
-
-  if ((dt < 0 || msecs > _lastMSecs) && options.nsecs === undefined) {
-    nsecs = 0;
-  } // Per 4.2.1.2 Throw error if too many uuids are requested
-
-
-  if (nsecs >= 10000) {
-    throw new Error("uuid.v1(): Can't create more than 10M uuids/sec");
-  }
-
-  _lastMSecs = msecs;
-  _lastNSecs = nsecs;
-  _clockseq = clockseq; // Per 4.1.4 - Convert from unix epoch to Gregorian epoch
-
-  msecs += 12219292800000; // `time_low`
-
-  const tl = ((msecs & 0xfffffff) * 10000 + nsecs) % 0x100000000;
-  b[i++] = tl >>> 24 & 0xff;
-  b[i++] = tl >>> 16 & 0xff;
-  b[i++] = tl >>> 8 & 0xff;
-  b[i++] = tl & 0xff; // `time_mid`
-
-  const tmh = msecs / 0x100000000 * 10000 & 0xfffffff;
-  b[i++] = tmh >>> 8 & 0xff;
-  b[i++] = tmh & 0xff; // `time_high_and_version`
-
-  b[i++] = tmh >>> 24 & 0xf | 0x10; // include version
-
-  b[i++] = tmh >>> 16 & 0xff; // `clock_seq_hi_and_reserved` (Per 4.2.2 - include variant)
-
-  b[i++] = clockseq >>> 8 | 0x80; // `clock_seq_low`
-
-  b[i++] = clockseq & 0xff; // `node`
-
-  for (let n = 0; n < 6; ++n) {
-    b[i + n] = node[n];
-  }
-
-  return buf || (0, _stringify.unsafeStringify)(b);
-}
-
-var _default = v1;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 1697:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(2930));
-
-var _md = _interopRequireDefault(__nccwpck_require__(216));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v3 = (0, _v.default)('v3', 0x30, _md.default);
-var _default = v3;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 2930:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports.URL = exports.DNS = void 0;
-exports["default"] = v35;
-
-var _stringify = __nccwpck_require__(7597);
-
-var _parse = _interopRequireDefault(__nccwpck_require__(7267));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function stringToBytes(str) {
-  str = unescape(encodeURIComponent(str)); // UTF8 escape
-
-  const bytes = [];
-
-  for (let i = 0; i < str.length; ++i) {
-    bytes.push(str.charCodeAt(i));
-  }
-
-  return bytes;
-}
-
-const DNS = '6ba7b810-9dad-11d1-80b4-00c04fd430c8';
-exports.DNS = DNS;
-const URL = '6ba7b811-9dad-11d1-80b4-00c04fd430c8';
-exports.URL = URL;
-
-function v35(name, version, hashfunc) {
-  function generateUUID(value, namespace, buf, offset) {
-    var _namespace;
-
-    if (typeof value === 'string') {
-      value = stringToBytes(value);
-    }
-
-    if (typeof namespace === 'string') {
-      namespace = (0, _parse.default)(namespace);
-    }
-
-    if (((_namespace = namespace) === null || _namespace === void 0 ? void 0 : _namespace.length) !== 16) {
-      throw TypeError('Namespace must be array-like (16 iterable integer values, 0-255)');
-    } // Compute hash of namespace and value, Per 4.3
-    // Future: Use spread syntax when supported on all platforms, e.g. `bytes =
-    // hashfunc([...namespace, ... value])`
-
-
-    let bytes = new Uint8Array(16 + value.length);
-    bytes.set(namespace);
-    bytes.set(value, namespace.length);
-    bytes = hashfunc(bytes);
-    bytes[6] = bytes[6] & 0x0f | version;
-    bytes[8] = bytes[8] & 0x3f | 0x80;
-
-    if (buf) {
-      offset = offset || 0;
-
-      for (let i = 0; i < 16; ++i) {
-        buf[offset + i] = bytes[i];
-      }
-
-      return buf;
-    }
-
-    return (0, _stringify.unsafeStringify)(bytes);
-  } // Function#name is not settable on some platforms (#270)
-
-
-  try {
-    generateUUID.name = name; // eslint-disable-next-line no-empty
-  } catch (err) {} // For CommonJS default export support
-
-
-  generateUUID.DNS = DNS;
-  generateUUID.URL = URL;
-  return generateUUID;
-}
-
-/***/ }),
-
-/***/ 4676:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _native = _interopRequireDefault(__nccwpck_require__(4221));
-
-var _rng = _interopRequireDefault(__nccwpck_require__(2973));
-
-var _stringify = __nccwpck_require__(7597);
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function v4(options, buf, offset) {
-  if (_native.default.randomUUID && !buf && !options) {
-    return _native.default.randomUUID();
-  }
-
-  options = options || {};
-
-  const rnds = options.random || (options.rng || _rng.default)(); // Per 4.4, set bits for version and `clock_seq_hi_and_reserved`
-
-
-  rnds[6] = rnds[6] & 0x0f | 0x40;
-  rnds[8] = rnds[8] & 0x3f | 0x80; // Copy bytes to buffer, if provided
-
-  if (buf) {
-    offset = offset || 0;
-
-    for (let i = 0; i < 16; ++i) {
-      buf[offset + i] = rnds[i];
-    }
-
-    return buf;
-  }
-
-  return (0, _stringify.unsafeStringify)(rnds);
-}
-
-var _default = v4;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 9771:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _v = _interopRequireDefault(__nccwpck_require__(2930));
-
-var _sha = _interopRequireDefault(__nccwpck_require__(507));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-const v5 = (0, _v.default)('v5', 0x50, _sha.default);
-var _default = v5;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 6200:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _regex = _interopRequireDefault(__nccwpck_require__(7879));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function validate(uuid) {
-  return typeof uuid === 'string' && _regex.default.test(uuid);
-}
-
-var _default = validate;
-exports["default"] = _default;
-
-/***/ }),
-
-/***/ 5868:
-/***/ ((__unused_webpack_module, exports, __nccwpck_require__) => {
-
-
-
-Object.defineProperty(exports, "__esModule", ({
-  value: true
-}));
-exports["default"] = void 0;
-
-var _validate = _interopRequireDefault(__nccwpck_require__(6200));
-
-function _interopRequireDefault(obj) { return obj && obj.__esModule ? obj : { default: obj }; }
-
-function version(uuid) {
-  if (!(0, _validate.default)(uuid)) {
-    throw TypeError('Invalid UUID');
-  }
-
-  return parseInt(uuid.slice(14, 15), 16);
-}
-
-var _default = version;
-exports["default"] = _default;
-
-/***/ }),
-
 /***/ 7125:
 /***/ ((module) => {
 
@@ -64985,81 +63386,6 @@ function wrappy (fn, cb) {
 
 /***/ }),
 
-/***/ 538:
-/***/ ((module) => {
-
-class Node {
-	/// value;
-	/// next;
-
-	constructor(value) {
-		this.value = value;
-
-		// TODO: Remove this when targeting Node.js 12.
-		this.next = undefined;
-	}
-}
-
-class Queue {
-	// TODO: Use private class fields when targeting Node.js 12.
-	// #_head;
-	// #_tail;
-	// #_size;
-
-	constructor() {
-		this.clear();
-	}
-
-	enqueue(value) {
-		const node = new Node(value);
-
-		if (this._head) {
-			this._tail.next = node;
-			this._tail = node;
-		} else {
-			this._head = node;
-			this._tail = node;
-		}
-
-		this._size++;
-	}
-
-	dequeue() {
-		const current = this._head;
-		if (!current) {
-			return;
-		}
-
-		this._head = this._head.next;
-		this._size--;
-		return current.value;
-	}
-
-	clear() {
-		this._head = undefined;
-		this._tail = undefined;
-		this._size = 0;
-	}
-
-	get size() {
-		return this._size;
-	}
-
-	* [Symbol.iterator]() {
-		let current = this._head;
-
-		while (current) {
-			yield current.value;
-			current = current.next;
-		}
-	}
-}
-
-module.exports = Queue;
-
-
-/***/ }),
-
 /***/ 2078:
 /***/ ((module) => {
 
@@ -65195,6 +63521,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:events"
 
 /***/ }),
 
+/***/ 3024:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+
+/***/ }),
+
 /***/ 7067:
 /***/ ((module) => {
 
@@ -65209,10 +63542,24 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:http2")
 
 /***/ }),
 
+/***/ 4708:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:https");
+
+/***/ }),
+
 /***/ 7030:
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:net");
+
+/***/ }),
+
+/***/ 6760:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:path");
 
 /***/ }),
 
@@ -65241,6 +63588,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:queryst
 /***/ ((module) => {
 
 module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream");
+
+/***/ }),
+
+/***/ 7830:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:stream/web");
 
 /***/ }),
 
@@ -65356,6 +63710,13 @@ module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("util");
 
 /***/ }),
 
+/***/ 8167:
+/***/ ((module) => {
+
+module.exports = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("worker_threads");
+
+/***/ }),
+
 /***/ 3106:
 /***/ ((module) => {
 
@@ -65434,8 +63795,6 @@ module.exports = { version: packageJson.version }
 // See the License for the specific language governing permissions and
 // limitations under the License.
 
-/* eslint-disable node/no-missing-require */
-
 function getPackageJSON() {
   return __nccwpck_require__(2721);
 }
@@ -65455,7 +63814,7 @@ module.exports = /*#__PURE__*/JSON.parse('{"name":"@actions/cache","version":"6.
 /***/ 2721:
 /***/ ((module) => {
 
-module.exports = /*#__PURE__*/JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"7.21.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=14"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"npm test && npm run system-test && npm run samples-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"npm run compile:cjs -- --sourceMap","predocs":"npm run compile:cjs -- --sourceMap","prelint":"cd samples; npm link ../; npm install","prepare":"npm run compile","presystem-test:esm":"npm run compile:esm","presystem-test":"npm run compile -- --sourceMap","pretest":"npm run compile -- --sourceMap","samples-test":"npm link && cd samples/ && npm link ../ && npm test && cd ../","system-test:esm":"mocha build/esm/system-test --timeout 600000 --exit","system-test":"mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\'--no-deprecation\' c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^5.0.0","@google-cloud/projectify":"^4.0.0","@google-cloud/promisify":"<4.1.0","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^7.0.0","teeny-request":"^9.0.0"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^4.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/node-fetch":"^2.1.3","@types/proxyquire":"^1.3.28","@types/request":"^2.48.4","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.10","c8":"^9.0.0","form-data":"^4.0.4","gapic-tools":"^0.4.0","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^5.0.0","jsdoc-region-tag":"^4.0.0","mocha":"^9.2.2","mockery":"^2.1.0","nock":"~13.5.0","node-fetch":"^2.6.7","pack-n-play":"^2.0.0","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.3.1","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
+module.exports = /*#__PURE__*/JSON.parse('{"name":"@google-cloud/storage","description":"Cloud Storage Client Library for Node.js","version":"8.2.0","license":"Apache-2.0","author":"Google Inc.","engines":{"node":">=22"},"repository":{"type":"git","directory":"handwritten/storage","url":"https://github.com/googleapis/google-cloud-node.git"},"main":"./build/cjs/src/index.js","types":"./build/cjs/src/index.d.ts","type":"module","exports":{".":{"import":{"types":"./build/esm/src/index.d.ts","default":"./build/esm/src/index.js"},"require":{"types":"./build/cjs/src/index.d.ts","default":"./build/cjs/src/index.js"}}},"files":["build/cjs/src","build/cjs/package.json","!build/cjs/src/**/*.map","build/esm/src","!build/esm/src/**/*.map"],"keywords":["google apis client","google api client","google apis","google api","google","google cloud platform","google cloud","cloud","google storage","storage"],"scripts":{"all-test":"pnpm test && pnpm run system-test","benchwrapper":"node bin/benchwrapper.js","check":"gts check","clean":"rm -rf build/","compile:cjs":"tsc -p ./tsconfig.cjs.json","compile:esm":"tsc -p .","compile":"npm run compile:cjs && npm run compile:esm","conformance-test":"cross-env NODE_OPTIONS=\\"--no-deprecation\\" mocha --parallel build/cjs/conformance-test/ --require build/cjs/conformance-test/globalHooks.js","docs":"jsdoc -c .jsdoc.json","fix":"gts fix","lint":"gts check","postcompile":"cp ./src/package-json-helper.cjs ./build/cjs/src && cp ./src/package-json-helper.cjs ./build/esm/src","postcompile:cjs":"babel --plugins gapic-tools/build/src/replaceImportMetaUrl,gapic-tools/build/src/toggleESMFlagVariable build/cjs/src/util.js -o build/cjs/src/util.js && cp internal-tooling/helpers/package.cjs.json build/cjs/package.json","precompile":"rm -rf build/","preconformance-test":"pnpm run compile:cjs --sourceMap","predocs":"pnpm run compile:cjs --sourceMap","prepare":"npm run compile","presystem-test:esm":"pnpm run compile:esm","presystem-test":"pnpm run compile --sourceMap","pretest":"pnpm run compile --sourceMap","system-test:esm":"mkdir -p $HOME/.config && mocha build/esm/system-test --timeout 600000 --exit","system-test":"mkdir -p $HOME/.config && mocha build/cjs/system-test --timeout 600000 --exit","test":"cross-env NODE_OPTIONS=\\"--require ./scripts/preload-yargs.cjs --no-deprecation\\" c8 mocha build/cjs/test"},"dependencies":{"@google-cloud/paginator":"^7.0.1","@google-cloud/projectify":"^6.0.1","@google-cloud/promisify":"^6.0.1","abort-controller":"^3.0.0","async-retry":"^1.3.3","duplexify":"^4.1.3","fast-xml-parser":"^5.3.4","gaxios":"^6.0.2","google-auth-library":"^9.6.3","html-entities":"^2.5.2","mime":"^3.0.0","p-limit":"^3.0.1","retry-request":"^9.0.1","teeny-request":"^11.0.1"},"devDependencies":{"@babel/cli":"^7.22.10","@babel/core":"^7.22.11","@google-cloud/pubsub":"^6.0.0","@grpc/grpc-js":"^1.0.3","@grpc/proto-loader":"^0.8.0","@types/async-retry":"^1.4.3","@types/duplexify":"^3.6.4","@types/mime":"^3.0.0","@types/mocha":"^9.1.1","@types/mockery":"^1.4.29","@types/node":"^24.0.0","@types/proxyquire":"^1.3.28","@types/request":"^2.48.12","@types/sinon":"^17.0.0","@types/tmp":"0.2.6","@types/yargs":"^17.0.35","c8":"^10.1.3","form-data":"^4.0.4","gapic-tools":"^2.0.1","gts":"^5.0.0","jsdoc":"^4.0.4","jsdoc-fresh":"^6.0.0","jsdoc-region-tag":"^5.0.0","mocha":"^11.1.0","mockery":"^2.1.0","nock":"~13.5.0","pack-n-play":"^5.0.1","proxyquire":"^2.1.3","sinon":"^18.0.0","nise":"6.0.0","path-to-regexp":"6.3.0","tmp":"^0.2.0","typescript":"^5.1.6","yargs":"^17.7.2","cross-env":"^7.0.3"},"homepage":"https://github.com/googleapis/google-cloud-node/tree/main/handwritten/storage"}');
 
 /***/ }),
 
@@ -65512,6 +63871,9 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 	return module.exports;
 /******/ }
 /******/ 
+/******/ // expose the modules object (__webpack_modules__)
+/******/ __nccwpck_require__.m = __webpack_modules__;
+/******/ 
 /************************************************************************/
 /******/ /* webpack/runtime/compat get default export */
 /******/ (() => {
@@ -65567,6 +63929,28 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ 	};
 /******/ })();
 /******/ 
+/******/ /* webpack/runtime/ensure chunk */
+/******/ (() => {
+/******/ 	__nccwpck_require__.f = {};
+/******/ 	// This file contains only the entry chunk.
+/******/ 	// The chunk loading function for additional chunks
+/******/ 	__nccwpck_require__.e = (chunkId) => {
+/******/ 		return Promise.all(Object.keys(__nccwpck_require__.f).reduce((promises, key) => {
+/******/ 			__nccwpck_require__.f[key](chunkId, promises);
+/******/ 			return promises;
+/******/ 		}, []));
+/******/ 	};
+/******/ })();
+/******/ 
+/******/ /* webpack/runtime/get javascript chunk filename */
+/******/ (() => {
+/******/ 	// This function allow to reference async chunks
+/******/ 	__nccwpck_require__.u = (chunkId) => {
+/******/ 		// return url for filenames based on template
+/******/ 		return "" + chunkId + ".index.js";
+/******/ 	};
+/******/ })();
+/******/ 
 /******/ /* webpack/runtime/hasOwnProperty shorthand */
 /******/ (() => {
 /******/ 	__nccwpck_require__.o = (obj, prop) => (Object.prototype.hasOwnProperty.call(obj, prop))
@@ -65586,6 +63970,69 @@ module.exports = /*#__PURE__*/JSON.parse('[[[0,44],"disallowed_STD3_valid"],[[45
 /******/ /* webpack/runtime/compat */
 /******/ 
 /******/ if (typeof __nccwpck_require__ !== 'undefined') __nccwpck_require__.ab = new URL('.', import.meta.url).pathname.slice(import.meta.url.match(/^file:\/\/\/\w:/) ? 1 : 0, -1) + "/";
+/******/ 
+/******/ /* webpack/runtime/import chunk loading */
+/******/ (() => {
+/******/ 	// no baseURI
+/******/ 	
+/******/ 	// object to store loaded and loading chunks
+/******/ 	// undefined = chunk not loaded, null = chunk preloaded/prefetched
+/******/ 	// [resolve, Promise] = chunk loading, 0 = chunk loaded
+/******/ 	var installedChunks = {
+/******/ 		792: 0
+/******/ 	};
+/******/ 	
+/******/ 	var installChunk = (data) => {
+/******/ 		var {ids, modules, runtime} = data;
+/******/ 		// add "modules" to the modules object,
+/******/ 		// then flag all "ids" as loaded and fire callback
+/******/ 		var moduleId, chunkId, i = 0;
+/******/ 		for(moduleId in modules) {
+/******/ 			if(__nccwpck_require__.o(modules, moduleId)) {
+/******/ 				__nccwpck_require__.m[moduleId] = modules[moduleId];
+/******/ 			}
+/******/ 		}
+/******/ 		if(runtime) runtime(__nccwpck_require__);
+/******/ 		for(;i < ids.length; i++) {
+/******/ 			chunkId = ids[i];
+/******/ 			if(__nccwpck_require__.o(installedChunks, chunkId) && installedChunks[chunkId]) {
+/******/ 				installedChunks[chunkId][0]();
+/******/ 			}
+/******/ 			installedChunks[ids[i]] = 0;
+/******/ 		}
+/******/ 	
+/******/ 	}
+/******/ 	
+/******/ 	__nccwpck_require__.f.j = (chunkId, promises) => {
+/******/ 			// import() chunk loading for javascript
+/******/ 			var installedChunkData = __nccwpck_require__.o(installedChunks, chunkId) ? installedChunks[chunkId] : undefined;
+/******/ 			if(installedChunkData !== 0) { // 0 means "already installed".
+/******/ 	
+/******/ 				// a Promise means "currently loading".
+/******/ 				if(installedChunkData) {
+/******/ 					promises.push(installedChunkData[1]);
+/******/ 				} else {
+/******/ 					if(true) { // all chunks have JS
+/******/ 						// setup Promise in chunk cache
+/******/ 						var promise = import("./" + __nccwpck_require__.u(chunkId)).then(installChunk, (e) => {
+/******/ 							if(installedChunks[chunkId] !== 0) installedChunks[chunkId] = undefined;
+/******/ 							throw e;
+/******/ 						});
+/******/ 						var promise = Promise.race([promise, new Promise((resolve) => (installedChunkData = installedChunks[chunkId] = [resolve]))])
+/******/ 						promises.push(installedChunkData[1] = promise);
+/******/ 					}
+/******/ 				}
+/******/ 			}
+/******/ 	};
+/******/ 	
+/******/ 	// no prefetching
+/******/ 	
+/******/ 	// no preloaded
+/******/ 	
+/******/ 	// no external install chunk
+/******/ 	
+/******/ 	// no on chunks loaded
+/******/ })();
 /******/ 
 /************************************************************************/
 var __webpack_exports__ = {};
@@ -71043,8 +69490,8 @@ function restError_isRestError(e) {
 //# sourceMappingURL=restError.js.map
 // EXTERNAL MODULE: external "node:http"
 var external_node_http_ = __nccwpck_require__(7067);
-;// CONCATENATED MODULE: external "node:https"
-const external_node_https_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:https");
+// EXTERNAL MODULE: external "node:https"
+var external_node_https_ = __nccwpck_require__(4708);
 // EXTERNAL MODULE: external "node:zlib"
 var external_node_zlib_ = __nccwpck_require__(8522);
 // EXTERNAL MODULE: external "node:stream"
@@ -71249,7 +69696,7 @@ class NodeHttpClient {
             ...request.requestOverrides,
         };
         return new Promise((resolve, reject) => {
-            const req = isInsecure ? external_node_http_.request(options, resolve) : external_node_https_namespaceObject.request(options, resolve);
+            const req = isInsecure ? external_node_http_.request(options, resolve) : external_node_https_.request(options, resolve);
             req.once("error", (err) => {
                 reject(new restError_RestError(err.message, { code: err.code ?? restError_RestError.REQUEST_SEND_ERROR, request }));
             });
@@ -71299,7 +69746,7 @@ class NodeHttpClient {
             if (disableKeepAlive && !request.tlsSettings) {
                 // When there are no tlsSettings and keepAlive is false
                 // we don't need a custom agent
-                return external_node_https_namespaceObject.globalAgent;
+                return external_node_https_.globalAgent;
             }
             // We use the tlsSettings to index cached clients
             const tlsSettings = request.tlsSettings ?? DEFAULT_TLS_SETTINGS;
@@ -71310,7 +69757,7 @@ class NodeHttpClient {
                 return agent;
             }
             log_logger.info("No cached TLS Agent exist, creating a new Agent");
-            agent = new external_node_https_namespaceObject.Agent({
+            agent = new external_node_https_.Agent({
                 // keepAlive is true if disableKeepAlive is false.
                 keepAlive: !disableKeepAlive,
                 // Since we are spreading, if no tslSettings were provided, nothing is added to the agent options.
@@ -112579,8 +111026,8 @@ class Batch {
     }
 }
 //# sourceMappingURL=Batch.js.map
-;// CONCATENATED MODULE: external "node:fs"
-const external_node_fs_namespaceObject = __WEBPACK_EXTERNAL_createRequire(import.meta.url)("node:fs");
+// EXTERNAL MODULE: external "node:fs"
+var external_node_fs_ = __nccwpck_require__(3024);
 ;// CONCATENATED MODULE: ./node_modules/@azure/storage-blob/dist/esm/utils/utils.js
 // Copyright (c) Microsoft Corporation.
 // Licensed under the MIT License.
@@ -112705,7 +111152,7 @@ async function streamToBuffer3(readableStream, encoding) {
  */
 async function readStreamToLocalFile(rs, file) {
     return new Promise((resolve, reject) => {
-        const ws = external_node_fs_namespaceObject.createWriteStream(file);
+        const ws = external_node_fs_.createWriteStream(file);
         rs.on("error", (err) => {
             reject(err);
         });
@@ -112721,8 +111168,8 @@ async function readStreamToLocalFile(rs, file) {
  *
  * Promisified version of fs.stat().
  */
-const fsStat = external_node_util_.promisify(external_node_fs_namespaceObject.stat);
-const fsCreateReadStream = external_node_fs_namespaceObject.createReadStream;
+const fsStat = external_node_util_.promisify(external_node_fs_.stat);
+const fsCreateReadStream = external_node_fs_.createReadStream;
 //# sourceMappingURL=utils.js.map
 ;// CONCATENATED MODULE: ./node_modules/@azure/storage-blob/dist/esm/Clients.js
 // Copyright (c) Microsoft Corporation.
@@ -121766,10 +120213,10 @@ function decode(text, _a) {
     return text.replace(decodeRegExp, function (entity) { return getDecodedEntity(entity, references, isAttribute, isStrict); });
 }
 //# sourceMappingURL=index.js.map
-// EXTERNAL MODULE: ./node_modules/retry-request/index.js
-var retry_request = __nccwpck_require__(7842);
 // EXTERNAL MODULE: ./node_modules/teeny-request/build/src/index.js
 var teeny_request_build_src = __nccwpck_require__(321);
+// EXTERNAL MODULE: ./node_modules/retry-request/index.js
+var retry_request = __nccwpck_require__(7842);
 // EXTERNAL MODULE: external "querystring"
 var external_querystring_ = __nccwpck_require__(3480);
 // EXTERNAL MODULE: ./node_modules/@google-cloud/storage/build/esm/src/package-json-helper.cjs
@@ -122009,7 +120456,7 @@ class PassThroughShim extends external_stream_.PassThrough {
  * Double quotes (") are forbidden in context keys and values as they
  * interfere with GCS filter string syntax.
  *
- * @param {FileMetadata['contexts']} contexts The contexts object to validate.
+ * @param {Contexts} [contexts] The contexts object to validate.
  * @returns {void} Throws an error if validation fails.
  */
 function validateContexts(contexts) {
@@ -122027,10 +120474,12 @@ function validateContexts(contexts) {
 }
 /**
  * Helper to validate contexts and route errors to either a callback or a Promise.
- * @param contexts The contexts to validate.
- * @param callback The optional user-provided callback.
+ * @param {Contexts} [contexts] The contexts to validate.
+ * @param {Function} [callback] The optional user-provided callback.
  */
-function handleContextValidation(contexts, callback) {
+function handleContextValidation(contexts, callback
+// eslint-disable-next-line @typescript-eslint/no-explicit-any
+) {
     try {
         validateContexts(contexts);
     }
@@ -122040,6 +120489,54 @@ function handleContextValidation(contexts, callback) {
         }
         return Promise.reject(err);
     }
+}
+let mimePromise;
+/**
+ * Lazily loads and returns the `mime` module instance.
+ * Caches the resolved module so dynamic import is evaluated only once.
+ *
+ * @internal
+ */
+function getMime() {
+    if (!mimePromise) {
+        mimePromise = __nccwpck_require__.e(/* import() */ 900).then(__nccwpck_require__.t.bind(__nccwpck_require__, 4900, 19))
+            .then(mod => {
+            const modObj = mod;
+            const mime = modObj.default && typeof modObj.default.getType === 'function'
+                ? modObj.default
+                : modObj;
+            return mime;
+        })
+            .catch(err => {
+            mimePromise = undefined;
+            throw err;
+        });
+    }
+    return mimePromise;
+}
+let pLimitPromise;
+/**
+ * Lazily loads and returns the `p-limit` limiter function.
+ * Caches the resolved module so dynamic import is evaluated only once.
+ *
+ * @internal
+ */
+function util_getPLimit() {
+    if (!pLimitPromise) {
+        pLimitPromise = __nccwpck_require__.e(/* import() */ 890).then(__nccwpck_require__.t.bind(__nccwpck_require__, 8890, 19))
+            .then(mod => {
+            const modObj = mod;
+            const pLimit = typeof mod === 'function'
+                ? mod
+                : modObj.default || modObj;
+            return pLimit;
+        })
+            .catch(err => {
+            pLimitPromise = undefined;
+            throw err;
+        });
+    }
+    return pLimitPromise;
 }
 
 // EXTERNAL MODULE: ./node_modules/duplexify/index.js
@@ -122520,7 +121017,7 @@ class Util {
                     return onAuthenticated(e);
                 }
             };
-            prepareRequest();
+            void prepareRequest();
             if (stream) {
                 return stream;
             }
@@ -122548,11 +121045,11 @@ class Util {
      * @param {object=} config - Configuration object.
      * @param {boolean=} config.autoRetry - Automatically retry requests if the
      *     response is related to rate limits or certain intermittent server
-     * errors. We will exponentially backoff subsequent requests by default.
-     * (default: true)
+     *     errors. We will exponentially backoff subsequent requests by default.
+     *     (default: true)
      * @param {number=} config.maxRetries - Maximum number of automatic retries
      *     attempted before returning the error. (default: 3)
-     * @param {object=} config.request - HTTP module for request calls.
+     * @param {object=} config.retryOptions - Configuration for retryRequest.
      * @param {function} callback - The callback function.
      */
     makeRequest(reqOpts, config, callback) {
@@ -122645,6 +121142,21 @@ class Util {
             delete reqOpts.json.autoPaginate;
             delete reqOpts.json.autoPaginateVal;
             reqOpts.json = (0,projectify_build_src/* replaceProjectIdToken */.e$)(reqOpts.json, projectId);
+            const headers = reqOpts.headers || {};
+            const headerLike = headers;
+            if (typeof headerLike.set === 'function' &&
+                typeof headerLike.has === 'function') {
+                if (!headerLike.has('content-type')) {
+                    headerLike.set('Content-Type', 'application/json');
+                }
+                reqOpts.headers = headers;
+            }
+            else {
+                const hasContentType = Object.keys(headers).some(key => key.toLowerCase() === 'content-type');
+                reqOpts.headers = hasContentType
+                    ? headers
+                    : { ...headers, 'Content-Type': 'application/json' };
+            }
         }
         reqOpts.uri = (0,projectify_build_src/* replaceProjectIdToken */.e$)(reqOpts.uri, projectId);
         return reqOpts;
@@ -122684,16 +121196,56 @@ class Util {
             ? [{}, optionsOrCallback]
             : [optionsOrCallback, cb];
     }
-    _getDefaultHeaders(gcclGcsCmd) {
-        const headers = {
-            'User-Agent': util_getUserAgentString(),
-            'x-goog-api-client': `${getRuntimeTrackingString()} gccl/${packageJson.version}-${getModuleFormat()} gccl-invocation-id/${external_crypto_.randomUUID()}`,
-        };
-        if (gcclGcsCmd) {
-            headers['x-goog-api-client'] += ` gccl-gcs-cmd/${gcclGcsCmd}`;
-        }
-        return headers;
+    decorateHeaders(headers, options) {
+        return decorateHeaders(headers, options);
     }
+    _getDefaultHeaders(gcclGcsCmd) {
+        return decorateHeaders(undefined, { gcclGcsCmd }).headers;
+    }
+}
+/**
+ * Decorates and sanitizes headers for GCS requests:
+ * - Checks for user-provided `x-goog-gcs-idempotency-token` case-insensitively.
+ * - If a valid non-empty string user token is provided, uses it as the idempotency token and preserves the header.
+ * - If not provided or invalid, removes any invalid header key and sets `x-goog-gcs-idempotency-token` to either the provided fallback token or a generated UUID.
+ * - Adds `User-Agent` and `x-goog-api-client` (with tracking string, package version, gccl-invocation-id, and optional gccl-gcs-cmd).
+ *
+ * @param headers Existing headers object (optional).
+ * @param options Decoration options (idempotencyToken, packageJson, providedUserAgent, gcclGcsCmd).
+ * @returns An object containing the decorated headers and the effective idempotency token.
+ */
+function decorateHeaders(headers, options) {
+    const sanitizedHeaders = { ...headers };
+    const userTokenKey = Object.keys(sanitizedHeaders).find(key => key.toLowerCase() === 'x-goog-gcs-idempotency-token');
+    const userTokenValue = userTokenKey
+        ? sanitizedHeaders[userTokenKey]
+        : undefined;
+    const hasValidUserToken = typeof userTokenValue === 'string' && userTokenValue.trim() !== '';
+    const idempotencyToken = hasValidUserToken
+        ? userTokenValue
+        : (options === null || options === void 0 ? void 0 : options.idempotencyToken) || external_crypto_.randomUUID();
+    let userAgent = util_getUserAgentString();
+    if (options === null || options === void 0 ? void 0 : options.providedUserAgent) {
+        userAgent = `${options.providedUserAgent} ${userAgent}`;
+    }
+    const pkg = (options === null || options === void 0 ? void 0 : options.packageJson) || packageJson;
+    let googAPIClient = `${getRuntimeTrackingString()} gccl/${pkg.version}-${getModuleFormat()} gccl-invocation-id/${idempotencyToken}`;
+    const gcclGcsCmd = options === null || options === void 0 ? void 0 : options.gcclGcsCmd;
+    if (gcclGcsCmd) {
+        googAPIClient += ` gccl-gcs-cmd/${gcclGcsCmd}`;
+    }
+    sanitizedHeaders['User-Agent'] = userAgent;
+    sanitizedHeaders['x-goog-api-client'] = googAPIClient;
+    if (!hasValidUserToken) {
+        if (userTokenKey) {
+            delete sanitizedHeaders[userTokenKey];
+        }
+        sanitizedHeaders['x-goog-gcs-idempotency-token'] = idempotencyToken;
+    }
+    return {
+        headers: sanitizedHeaders,
+        idempotencyToken,
+    };
 }
 /**
  * Basic Passthrough Stream that records the number of bytes read
@@ -122731,8 +121283,6 @@ const util_util = new Util();
  * See the License for the specific language governing permissions and
  * limitations under the License.
  */
-
-
 
 
 const DEFAULT_PROJECT_ID_TOKEN = '{{projectId}}';
@@ -122806,7 +121356,15 @@ class Service {
         if (!callback) {
             return this.getProjectIdAsync();
         }
-        this.getProjectIdAsync().then(p => callback(null, p), callback);
+        void (async () => {
+            try {
+                const p = await this.getProjectIdAsync();
+                callback(null, p);
+            }
+            catch (err) {
+                callback(err);
+            }
+        })();
     }
     async getProjectIdAsync() {
         const projectId = await this.authClient.getProjectId();
@@ -122856,20 +121414,12 @@ class Service {
             reqOpts = requestInterceptor(reqOpts);
         });
         delete reqOpts.interceptors_;
-        const pkg = this.packageJson;
-        let userAgent = util_getUserAgentString();
-        if (this.providedUserAgent) {
-            userAgent = `${this.providedUserAgent} ${userAgent}`;
-        }
-        reqOpts.headers = {
-            ...reqOpts.headers,
-            'User-Agent': userAgent,
-            'x-goog-api-client': `${getRuntimeTrackingString()} gccl/${pkg.version}-${getModuleFormat()} gccl-invocation-id/${external_crypto_.randomUUID()}`,
-        };
-        if (reqOpts[util_GCCL_GCS_CMD_KEY]) {
-            reqOpts.headers['x-goog-api-client'] +=
-                ` gccl-gcs-cmd/${reqOpts[util_GCCL_GCS_CMD_KEY]}`;
-        }
+        const { headers } = decorateHeaders(reqOpts.headers, {
+            packageJson: this.packageJson,
+            providedUserAgent: this.providedUserAgent,
+            gcclGcsCmd: reqOpts[util_GCCL_GCS_CMD_KEY],
+        });
+        reqOpts.headers = headers;
         if (reqOpts.shouldReturnStream) {
             return this.makeAuthenticatedRequest(reqOpts);
         }
@@ -123082,7 +121632,7 @@ class ServiceObject extends external_events_.EventEmitter {
                         args.push(options);
                     }
                     args.push(onCreate);
-                    self.create(...args);
+                    void self.create(...args);
                     return;
                 }
                 callback(err, null, metadata);
@@ -123199,10 +121749,6 @@ class ServiceObject extends external_events_.EventEmitter {
 
 // EXTERNAL MODULE: ./node_modules/@google-cloud/paginator/build/src/index.js
 var paginator_build_src = __nccwpck_require__(1850);
-// EXTERNAL MODULE: ./node_modules/mime/index.js
-var mime = __nccwpck_require__(4900);
-// EXTERNAL MODULE: ./node_modules/p-limit/index.js
-var p_limit = __nccwpck_require__(8890);
 // EXTERNAL MODULE: ./node_modules/async-retry/lib/index.js
 var lib = __nccwpck_require__(5195);
 ;// CONCATENATED MODULE: ./node_modules/@google-cloud/storage/build/esm/src/acl.js
@@ -124155,7 +122701,7 @@ class crc32c_CRC32C {
         return new crc32c_CRC32C(value);
     }
     /**
-     * Generates a `CRC32C` from a variety of compatable types.
+     * Generates a `CRC32C` from a variety of compatible types.
      * Note: strings are treated as input, not as file paths to read from.
      *
      * @param value A number, 4-byte `ArrayBufferView`/`Buffer`/`TypedArray`, or 4-byte base64-encoded data (string)
@@ -124344,13 +122890,8 @@ var _Upload_instances, _Upload_hashValidator, _Upload_clientCrc32c, _Upload_clie
 
 
 
-// eslint-disable-next-line @typescript-eslint/ban-ts-comment
-// @ts-ignore
-
-
 const NOT_FOUND_STATUS_CODE = 404;
 const RESUMABLE_INCOMPLETE_STATUS_CODE = 308;
-const resumable_upload_packageJson = (0,package_json_helper/* getPackageJSON */.V)();
 const PROTOCOL_REGEX = /^(\w*):\/\//;
 class Upload extends external_stream_.Writable {
     constructor(cfg) {
@@ -124491,18 +123032,25 @@ class Upload extends external_stream_.Writable {
         resumable_upload_classPrivateFieldSet(this, _Upload_gcclGcsCmd, cfg[util_GCCL_GCS_CMD_KEY], "f");
         this.once('writing', () => {
             if (this.uri) {
-                this.continueUploading();
+                this.continueUploading().catch(err => this.destroy(err));
             }
             else {
                 this.createURI(err => {
                     if (err) {
-                        return this.destroy(err);
+                        this.destroy(err);
+                        return;
                     }
-                    this.startUploading();
-                    return;
+                    this.handleStartUploading();
                 });
             }
         });
+    }
+    /**
+     * Handle start uploading.
+     * @private
+     */
+    handleStartUploading() {
+        this.startUploading().catch(err => this.destroy(err));
     }
     /**
      * Prevent 'finish' event until the upload has succeeded.
@@ -124671,9 +123219,18 @@ class Upload extends external_stream_.Writable {
         if (!callback) {
             return this.createURIAsync();
         }
-        this.createURIAsync().then(r => callback(null, r), callback);
+        void (async () => {
+            try {
+                const r = await this.createURIAsync();
+                callback(null, r);
+            }
+            catch (err) {
+                callback(err);
+            }
+        })();
     }
     async createURIAsync() {
+        var _a;
         const metadata = { ...this.metadata };
         const headers = {};
         // Delete content length and content type from metadata if they exist.
@@ -124686,10 +123243,17 @@ class Upload extends external_stream_.Writable {
             headers['X-Upload-Content-Type'] = metadata.contentType;
             delete metadata.contentType;
         }
-        let googAPIClient = `${getRuntimeTrackingString()} gccl/${resumable_upload_packageJson.version}-${getModuleFormat()} gccl-invocation-id/${this.currentInvocationId.uri}`;
-        if (resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")) {
-            googAPIClient += ` gccl-gcs-cmd/${resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")}`;
+        if (this.origin) {
+            headers.Origin = this.origin;
         }
+        const { headers: reqHeaders, idempotencyToken } = decorateHeaders({
+            ...(_a = this.customRequestOptions) === null || _a === void 0 ? void 0 : _a.headers,
+            ...headers,
+        }, {
+            idempotencyToken: this.currentInvocationId.uri,
+            gcclGcsCmd: resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f"),
+        });
+        this.currentInvocationId.uri = idempotencyToken;
         // Check if headers already exist before creating new ones
         const reqOpts = {
             method: 'POST',
@@ -124699,11 +123263,7 @@ class Upload extends external_stream_.Writable {
                 uploadType: 'resumable',
             }, this.params),
             data: metadata,
-            headers: {
-                'User-Agent': util_getUserAgentString(),
-                'x-goog-api-client': googAPIClient,
-                ...headers,
-            },
+            headers: reqHeaders,
         };
         if (metadata.contentLength) {
             reqOpts.headers['X-Upload-Content-Length'] =
@@ -124770,6 +123330,7 @@ class Upload extends external_stream_.Writable {
         return this.startUploading();
     }
     async startUploading() {
+        var _a;
         const multiChunkMode = !!this.chunkSize;
         let responseReceived = false;
         this.numChunksReadInRequest = 0;
@@ -124838,14 +123399,11 @@ class Upload extends external_stream_.Writable {
                 }
             },
         });
-        let googAPIClient = `${getRuntimeTrackingString()} gccl/${resumable_upload_packageJson.version}-${getModuleFormat()} gccl-invocation-id/${this.currentInvocationId.chunk}`;
-        if (resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")) {
-            googAPIClient += ` gccl-gcs-cmd/${resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")}`;
-        }
-        const headers = {
-            'User-Agent': util_getUserAgentString(),
-            'x-goog-api-client': googAPIClient,
-        };
+        const { headers, idempotencyToken } = decorateHeaders((_a = this.customRequestOptions) === null || _a === void 0 ? void 0 : _a.headers, {
+            idempotencyToken: this.currentInvocationId.chunk,
+            gcclGcsCmd: resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f"),
+        });
+        this.currentInvocationId.chunk = idempotencyToken;
         // If using multiple chunk upload, set appropriate header
         if (multiChunkMode) {
             // We need to know how much data is available upstream to set the `Content-Range` header.
@@ -124959,7 +123517,7 @@ class Upload extends external_stream_.Writable {
                 resumable_upload_classPrivateFieldGet(this, _Upload_instances, "m", _Upload_resetLocalBuffersCache).call(this);
             }
             // continue uploading next chunk
-            this.continueUploading();
+            this.continueUploading().catch(err => this.destroy(err));
         }
         else if (!this.isSuccessfulResponse(resp.status) &&
             !shouldContinueUploadInAnotherRequest) {
@@ -125007,19 +123565,21 @@ class Upload extends external_stream_.Writable {
      * @returns the current upload status
      */
     async checkUploadStatus(config = {}) {
-        let googAPIClient = `${getRuntimeTrackingString()} gccl/${resumable_upload_packageJson.version}-${getModuleFormat()} gccl-invocation-id/${this.currentInvocationId.checkUploadStatus}`;
-        if (resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")) {
-            googAPIClient += ` gccl-gcs-cmd/${resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f")}`;
-        }
+        var _a;
+        const localHeaders = {
+            ...(_a = this.customRequestOptions) === null || _a === void 0 ? void 0 : _a.headers,
+            'Content-Length': 0,
+            'Content-Range': 'bytes */*',
+        };
+        const { headers: reqHeaders, idempotencyToken } = decorateHeaders(localHeaders, {
+            idempotencyToken: this.currentInvocationId.checkUploadStatus,
+            gcclGcsCmd: resumable_upload_classPrivateFieldGet(this, _Upload_gcclGcsCmd, "f"),
+        });
+        this.currentInvocationId.checkUploadStatus = idempotencyToken;
         const opts = {
             method: 'PUT',
             url: this.uri,
-            headers: {
-                'Content-Length': 0,
-                'Content-Range': 'bytes */*',
-                'User-Agent': util_getUserAgentString(),
-                'x-goog-api-client': googAPIClient,
-            },
+            headers: reqHeaders,
         };
         try {
             const resp = await this.makeRequest(opts);
@@ -125037,7 +123597,7 @@ class Upload extends external_stream_.Writable {
             if (retryDelay <= 0) {
                 throw e;
             }
-            await new Promise(res => setTimeout(res, retryDelay));
+            await new Promise(resolve => setTimeout(resolve, retryDelay));
             return this.checkUploadStatus(config);
         }
     }
@@ -125090,6 +123650,15 @@ class Upload extends external_stream_.Writable {
                 ...reqOpts.headers,
             },
         };
+        if (combinedReqOpts.headers) {
+            const headers = combinedReqOpts.headers;
+            const userTokenKey = Object.keys(headers).find(key => key.toLowerCase() === 'x-goog-gcs-idempotency-token');
+            const userTokenValue = userTokenKey ? headers[userTokenKey] : undefined;
+            const hasValidUserToken = typeof userTokenValue === 'string' && userTokenValue.trim() !== '';
+            if (!hasValidUserToken && userTokenKey) {
+                delete headers[userTokenKey];
+            }
+        }
         const res = await this.authClient.request(combinedReqOpts);
         if (res.data && res.data.error) {
             throw res.data.error;
@@ -125114,6 +123683,15 @@ class Upload extends external_stream_.Writable {
                 ...reqOpts.headers,
             },
         };
+        if (combinedReqOpts.headers) {
+            const headers = combinedReqOpts.headers;
+            const userTokenKey = Object.keys(headers).find(key => key.toLowerCase() === 'x-goog-gcs-idempotency-token');
+            const userTokenValue = userTokenKey ? headers[userTokenKey] : undefined;
+            const hasValidUserToken = typeof userTokenValue === 'string' && userTokenValue.trim() !== '';
+            if (!hasValidUserToken && userTokenKey) {
+                delete headers[userTokenKey];
+            }
+        }
         const res = await this.authClient.request(combinedReqOpts);
         const successfulRequest = this.onResponse(res);
         this.removeListener('error', errorCallback);
@@ -125142,12 +123720,12 @@ class Upload extends external_stream_.Writable {
         if (this.numRetries < this.retryOptions.maxRetries) {
             if (resp.status === NOT_FOUND_STATUS_CODE &&
                 this.numChunksReadInRequest === 0) {
-                this.startUploading();
+                this.startUploading().catch(err => this.destroy(err));
             }
             else {
                 const retryDelay = this.getRetryDelay();
                 if (retryDelay <= 0) {
-                    this.destroy(new Error(`Retry total time limit exceeded - ${JSON.stringify(resp.data)}`));
+                    this.destroy(buildRetryError('Retry total time limit exceeded', resp));
                     return;
                 }
                 // Unshift the local cache back in case it's needed for the next request.
@@ -125165,7 +123743,7 @@ class Upload extends external_stream_.Writable {
             this.numRetries++;
         }
         else {
-            this.destroy(new Error(`Retry limit exceeded - ${JSON.stringify(resp.data)}`));
+            this.destroy(buildRetryError('Retry limit exceeded', resp));
         }
     }
     /**
@@ -125242,6 +123820,66 @@ _Upload_hashValidator = new WeakMap(), _Upload_clientCrc32c = new WeakMap(), _Up
         headers['X-Goog-Hash'] = checksums.join(',');
     }
 };
+function buildRetryError(prefix, resp) {
+    var _a, _b, _c, _d;
+    const parts = [];
+    if (typeof resp.status === 'number' && !isNaN(resp.status)) {
+        parts.push(`status: ${resp.status}`);
+    }
+    const err = resp.data;
+    if (err !== undefined && err !== null) {
+        if (typeof err === 'object') {
+            const gaxiosErrLike = err;
+            const errParts = [];
+            if (gaxiosErrLike.message) {
+                errParts.push(String(gaxiosErrLike.message));
+            }
+            const status = (_a = gaxiosErrLike.status) !== null && _a !== void 0 ? _a : (_b = gaxiosErrLike.response) === null || _b === void 0 ? void 0 : _b.status;
+            if (typeof status === 'number' &&
+                !isNaN(status) &&
+                status !== resp.status) {
+                errParts.push(`status: ${status}`);
+            }
+            const statusText = (_c = gaxiosErrLike.response) === null || _c === void 0 ? void 0 : _c.statusText;
+            if (statusText) {
+                errParts.push(`statusText: ${statusText}`);
+            }
+            const responseData = (_d = gaxiosErrLike.response) === null || _d === void 0 ? void 0 : _d.data;
+            if (responseData !== undefined &&
+                responseData !== null &&
+                responseData !== '') {
+                errParts.push(`response: ${typeof responseData === 'object'
+                    ? JSON.stringify(responseData)
+                    : responseData}`);
+            }
+            if (gaxiosErrLike.code) {
+                errParts.push(`code: ${String(gaxiosErrLike.code)}`);
+            }
+            if (errParts.length > 0) {
+                parts.push(...errParts);
+            }
+            else if (err instanceof Error) {
+                parts.push(err.toString() || err.name || 'Unknown Error');
+            }
+            else {
+                const stringified = JSON.stringify(err);
+                if (stringified && stringified !== '{}') {
+                    parts.push(stringified);
+                }
+            }
+        }
+        else if (typeof err === 'string') {
+            if (err !== '') {
+                parts.push(err);
+            }
+        }
+        else {
+            parts.push(String(err));
+        }
+    }
+    const suffix = parts.join(' - ');
+    return new Error(`${prefix} - ${suffix || 'Unknown Error'}`);
+}
 function upload(cfg) {
     return new Upload(cfg);
 }
@@ -125250,7 +123888,15 @@ function createURI(cfg, callback) {
     if (!callback) {
         return up.createURI();
     }
-    up.createURI().then(r => callback(null, r), callback);
+    void (async () => {
+        try {
+            const r = await up.createURI();
+            callback(null, r);
+        }
+        catch (err) {
+            callback(err);
+        }
+    })();
 }
 /**
  * Check the status of an existing resumable upload.
@@ -125585,7 +124231,6 @@ var file_classPrivateFieldGet = (undefined && undefined.__classPrivateFieldGet) 
     return kind === "m" ? f : kind === "a" ? f.call(receiver) : f ? f.value : state.get(receiver);
 };
 var _File_instances, _File_validateIntegrity;
-
 
 
 
@@ -126152,7 +124797,7 @@ class file_File extends ServiceObject {
         this.kmsKeyName = options.kmsKeyName;
         this.userProject = userProject;
         this.name = name;
-        if (options.encryptionKey) {
+        if (options.encryptionKey !== undefined) {
             this.setEncryptionKey(options.encryptionKey);
         }
         this.acl = new Acl({
@@ -126224,6 +124869,8 @@ class file_File extends ServiceObject {
      *     `projects/my-project/locations/location/keyRings/my-kr/cryptoKeys/my-key`,
      *     that will be used to encrypt the object. Overwrites the object
      * metadata's `kms_key_name` value, if any.
+     * @property {string} [kmsKeyName] Resource name of the Cloud KMS key. Alias
+     *     for `destinationKmsKeyName`.
      * @property {Metadata} [metadata] Metadata to specify on the copied file.
      * @property {string} [predefinedAcl] Set the ACL for the new file.
      * @property {string} [token] A previously-returned `rewriteToken` from an
@@ -126396,21 +125043,27 @@ class file_File extends ServiceObject {
         }
         newFile = newFile || destBucket.file(destName);
         const headers = {};
-        if (this.encryptionKey !== undefined) {
+        if (this.encryptionKey !== undefined && this.encryptionKey !== null) {
             headers['x-goog-copy-source-encryption-algorithm'] = 'AES256';
             headers['x-goog-copy-source-encryption-key'] = this.encryptionKeyBase64;
             headers['x-goog-copy-source-encryption-key-sha256'] =
                 this.encryptionKeyHash;
         }
-        if (newFile.encryptionKey !== undefined) {
-            this.setEncryptionKey(newFile.encryptionKey);
+        const destinationKmsKeyName = options.destinationKmsKeyName || options.kmsKeyName || newFile.kmsKeyName;
+        if (this.encryptionKey &&
+            newFile.encryptionKey === undefined &&
+            !destinationKmsKeyName) {
+            newFile.setEncryptionKey(this.encryptionKey);
         }
-        else if (options.destinationKmsKeyName !== undefined) {
-            query.destinationKmsKeyName = options.destinationKmsKeyName;
+        if (newFile.encryptionKey !== undefined && newFile.encryptionKey !== null) {
+            headers['x-goog-encryption-algorithm'] = 'AES256';
+            headers['x-goog-encryption-key'] = newFile.encryptionKeyBase64;
+            headers['x-goog-encryption-key-sha256'] = newFile.encryptionKeyHash;
+        }
+        else if (destinationKmsKeyName !== undefined) {
+            query.destinationKmsKeyName = destinationKmsKeyName;
             delete options.destinationKmsKeyName;
-        }
-        else if (newFile.kmsKeyName !== undefined) {
-            query.destinationKmsKeyName = newFile.kmsKeyName;
+            delete options.kmsKeyName;
         }
         if (query.destinationKmsKeyName) {
             this.kmsKeyName = query.destinationKmsKeyName;
@@ -126426,9 +125079,9 @@ class file_File extends ServiceObject {
             query.ifGenerationMatch = (_b = options.preconditionOpts) === null || _b === void 0 ? void 0 : _b.ifGenerationMatch;
             delete options.preconditionOpts;
         }
-        this.request({
+        this.bucket.request({
             method: 'POST',
-            uri: `/rewriteTo/b/${destBucket.name}/o/${encodeURIComponent(newFile.name)}`,
+            uri: `/o/${encodeURIComponent(this.name)}/rewriteTo/b/${destBucket.name}/o/${encodeURIComponent(newFile.name)}`,
             qs: query,
             json: options,
             headers,
@@ -126594,10 +125247,18 @@ class file_File extends ServiceObject {
         const onResponse = (err, _body, rawResponseStream) => {
             if (err) {
                 // Get error message from the body.
-                this.getBufferFromReadable(rawResponseStream).then(body => {
-                    err.message = body.toString('utf8');
-                    throughStream.destroy(err);
-                });
+                void (async () => {
+                    try {
+                        const body = await this.getBufferFromReadable(rawResponseStream);
+                        err.message = body.toString('utf8');
+                    }
+                    catch (_a) {
+                        // Ignore error getting body
+                    }
+                    finally {
+                        throughStream.destroy(err);
+                    }
+                })();
                 return;
             }
             request = rawResponseStream.request;
@@ -126791,7 +125452,7 @@ class file_File extends ServiceObject {
             customRequestOptions: this.getRequestInterceptors().reduce((reqOpts, interceptorFn) => interceptorFn(reqOpts), {}),
             file: this.name,
             generation: this.generation,
-            key: this.encryptionKey,
+            key: this.encryptionKey === null ? undefined : this.encryptionKey,
             kmsKeyName: this.kmsKeyName,
             metadata: options.metadata,
             offset: options.offset,
@@ -126978,20 +125639,6 @@ class file_File extends ServiceObject {
         if (options.contentType) {
             options.metadata.contentType = options.contentType;
         }
-        if (!options.metadata.contentType ||
-            options.metadata.contentType === 'auto') {
-            const detectedContentType = mime.getType(this.name);
-            if (detectedContentType) {
-                options.metadata.contentType = detectedContentType;
-            }
-        }
-        let gzip = options.gzip;
-        if (gzip === 'auto') {
-            gzip = COMPRESSIBLE_MIME_REGEX.test(options.metadata.contentType || '');
-        }
-        if (gzip) {
-            options.metadata.contentEncoding = 'gzip';
-        }
         let crc32c = true;
         let md5 = false;
         if (typeof options.validation === 'string') {
@@ -127043,28 +125690,10 @@ class file_File extends ServiceObject {
         writeStream.once('close', () => {
             emitStream.destroy();
         });
-        const transformStreams = [];
-        if (gzip) {
-            transformStreams.push(external_zlib_.createGzip());
-        }
         const emitStream = new PassThroughShim();
         // If `writeStream` is destroyed before the `writing` event, `emitStream` will not have any listeners. This prevents an unhandled error.
         const noop = () => { };
         emitStream.on('error', noop);
-        let hashCalculatingStream = null;
-        if (crc32c || md5) {
-            const crc32cInstance = options.resumeCRC32C
-                ? crc32c_CRC32C.from(options.resumeCRC32C)
-                : undefined;
-            hashCalculatingStream = new HashStreamValidator({
-                crc32c,
-                crc32cInstance,
-                md5,
-                crc32cGenerator: this.crc32cGenerator,
-                updateHashesOnly: true,
-            });
-            transformStreams.push(hashCalculatingStream);
-        }
         const fileWriteStream = duplexify();
         let fileWriteStreamMetadataReceived = false;
         // Handing off emitted events to users
@@ -127076,62 +125705,124 @@ class file_File extends ServiceObject {
         fileWriteStream.once('metadata', () => {
             fileWriteStreamMetadataReceived = true;
         });
-        writeStream.once('writing', () => {
-            if (options.resumable === false) {
-                this.startSimpleUpload_(fileWriteStream, options);
-            }
-            else {
-                this.startResumableUpload_(fileWriteStream, options);
-            }
-            // remove temporary noop listener as we now create a pipeline that handles the errors
-            emitStream.removeListener('error', noop);
-            (0,external_stream_.pipeline)(emitStream, ...transformStreams, fileWriteStream, async (e) => {
-                if (e) {
-                    return pipelineCallback(e);
+        writeStream.once('writing', async () => {
+            try {
+                if (!options.metadata.contentType ||
+                    options.metadata.contentType === 'auto') {
+                    const mime = await getMime();
+                    const detectedContentType = mime.getType(this.name);
+                    if (detectedContentType) {
+                        options.metadata.contentType = detectedContentType;
+                    }
                 }
-                // If this is a partial upload, we don't expect final metadata yet.
-                if (options.isPartialUpload) {
-                    // Emit CRC32c for this completed chunk if hash validation is active.
+                let gzip = options.gzip;
+                if (gzip === 'auto') {
+                    gzip = COMPRESSIBLE_MIME_REGEX.test(options.metadata.contentType || '');
+                }
+                if (gzip) {
+                    options.metadata.contentEncoding = 'gzip';
+                }
+                const transformStreams = [];
+                if (gzip) {
+                    transformStreams.push(external_zlib_.createGzip());
+                }
+                let hashCalculatingStream = null;
+                if (crc32c || md5) {
+                    const crc32cInstance = options.resumeCRC32C
+                        ? crc32c_CRC32C.from(options.resumeCRC32C)
+                        : undefined;
+                    hashCalculatingStream = new HashStreamValidator({
+                        crc32c,
+                        crc32cInstance,
+                        md5,
+                        crc32cGenerator: this.crc32cGenerator,
+                        updateHashesOnly: true,
+                    });
+                    transformStreams.push(hashCalculatingStream);
+                }
+                if (options.resumable === false) {
+                    this.startSimpleUpload_(fileWriteStream, options);
+                }
+                else {
+                    this.startResumableUpload_(fileWriteStream, options);
+                }
+                // remove temporary noop listener as we now create a pipeline that handles the errors
+                emitStream.removeListener('error', noop);
+                if (fileWriteStream.destroyed) {
+                    let callbackCalled = false;
+                    const onError = (err) => {
+                        if (!callbackCalled) {
+                            callbackCalled = true;
+                            pipelineCallback(err);
+                        }
+                    };
+                    fileWriteStream.once('error', onError);
+                    emitStream.destroy();
+                    process.nextTick(() => {
+                        fileWriteStream.removeListener('error', onError);
+                        if (!callbackCalled) {
+                            callbackCalled = true;
+                            const err = fileWriteStream.errored ||
+                                new Error('Write stream destroyed');
+                            pipelineCallback(err);
+                        }
+                    });
+                    return;
+                }
+                (0,external_stream_.pipeline)(emitStream, ...transformStreams, fileWriteStream, async (e) => {
+                    if (e) {
+                        return pipelineCallback(e);
+                    }
+                    // If this is a partial upload, we don't expect final metadata yet.
+                    if (options.isPartialUpload) {
+                        // Emit CRC32c for this completed chunk if hash validation is active.
+                        if (hashCalculatingStream === null || hashCalculatingStream === void 0 ? void 0 : hashCalculatingStream.crc32c) {
+                            writeStream.emit('crc32c', hashCalculatingStream.crc32c);
+                        }
+                        // Resolve the pipeline for this *partial chunk*.
+                        return pipelineCallback();
+                    }
+                    // We want to make sure we've received the metadata from the server in order
+                    // to properly validate the object's integrity. Depending on the type of upload,
+                    // the stream could close before the response is returned.
+                    if (!fileWriteStreamMetadataReceived) {
+                        try {
+                            await new Promise((resolve, reject) => {
+                                fileWriteStream.once('metadata', resolve);
+                                fileWriteStream.once('error', reject);
+                            });
+                        }
+                        catch (e) {
+                            return pipelineCallback(e);
+                        }
+                    }
+                    // Emit the local CRC32C value for future validation, if validation is enabled.
                     if (hashCalculatingStream === null || hashCalculatingStream === void 0 ? void 0 : hashCalculatingStream.crc32c) {
                         writeStream.emit('crc32c', hashCalculatingStream.crc32c);
                     }
-                    // Resolve the pipeline for this *partial chunk*.
-                    return pipelineCallback();
-                }
-                // We want to make sure we've received the metadata from the server in order
-                // to properly validate the object's integrity. Depending on the type of upload,
-                // the stream could close before the response is returned.
-                if (!fileWriteStreamMetadataReceived) {
                     try {
-                        await new Promise((resolve, reject) => {
-                            fileWriteStream.once('metadata', resolve);
-                            fileWriteStream.once('error', reject);
-                        });
+                        // Metadata may not be ready if the upload is a partial upload,
+                        // nothing to validate yet.
+                        const metadataNotReady = options.isPartialUpload && !this.metadata;
+                        if (hashCalculatingStream && !metadataNotReady) {
+                            await file_classPrivateFieldGet(this, _File_instances, "m", _File_validateIntegrity).call(this, hashCalculatingStream, {
+                                crc32c,
+                                md5,
+                            });
+                        }
+                        pipelineCallback();
                     }
                     catch (e) {
-                        return pipelineCallback(e);
+                        pipelineCallback(e);
                     }
-                }
-                // Emit the local CRC32C value for future validation, if validation is enabled.
-                if (hashCalculatingStream === null || hashCalculatingStream === void 0 ? void 0 : hashCalculatingStream.crc32c) {
-                    writeStream.emit('crc32c', hashCalculatingStream.crc32c);
-                }
-                try {
-                    // Metadata may not be ready if the upload is a partial upload,
-                    // nothing to validate yet.
-                    const metadataNotReady = options.isPartialUpload && !this.metadata;
-                    if (hashCalculatingStream && !metadataNotReady) {
-                        await file_classPrivateFieldGet(this, _File_instances, "m", _File_validateIntegrity).call(this, hashCalculatingStream, {
-                            crc32c,
-                            md5,
-                        });
-                    }
-                    pipelineCallback();
-                }
-                catch (e) {
-                    pipelineCallback(e);
-                }
-            });
+                });
+            }
+            catch (err) {
+                emitStream.removeListener('error', noop);
+                emitStream.destroy(err);
+                fileWriteStream.destroy(err);
+                pipelineCallback(err);
+            }
         });
         return writeStream;
     }
@@ -127139,13 +125830,20 @@ class file_File extends ServiceObject {
         const options = typeof optionsOrCallback === 'object' ? optionsOrCallback : {};
         cb = typeof optionsOrCallback === 'function' ? optionsOrCallback : cb;
         this.disableAutoRetryConditionallyIdempotent_(this.methods.delete, AvailableServiceObjectMethods.delete, options);
-        super
-            .delete(options)
-            .then(resp => cb(null, ...resp))
-            .catch(cb)
-            .finally(() => {
-            this.storage.retryOptions.autoRetry = this.instanceRetryValue;
-        });
+        void (async () => {
+            let resp;
+            try {
+                resp = await super.delete(options);
+            }
+            catch (err) {
+                cb(err);
+                return;
+            }
+            finally {
+                this.storage.retryOptions.autoRetry = this.instanceRetryValue;
+            }
+            cb(null, ...resp);
+        })();
     }
     /**
      * @typedef {array} DownloadResponse
@@ -127228,7 +125926,7 @@ class file_File extends ServiceObject {
         });
         const destination = options.destination;
         delete options.destination;
-        if (options.encryptionKey) {
+        if (options.encryptionKey !== undefined) {
             this.setEncryptionKey(options.encryptionKey);
             delete options.encryptionKey;
         }
@@ -127266,9 +125964,17 @@ class file_File extends ServiceObject {
             });
         }
         else {
-            this.getBufferFromReadable(fileStream)
-                .then(contents => callback === null || callback === void 0 ? void 0 : callback(null, contents))
-                .catch(callback);
+            void (async () => {
+                let contents;
+                try {
+                    contents = await this.getBufferFromReadable(fileStream);
+                }
+                catch (err) {
+                    callback === null || callback === void 0 ? void 0 : callback(err);
+                    return;
+                }
+                callback === null || callback === void 0 ? void 0 : callback(null, contents);
+            })();
         }
     }
     /**
@@ -127317,7 +126023,19 @@ class file_File extends ServiceObject {
      * Example of downloading an encrypted file:
      */
     setEncryptionKey(encryptionKey) {
+        if (this.encryptionKeyInterceptor) {
+            const index = this.interceptors.indexOf(this.encryptionKeyInterceptor);
+            if (index > -1) {
+                this.interceptors.splice(index, 1);
+            }
+            this.encryptionKeyInterceptor = undefined;
+        }
         this.encryptionKey = encryptionKey;
+        if (encryptionKey === null || encryptionKey === undefined) {
+            this.encryptionKeyBase64 = undefined;
+            this.encryptionKeyHash = undefined;
+            return this;
+        }
         this.encryptionKeyBase64 = Buffer.from(encryptionKey).toString('base64');
         this.encryptionKeyHash = external_crypto_.createHash('sha256')
             // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -127402,7 +126120,7 @@ class file_File extends ServiceObject {
      * ```
      */
     getExpirationDate(callback) {
-        this.getMetadata((err, metadata, apiResponse) => {
+        void this.getMetadata((err, metadata, apiResponse) => {
             if (err) {
                 callback(err, null, apiResponse);
                 return;
@@ -127573,15 +126291,21 @@ class file_File extends ServiceObject {
         };
         const policyString = JSON.stringify(policy);
         const policyBase64 = Buffer.from(policyString).toString('base64');
-        this.storage.authClient.sign(policyBase64, options.signingEndpoint).then(signature => {
+        void (async () => {
+            let signature;
+            try {
+                signature = await this.storage.authClient.sign(policyBase64, options.signingEndpoint);
+            }
+            catch (err) {
+                callback(new SigningError(err.message));
+                return;
+            }
             callback(null, {
                 string: policyString,
                 base64: policyBase64,
                 signature,
             });
-        }, err => {
-            callback(new SigningError(err.message));
-        });
+        })();
     }
     /**
      * @typedef {object} SignedPostPolicyV4Output
@@ -127747,7 +126471,17 @@ class file_File extends ServiceObject {
                 throw new SigningError(err.message);
             }
         };
-        sign().then(res => callback(null, res), callback);
+        void (async () => {
+            let res;
+            try {
+                res = await sign();
+            }
+            catch (err) {
+                callback(err);
+                return;
+            }
+            callback(null, res);
+        })();
     }
     /**
      * @typedef {array} GetSignedUrlResponse
@@ -127951,6 +126685,7 @@ class file_File extends ServiceObject {
             contentMd5: cfg.contentMd5,
             contentType: cfg.contentType,
             host: cfg.host,
+            signingEndpoint: cfg.signingEndpoint,
         };
         if (cfg.cname) {
             signConfig.cname = cfg.cname;
@@ -127964,9 +126699,17 @@ class file_File extends ServiceObject {
         if (!this.signer) {
             this.signer = new URLSigner(this.storage.authClient, this.bucket, this, this.storage);
         }
-        this.signer
-            .getSignedUrl(signConfig)
-            .then(signedUrl => callback(null, signedUrl), callback);
+        void (async () => {
+            let signedUrl;
+            try {
+                signedUrl = await this.signer.getSignedUrl(signConfig);
+            }
+            catch (err) {
+                callback(err);
+                return;
+            }
+            callback(null, signedUrl);
+        })();
     }
     /**
      * @callback IsPublicCallback
@@ -128691,7 +127434,25 @@ class file_File extends ServiceObject {
         const copyOptions = ((_a = options.preconditionOpts) === null || _a === void 0 ? void 0 : _a.ifGenerationMatch) !== undefined
             ? { preconditionOpts: options.preconditionOpts }
             : {};
-        this.copy(newFile, copyOptions, callback);
+        this.copy(newFile, copyOptions, (err, file, resp) => {
+            if (!err) {
+                if (options.encryptionKey !== undefined) {
+                    this.setEncryptionKey(options.encryptionKey);
+                }
+                else {
+                    this.setEncryptionKey(null);
+                }
+                if (options.kmsKeyName !== undefined) {
+                    this.kmsKeyName = options.kmsKeyName;
+                }
+                else {
+                    this.kmsKeyName = undefined;
+                }
+            }
+            if (callback) {
+                callback(err, file, resp);
+            }
+        });
     }
     /**
      * @typedef {object} SaveOptions
@@ -128807,15 +127568,16 @@ class file_File extends ServiceObject {
         if (!callback) {
             return returnValue;
         }
-        else {
-            return returnValue
-                .then(() => {
-                if (callback) {
-                    return callback();
-                }
-            })
-                .catch(callback);
-        }
+        return (async () => {
+            try {
+                await returnValue;
+            }
+            catch (err) {
+                callback(err);
+                return;
+            }
+            callback();
+        })();
     }
     setMetadata(metadata, optionsOrCallback, cb) {
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -128828,13 +127590,20 @@ class file_File extends ServiceObject {
         if (validationError)
             return validationError;
         this.disableAutoRetryConditionallyIdempotent_(this.methods.setMetadata, AvailableServiceObjectMethods.setMetadata, options);
-        super
-            .setMetadata(metadata, options)
-            .then(resp => cb(null, ...resp))
-            .catch(cb)
-            .finally(() => {
-            this.storage.retryOptions.autoRetry = this.instanceRetryValue;
-        });
+        void (async () => {
+            let resp;
+            try {
+                resp = await super.setMetadata(metadata, options);
+            }
+            catch (err) {
+                cb(err);
+                return;
+            }
+            finally {
+                this.storage.retryOptions.autoRetry = this.instanceRetryValue;
+            }
+            cb(null, ...resp);
+        })();
     }
     /**
      * @typedef {array} SetStorageClassResponse
@@ -128947,7 +127716,7 @@ class file_File extends ServiceObject {
             file: this.name,
             generation: this.generation,
             isPartialUpload: options.isPartialUpload,
-            key: this.encryptionKey,
+            key: this.encryptionKey === null ? undefined : this.encryptionKey,
             kmsKeyName: this.kmsKeyName,
             metadata: options.metadata,
             offset: options.offset,
@@ -129758,8 +128527,15 @@ class Notification extends ServiceObject {
 
 
 
-
-
+class ComposeCleanupError extends Error {
+    constructor(message, errors, newFile, apiResponse) {
+        super(message);
+        this.name = 'ComposeCleanupError';
+        this.errors = errors;
+        this.newFile = newFile;
+        this.apiResponse = apiResponse;
+    }
+}
 var BucketActionToHTTPMethod;
 (function (BucketActionToHTTPMethod) {
     BucketActionToHTTPMethod["list"] = "GET";
@@ -130699,7 +129475,7 @@ class Bucket extends ServiceObject {
         }
         // The default behavior appends the previously-defined lifecycle rules with
         // the new ones just passed in by the user.
-        this.getMetadata((err, metadata) => {
+        void this.getMetadata((err, metadata) => {
             var _a, _b;
             if (err) {
                 callback(err);
@@ -130722,6 +129498,8 @@ class Bucket extends ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @property {string} [userProject] The ID of the project which will be
      *     billed for the request.
+     * @property {boolean} [deleteSourceObjects] If true, the source objects
+     *     will be permanently deleted after a successful compose operation.
      */
     /**
      * @callback CombineCallback
@@ -130755,7 +129533,8 @@ class Bucket extends ServiceObject {
      * metadata's `kms_key_name` value, if any.
      * @param {string} [options.userProject] The ID of the project which will be
      *     billed for the request.
-  
+     * @param {boolean} [options.deleteSourceObjects] If true, the source objects
+     *     will be permanently deleted after a successful compose operation.
      * @param {CombineCallback} [callback] Callback function.
      * @returns {Promise<CombineResponse>}
      *
@@ -130784,7 +129563,6 @@ class Bucket extends ServiceObject {
      * ```
      */
     combine(sources, destination, optionsOrCallback, callback) {
-        var _a;
         if (!Array.isArray(sources) || sources.length === 0) {
             throw new Error(BucketExceptionMessages.PROVIDE_SOURCE_FILE);
         }
@@ -130816,55 +129594,99 @@ class Bucket extends ServiceObject {
         sources = sources.map(convertToFile);
         const destinationFile = convertToFile(destination);
         callback = callback || util_util.noop;
-        if (!destinationFile.metadata.contentType) {
-            const destinationContentType = mime.getType(destinationFile.name) || undefined;
-            if (destinationContentType) {
-                destinationFile.metadata.contentType = destinationContentType;
-            }
-        }
-        let maxRetries = this.storage.retryOptions.maxRetries;
-        if ((((_a = destinationFile === null || destinationFile === void 0 ? void 0 : destinationFile.instancePreconditionOpts) === null || _a === void 0 ? void 0 : _a.ifGenerationMatch) ===
-            undefined &&
-            options.ifGenerationMatch === undefined &&
-            this.storage.retryOptions.idempotencyStrategy ===
-                IdempotencyStrategy.RetryConditional) ||
-            this.storage.retryOptions.idempotencyStrategy ===
-                IdempotencyStrategy.RetryNever) {
-            maxRetries = 0;
-        }
-        if (options.ifGenerationMatch === undefined) {
-            Object.assign(options, destinationFile.instancePreconditionOpts, options);
-        }
-        // Make the request from the destination File object.
-        destinationFile.request({
-            method: 'POST',
-            uri: '/compose',
-            maxRetries,
-            json: {
-                destination: {
-                    contentType: destinationFile.metadata.contentType,
-                    contentEncoding: destinationFile.metadata.contentEncoding,
-                    contexts: options.contexts || destinationFile.metadata.contexts,
-                },
-                sourceObjects: sources.map(source => {
-                    const sourceObject = {
-                        name: source.name,
-                    };
-                    if (source.metadata && source.metadata.generation) {
-                        sourceObject.generation = parseInt(source.metadata.generation.toString());
+        void (async () => {
+            var _a;
+            try {
+                if (!destinationFile.metadata.contentType) {
+                    const mime = await getMime();
+                    const destinationContentType = mime.getType(destinationFile.name) || undefined;
+                    if (destinationContentType) {
+                        destinationFile.metadata.contentType = destinationContentType;
                     }
-                    return sourceObject;
-                }),
-            },
-            qs: options,
-        }, (err, resp) => {
-            this.storage.retryOptions.autoRetry = this.instanceRetryValue;
-            if (err) {
-                callback(err, null, resp);
-                return;
+                }
+                let maxRetries = this.storage.retryOptions.maxRetries;
+                if ((((_a = destinationFile === null || destinationFile === void 0 ? void 0 : destinationFile.instancePreconditionOpts) === null || _a === void 0 ? void 0 : _a.ifGenerationMatch) ===
+                    undefined &&
+                    options.ifGenerationMatch === undefined &&
+                    this.storage.retryOptions.idempotencyStrategy ===
+                        IdempotencyStrategy.RetryConditional) ||
+                    this.storage.retryOptions.idempotencyStrategy ===
+                        IdempotencyStrategy.RetryNever) {
+                    maxRetries = 0;
+                }
+                const deleteSourceObjects = options.deleteSourceObjects;
+                const requestQueryObject = Object.assign({}, options);
+                delete requestQueryObject.deleteSourceObjects;
+                if (requestQueryObject.ifGenerationMatch === undefined) {
+                    Object.assign(requestQueryObject, destinationFile.instancePreconditionOpts, requestQueryObject);
+                }
+                // Make the request from the destination File object.
+                destinationFile.request({
+                    method: 'POST',
+                    uri: '/compose',
+                    maxRetries,
+                    json: {
+                        destination: {
+                            contentType: destinationFile.metadata.contentType,
+                            contentEncoding: destinationFile.metadata.contentEncoding,
+                            contexts: requestQueryObject.contexts ||
+                                destinationFile.metadata.contexts,
+                        },
+                        sourceObjects: sources.map(source => {
+                            var _a, _b;
+                            const sourceObject = {
+                                name: source.name,
+                            };
+                            const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                            if (generation !== undefined) {
+                                sourceObject.generation = parseInt(generation.toString());
+                            }
+                            return sourceObject;
+                        }),
+                    },
+                    qs: requestQueryObject,
+                }, (err, resp) => {
+                    this.storage.retryOptions.autoRetry = this.instanceRetryValue;
+                    if (err) {
+                        callback(err, null, resp);
+                        return;
+                    }
+                    if (deleteSourceObjects) {
+                        const deletePromises = sources.map(source => {
+                            var _a, _b;
+                            const deleteOptions = {
+                                ignoreNotFound: true,
+                                userProject: options.userProject,
+                            };
+                            const generation = (_a = source.generation) !== null && _a !== void 0 ? _a : (_b = source.metadata) === null || _b === void 0 ? void 0 : _b.generation;
+                            if (generation !== undefined) {
+                                deleteOptions.ifGenerationMatch = generation;
+                            }
+                            return source
+                                .delete(deleteOptions)
+                                .catch(deleteErr => deleteErr);
+                        });
+                        void (async () => {
+                            // eslint-disable-next-line promise/no-promise-in-callback
+                            const results = await Promise.all(deletePromises);
+                            const errors = results.filter((res) => res instanceof Error);
+                            if (errors.length > 0) {
+                                const cleanupErr = new ComposeCleanupError(`Compose operation succeeded, but cleaning up source objects failed. Failed to delete ${errors.length} source object(s).`, errors, destinationFile, resp);
+                                callback(cleanupErr, destinationFile, resp);
+                                return;
+                            }
+                            callback(null, destinationFile, resp);
+                        })();
+                    }
+                    else {
+                        callback(null, destinationFile, resp);
+                    }
+                });
             }
-            callback(null, destinationFile, resp);
-        });
+            catch (err) {
+                callback(err, null, null);
+            }
+        })();
     }
     /**
      * See a {@link https://cloud.google.com/storage/docs/json_api/v1/objects/watchAll| Objects: watchAll request body}.
@@ -131235,10 +130057,11 @@ class Bucket extends ServiceObject {
                 errors.push(err);
             });
         };
-        (async () => {
+        void (async () => {
             try {
                 let promises = [];
-                const limit = p_limit(MAX_PARALLEL_LIMIT);
+                const pLimit = await util_getPLimit();
+                const limit = pLimit(MAX_PARALLEL_LIMIT);
                 const filesStream = this.getFilesStream(query);
                 for await (const curFile of filesStream) {
                     if (promises.length >= MAX_QUEUE_SIZE) {
@@ -131251,12 +130074,12 @@ class Bucket extends ServiceObject {
                     }));
                 }
                 await Promise.all(promises);
-                callback(errors.length > 0 ? errors : null);
             }
             catch (e) {
                 callback(e);
                 return;
             }
+            callback(errors.length > 0 ? errors : null);
         })();
     }
     /**
@@ -131495,7 +130318,7 @@ class Bucket extends ServiceObject {
         if (config === null || config === void 0 ? void 0 : config.ifMetagenerationNotMatch) {
             options.ifMetagenerationNotMatch = config.ifMetagenerationNotMatch;
         }
-        (async () => {
+        void (async () => {
             try {
                 const [policy] = await this.iam.getPolicy();
                 policy.bindings.push({
@@ -132181,9 +131004,7 @@ class Bucket extends ServiceObject {
         if (!this.signer) {
             this.signer = new URLSigner(this.storage.authClient, this, undefined, this.storage);
         }
-        this.signer
-            .getSignedUrl(signConfig)
-            .then(signedUrl => callback(null, signedUrl), callback);
+        void this.signer.getSignedUrl(signConfig).then(signedUrl => callback(null, signedUrl), callback);
     }
     /**
      * @callback BucketLockCallback
@@ -132384,16 +131205,21 @@ class Bucket extends ServiceObject {
         this.setMetadata(metadata, query, (err) => {
             if (err) {
                 callback(err);
+                return;
             }
-            const internalCall = () => {
-                if (options.includeFiles) {
-                    return (0,external_util_.promisify)(this.makeAllFilesPublicPrivate_).call(this, options);
+            void (async () => {
+                let files = [];
+                try {
+                    if (options.includeFiles) {
+                        files = await (0,external_util_.promisify)(this.makeAllFilesPublicPrivate_).call(this, options);
+                    }
                 }
-                return Promise.resolve([]);
-            };
-            internalCall()
-                .then(files => callback(null, files))
-                .catch(callback);
+                catch (callErr) {
+                    callback(callErr);
+                    return;
+                }
+                callback(null, files);
+            })();
         });
     }
     /**
@@ -132494,24 +131320,27 @@ class Bucket extends ServiceObject {
         callback =
             typeof optionsOrCallback === 'function' ? optionsOrCallback : callback;
         const req = { public: true, ...options };
-        this.acl
-            .add({
-            entity: 'allUsers',
-            role: 'READER',
-        })
-            .then(() => {
-            return this.acl.default.add({
-                entity: 'allUsers',
-                role: 'READER',
-            });
-        })
-            .then(() => {
-            if (req.includeFiles) {
-                return (0,external_util_.promisify)(this.makeAllFilesPublicPrivate_).call(this, req);
+        void (async () => {
+            let files = [];
+            try {
+                await this.acl.add({
+                    entity: 'allUsers',
+                    role: 'READER',
+                });
+                await this.acl.default.add({
+                    entity: 'allUsers',
+                    role: 'READER',
+                });
+                if (req.includeFiles) {
+                    files = await (0,external_util_.promisify)(this.makeAllFilesPublicPrivate_).call(this, req);
+                }
             }
-            return [];
-        })
-            .then(files => callback(null, files), callback);
+            catch (err) {
+                callback(err);
+                return;
+            }
+            callback(null, files);
+        })();
     }
     /**
      * Get a reference to a Cloud Pub/Sub Notification.
@@ -132650,13 +131479,20 @@ class Bucket extends ServiceObject {
                 ? optionsOrCallback
                 : cb;
         this.disableAutoRetryConditionallyIdempotent_(this.methods.setMetadata, AvailableServiceObjectMethods.setMetadata, options);
-        super
-            .setMetadata(metadata, options)
-            .then(resp => cb(null, ...resp))
-            .catch(cb)
-            .finally(() => {
-            this.storage.retryOptions.autoRetry = this.instanceRetryValue;
-        });
+        void (async () => {
+            let resp;
+            try {
+                resp = await super.setMetadata(metadata, options);
+            }
+            catch (err) {
+                cb(err);
+                return;
+            }
+            finally {
+                this.storage.retryOptions.autoRetry = this.instanceRetryValue;
+            }
+            cb(null, ...resp);
+        })();
     }
     /**
      * Lock all objects contained in the bucket, based on their creation time. Any
@@ -133125,10 +131961,16 @@ class Bucket extends ServiceObject {
                     if (options.onUploadProgress) {
                         writable.on('progress', options.onUploadProgress);
                     }
-                    external_fs_.createReadStream(pathString)
-                        .on('error', bail)
+                    const readStream = external_fs_.createReadStream(pathString);
+                    readStream
+                        .on('error', err => {
+                        readStream.destroy();
+                        writable.destroy();
+                        bail(err);
+                    })
                         .pipe(writable)
                         .on('error', err => {
+                        readStream.destroy();
                         if (this.storage.retryOptions.autoRetry &&
                             this.storage.retryOptions.retryableErrorFn(err)) {
                             return reject(err);
@@ -133150,15 +131992,17 @@ class Bucket extends ServiceObject {
             if (!callback) {
                 return returnValue;
             }
-            else {
-                return returnValue
-                    .then(() => {
-                    if (callback) {
-                        return callback(null, newFile, newFile.metadata);
-                    }
-                })
-                    .catch(callback);
-            }
+            void (async () => {
+                try {
+                    await returnValue;
+                }
+                catch (err) {
+                    callback(err);
+                    return;
+                }
+                callback(null, newFile, newFile.metadata);
+            })();
+            return;
         };
         // eslint-disable-next-line @typescript-eslint/no-explicit-any
         if (global['GCLOUD_SANDBOX_ENV']) {
@@ -133203,7 +132047,7 @@ class Bucket extends ServiceObject {
                 preconditionOpts: this.instancePreconditionOpts,
             });
         }
-        upload(maxRetries);
+        return upload(maxRetries);
     }
     /**
      * @private
@@ -133268,15 +132112,22 @@ class Bucket extends ServiceObject {
                 errors.push(e);
             }
         };
-        this.getFiles(options)
-            .then(([files]) => {
-            const limit = p_limit(MAX_PARALLEL_LIMIT);
-            const promises = files.map(file => {
-                return limit(() => processFile(file));
-            });
-            return Promise.all(promises);
-        })
-            .then(() => callback(errors.length > 0 ? errors : null, updatedFiles), err => callback(err, updatedFiles));
+        void (async () => {
+            try {
+                const [files] = await this.getFiles(options);
+                const pLimit = await util_getPLimit();
+                const limit = pLimit(MAX_PARALLEL_LIMIT);
+                const promises = files.map(file => {
+                    return limit(() => processFile(file));
+                });
+                await Promise.all(promises);
+            }
+            catch (err) {
+                callback(err, updatedFiles);
+                return;
+            }
+            callback(errors.length > 0 ? errors : null, updatedFiles);
+        })();
     }
     getId() {
         return this.id;
@@ -133748,13 +132599,20 @@ class HmacKey extends ServiceObject {
             typeof optionsOrCallback === 'function'
                 ? optionsOrCallback
                 : cb;
-        super
-            .setMetadata(metadata, options)
-            .then(resp => cb(null, ...resp))
-            .catch(cb)
-            .finally(() => {
-            this.storage.retryOptions.autoRetry = this.instanceRetryValue;
-        });
+        void (async () => {
+            let resp;
+            try {
+                resp = await super.setMetadata(metadata, options);
+            }
+            catch (err) {
+                cb(err);
+                return;
+            }
+            finally {
+                this.storage.retryOptions.autoRetry = this.instanceRetryValue;
+            }
+            cb(null, ...resp);
+        })();
     }
 }
 /*! Developer Documentation
@@ -134968,7 +133826,6 @@ var _XMLMultiPartUploadHelper_instances, _XMLMultiPartUploadHelper_setGoogApiCli
 
 
 
-
 // eslint-disable-next-line @typescript-eslint/ban-ts-comment
 // @ts-ignore
 
@@ -135197,7 +134054,8 @@ _XMLMultiPartUploadHelper_instances = new WeakSet(), _XMLMultiPartUploadHelper_s
     }
     // If the header isn't present, add it
     if (!headerFound) {
-        headers['x-goog-api-client'] = `${getRuntimeTrackingString()} gccl/${transfer_manager_packageJson.version} gccl-gcs-cmd/${GCCL_GCS_CMD_FEATURE.UPLOAD_SHARDED}`;
+        headers['x-goog-api-client'] =
+            `${getRuntimeTrackingString()} gccl/${transfer_manager_packageJson.version} gccl-gcs-cmd/${GCCL_GCS_CMD_FEATURE.UPLOAD_SHARDED}`;
     }
     // If the User-Agent isn't present, add it
     if (!userAgentFound) {
@@ -135281,6 +134139,7 @@ class TransferManager {
                 },
             };
         }
+        const pLimit = await getPLimit();
         const limit = pLimit(options.concurrencyLimit || DEFAULT_PARALLEL_UPLOAD_LIMIT);
         const promises = [];
         let allPaths = [];
@@ -135390,6 +134249,7 @@ class TransferManager {
      */
     async downloadManyFiles(filesOrFolder, options = {}) {
         var _a;
+        const pLimit = await getPLimit();
         const limit = pLimit(options.concurrencyLimit || DEFAULT_PARALLEL_DOWNLOAD_LIMIT);
         const promises = [];
         let files = [];
@@ -135533,6 +134393,7 @@ class TransferManager {
      *
      */
     async downloadFileInChunks(fileOrName, options = {}) {
+        const pLimit = await getPLimit();
         let chunkSize = options.chunkSizeBytes || DOWNLOAD_IN_CHUNKS_DEFAULT_CHUNK_SIZE;
         let limit = pLimit(options.concurrencyLimit || DEFAULT_PARALLEL_CHUNKED_DOWNLOAD_LIMIT);
         const noReturnData = Boolean(options.noReturnData);
@@ -135638,6 +134499,7 @@ class TransferManager {
      */
     async uploadFileInChunks(filePath, options = {}, generator = defaultMultiPartGenerator) {
         var _a;
+        const pLimit = await getPLimit();
         const chunkSize = options.chunkSizeBytes || UPLOAD_IN_CHUNKS_DEFAULT_CHUNK_SIZE;
         const limit = pLimit(options.concurrencyLimit || DEFAULT_PARALLEL_CHUNKED_UPLOAD_LIMIT);
         const maxQueueSize = options.maxQueueSize ||
