@@ -11,7 +11,7 @@ import { parseDeleteOldCachesMode } from './delete-old-caches.js';
 
 type GcpCompression = 'zstd' | 'gzip';
 
-interface StreamRestoreOptions {
+interface StreamGcsRestoreOptions {
     inStream: Readable;
     useZstd: boolean;
     cwd: string;
@@ -41,7 +41,9 @@ function parseGcpCompressionInput(inputVal: string): GcpCompression {
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
 
-function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promise<void> {
+// Only used by the Google Cloud Storage pathway: streams the archive through the
+// decompressor and tar straight into the depot.
+function streamGcsRestore({ inStream, useZstd, cwd }: StreamGcsRestoreOptions): Promise<void> {
     return new Promise<void>((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
@@ -81,6 +83,30 @@ function streamRestore({ inStream, useZstd, cwd }: StreamRestoreOptions): Promis
         inStream.pipe(decompressProc.stdin);
         decompressProc.stdout.pipe(tarProc.stdin);
     });
+}
+
+// Only used by the Google Cloud Storage pathway: moves what a restore unpacked
+// under src to dst, merging into directories that already exist there and
+// replacing files that do. src and dst are on the same filesystem, so this is
+// a rename per subtree that has no counterpart in dst.
+function moveInto(src: string, dst: string): void {
+    let dstStat: fs.Stats | undefined;
+    try {
+        dstStat = fs.lstatSync(dst);
+    } catch {
+        dstStat = undefined;
+    }
+    if (dstStat === undefined) {
+        fs.renameSync(src, dst);
+    } else if (dstStat.isDirectory() && fs.lstatSync(src).isDirectory()) {
+        for (const name of fs.readdirSync(src)) {
+            moveInto(path.join(src, name), path.join(dst, name));
+        }
+        fs.rmdirSync(src);
+    } else {
+        fs.rmSync(dst, { recursive: true, force: true });
+        fs.renameSync(src, dst);
+    }
 }
 
 async function run() {
@@ -271,12 +297,30 @@ async function run() {
                     }
 
                     if (restoredKey && fileToStream) {
+                        core.info(`Restoring cache from GCS key: ${restoredKey}`);
+                        // The archive holds the cache paths relative to the filesystem root.
+                        const root = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
+                        // Unpack into a staging directory inside the depot (so it is on the
+                        // same filesystem) and only move the result into place once the
+                        // whole archive has arrived. A stream that breaks part-way would
+                        // otherwise leave truncated files in the depot, which the post step
+                        // would then save under the restore key for every following job.
+                        fs.mkdirSync(depotPath, { recursive: true });
+                        const staging = fs.mkdtempSync(path.join(depotPath, '.restore-'));
+                        try {
+                            const inStream = fileToStream.createReadStream();
+                            await streamGcsRestore({ inStream, useZstd, cwd: staging });
+                            for (const p of cachePaths) {
+                                if (p.startsWith('!')) continue;
+                                const unpacked = path.join(staging, path.relative(root, p));
+                                if (fs.existsSync(unpacked)) moveInto(unpacked, p);
+                            }
+                        } finally {
+                            fs.rmSync(staging, { recursive: true, force: true });
+                        }
                         cacheHit = restoredKey === key ? 'true' : '';
                         core.info(`Cache restored from GCS key: ${restoredKey}`);
                         core.saveState('cache-matched-key', restoredKey);
-                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        const inStream = fileToStream.createReadStream();
-                        await streamRestore({ inStream, useZstd, cwd });
                     } else {
                         core.info('No cache found in GCS');
                     }

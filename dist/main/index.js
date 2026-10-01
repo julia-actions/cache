@@ -64394,6 +64394,7 @@ function file_command_prepareKeyValueMessage(key, value) {
 //# sourceMappingURL=file-command.js.map
 // EXTERNAL MODULE: external "path"
 var external_path_ = __nccwpck_require__(6928);
+var external_path_default = /*#__PURE__*/__nccwpck_require__.n(external_path_);
 // EXTERNAL MODULE: external "http"
 var external_http_ = __nccwpck_require__(8611);
 var external_http_namespaceObject = /*#__PURE__*/__nccwpck_require__.t(external_http_, 2);
@@ -134650,6 +134651,7 @@ function parseDeleteOldCachesMode(inputValue) {
 
 
 
+
 function main_getErrorMessage(error) {
     return error instanceof Error ? error.message : String(error);
 }
@@ -134672,7 +134674,9 @@ function parseGcpCompressionInput(inputVal) {
     }
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
-function streamRestore({ inStream, useZstd, cwd }) {
+// Only used by the Google Cloud Storage pathway: streams the archive through the
+// decompressor and tar straight into the depot.
+function streamGcsRestore({ inStream, useZstd, cwd }) {
     return new Promise((resolve, reject) => {
         const decompressCmd = useZstd ? 'zstd' : 'gzip';
         const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
@@ -134708,6 +134712,32 @@ function streamRestore({ inStream, useZstd, cwd }) {
         inStream.pipe(decompressProc.stdin);
         decompressProc.stdout.pipe(tarProc.stdin);
     });
+}
+// Only used by the Google Cloud Storage pathway: moves what a restore unpacked
+// under src to dst, merging into directories that already exist there and
+// replacing files that do. src and dst are on the same filesystem, so this is
+// a rename per subtree that has no counterpart in dst.
+function moveInto(src, dst) {
+    let dstStat;
+    try {
+        dstStat = external_fs_default().lstatSync(dst);
+    }
+    catch {
+        dstStat = undefined;
+    }
+    if (dstStat === undefined) {
+        external_fs_default().renameSync(src, dst);
+    }
+    else if (dstStat.isDirectory() && external_fs_default().lstatSync(src).isDirectory()) {
+        for (const name of external_fs_default().readdirSync(src)) {
+            moveInto(external_path_default().join(src, name), external_path_default().join(dst, name));
+        }
+        external_fs_default().rmdirSync(src);
+    }
+    else {
+        external_fs_default().rmSync(dst, { recursive: true, force: true });
+        external_fs_default().renameSync(src, dst);
+    }
 }
 async function run() {
     try {
@@ -134889,12 +134919,33 @@ async function run() {
                         }
                     }
                     if (restoredKey && fileToStream) {
+                        info(`Restoring cache from GCS key: ${restoredKey}`);
+                        // The archive holds the cache paths relative to the filesystem root.
+                        const root = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
+                        // Unpack into a staging directory inside the depot (so it is on the
+                        // same filesystem) and only move the result into place once the
+                        // whole archive has arrived. A stream that breaks part-way would
+                        // otherwise leave truncated files in the depot, which the post step
+                        // would then save under the restore key for every following job.
+                        external_fs_default().mkdirSync(depotPath, { recursive: true });
+                        const staging = external_fs_default().mkdtempSync(external_path_default().join(depotPath, '.restore-'));
+                        try {
+                            const inStream = fileToStream.createReadStream();
+                            await streamGcsRestore({ inStream, useZstd, cwd: staging });
+                            for (const p of cachePaths) {
+                                if (p.startsWith('!'))
+                                    continue;
+                                const unpacked = external_path_default().join(staging, external_path_default().relative(root, p));
+                                if (external_fs_default().existsSync(unpacked))
+                                    moveInto(unpacked, p);
+                            }
+                        }
+                        finally {
+                            external_fs_default().rmSync(staging, { recursive: true, force: true });
+                        }
                         cacheHit = restoredKey === key ? 'true' : '';
                         info(`Cache restored from GCS key: ${restoredKey}`);
                         saveState('cache-matched-key', restoredKey);
-                        const cwd = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        const inStream = fileToStream.createReadStream();
-                        await streamRestore({ inStream, useZstd, cwd });
                     }
                     else {
                         info('No cache found in GCS');
