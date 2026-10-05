@@ -5,7 +5,9 @@ import fs from 'fs';
 import os from 'os';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
+import type { ChildProcess } from 'child_process';
 import type { Readable } from 'stream';
+import { pipeline } from 'stream/promises';
 import { Storage as GoogleCloudStorage } from '@google-cloud/storage';
 import { parseDeleteOldCachesMode } from './delete-old-caches.js';
 
@@ -41,63 +43,70 @@ function parseGcpCompressionInput(inputVal: string): GcpCompression {
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
 
-// Only used by the Google Cloud Storage pathway: streams the archive through the
-// decompressor and tar straight into the depot.
-function streamGcsRestore({ inStream, useZstd, cwd }: StreamGcsRestoreOptions): Promise<void> {
+// Resolves once the child process has exited with status 0.
+function exited(proc: ChildProcess, name: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
-        const decompressCmd = useZstd ? 'zstd' : 'gzip';
-        const decompressArgs = useZstd ? ['-d', '-c'] : ['-d', '-c'];
-        const decompressProc = spawn(decompressCmd, decompressArgs, { stdio: ['pipe', 'pipe', 'inherit'] });
-
-        const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
-
-        let errorOccurred = false;
-        const onError = (err: Error): void => {
-            if (!errorOccurred) {
-                errorOccurred = true;
-                inStream.destroy();
-                decompressProc.kill();
-                tarProc.kill();
-                reject(err);
-            }
-        };
-
-        inStream.on('error', onError);
-        decompressProc.on('error', onError);
-        tarProc.on('error', onError);
-
-        decompressProc.on('close', (code) => {
-            if (code !== 0 && !errorOccurred) {
-                onError(new Error(`${decompressCmd} process failed with exit code ${code}`));
-            }
+        proc.on('error', reject);
+        proc.on('close', (code, signal) => {
+            if (code === 0) resolve();
+            else reject(new Error(`${name} failed with ${signal ? `signal ${signal}` : `exit code ${code}`}`));
         });
-
-        tarProc.on('close', (code) => {
-            if (code === 0) {
-                if (!errorOccurred) resolve();
-            } else if (!errorOccurred) {
-                onError(new Error(`tar extraction failed with exit code ${code}`));
-            }
-        });
-
-        inStream.pipe(decompressProc.stdin);
-        decompressProc.stdout.pipe(tarProc.stdin);
     });
 }
 
-// Only used by the Google Cloud Storage pathway: moves what a restore unpacked
-// under src to dst, merging into directories that already exist there and
-// replacing files that do. src and dst are on the same filesystem, so this is
-// a rename per subtree that has no counterpart in dst.
-function moveInto(src: string, dst: string): void {
-    let dstStat: fs.Stats | undefined;
+// Streams a Google Cloud Storage archive through the decompressor and tar into cwd.
+// Settles only once the download and both processes have all finished, in whatever
+// order: tar exits 0 on an archive cut at a member boundary, so its exit alone does
+// not show that the whole archive arrived.
+async function streamGcsRestore({ inStream, useZstd, cwd }: StreamGcsRestoreOptions): Promise<void> {
+    const decompressCmd = useZstd ? 'zstd' : 'gzip';
+    const decompressProc = spawn(decompressCmd, ['-d', '-c'], { stdio: ['pipe', 'pipe', 'inherit'] });
+    const tarProc = spawn('tar', ['-xf', '-'], { cwd, stdio: ['pipe', 'inherit', 'inherit'] });
+
+    let firstError: unknown;
+    const fail = (error: unknown): void => {
+        if (firstError === undefined) {
+            firstError = error;
+            inStream.destroy();
+            decompressProc.kill();
+            tarProc.kill();
+        }
+    };
+    await Promise.all([
+        pipeline(inStream, decompressProc.stdin),
+        pipeline(decompressProc.stdout, tarProc.stdin),
+        exited(decompressProc, decompressCmd),
+        exited(tarProc, 'tar extraction'),
+    ].map(p => p.catch(fail)));
+    if (firstError !== undefined) throw firstError;
+}
+
+function lstatOrUndefined(p: string): fs.Stats | undefined {
     try {
-        dstStat = fs.lstatSync(dst);
+        return fs.lstatSync(p);
     } catch {
-        dstStat = undefined;
+        return undefined;
     }
-    if (dstStat === undefined) {
+}
+
+// Renames src to dst, copying instead when they are on different filesystems
+// (e.g. a cache path that is a symlink to another disk).
+function renameOrCopy(src: string, dst: string): void {
+    try {
         fs.renameSync(src, dst);
+    } catch (error) {
+        if ((error as NodeJS.ErrnoException).code !== 'EXDEV') throw error;
+        fs.cpSync(src, dst, { recursive: true, verbatimSymlinks: true, preserveTimestamps: true });
+        fs.rmSync(src, { recursive: true, force: true });
+    }
+}
+
+// Moves what a restore unpacked under src to dst, merging into directories that
+// already exist there and replacing files that do.
+function moveInto(src: string, dst: string): void {
+    const dstStat = lstatOrUndefined(dst);
+    if (dstStat === undefined) {
+        renameOrCopy(src, dst);
     } else if (dstStat.isDirectory() && fs.lstatSync(src).isDirectory()) {
         for (const name of fs.readdirSync(src)) {
             moveInto(path.join(src, name), path.join(dst, name));
@@ -105,7 +114,45 @@ function moveInto(src: string, dst: string): void {
         fs.rmdirSync(src);
     } else {
         fs.rmSync(dst, { recursive: true, force: true });
-        fs.renameSync(src, dst);
+        renameOrCopy(src, dst);
+    }
+}
+
+// A cache path that is a symlink to a directory (e.g. artifacts kept on a larger
+// disk) is restored into its target rather than replaced.
+function followDirSymlink(p: string): string {
+    if (lstatOrUndefined(p)?.isSymbolicLink() && fs.statSync(p, { throwIfNoEntry: false })?.isDirectory()) {
+        return fs.realpathSync(p);
+    }
+    return p;
+}
+
+const STAGING_PREFIX = '.restore-';
+const STALE_STAGING_MS = 6 * 60 * 60 * 1000;
+
+// Removes staging directories left behind by restores that were killed before they
+// could clean up (e.g. a cancelled job). Only old ones: several runners can share a
+// depot, and a recent one may belong to a restore still in progress. A staging
+// directory's own mtime only changes when tar creates its first entry.
+function removeStaleStagingDirs(depotPath: string): void {
+    let names: string[];
+    try {
+        names = fs.readdirSync(depotPath);
+    } catch {
+        return;
+    }
+    const cutoff = Date.now() - STALE_STAGING_MS;
+    for (const name of names) {
+        if (!name.startsWith(STAGING_PREFIX)) continue;
+        const dir = path.join(depotPath, name);
+        try {
+            const stat = fs.lstatSync(dir);
+            if (!stat.isDirectory() || stat.mtimeMs > cutoff) continue;
+            fs.rmSync(dir, { recursive: true, force: true });
+            core.info(`Removed stale restore staging directory ${dir}`);
+        } catch (error) {
+            core.debug(`Could not remove stale restore staging directory ${dir}: ${getErrorMessage(error)}`);
+        }
     }
 }
 
@@ -300,27 +347,42 @@ async function run() {
                         core.info(`Restoring cache from GCS key: ${restoredKey}`);
                         // The archive holds the cache paths relative to the filesystem root.
                         const root = process.platform === 'win32' ? depotPath.split(':')[0] + ':/' : '/';
-                        // Unpack into a staging directory inside the depot (so it is on the
-                        // same filesystem) and only move the result into place once the
-                        // whole archive has arrived. A stream that breaks part-way would
-                        // otherwise leave truncated files in the depot, which the post step
-                        // would then save under the restore key for every following job.
+                        // Unpack into a staging directory inside the depot (so it is on the same
+                        // filesystem) and only move the cache paths into place once the whole archive
+                        // has arrived, so a broken stream leaves the depot as it was. If moving fails
+                        // part-way, restoreComplete stops the post step from saving the depot.
                         fs.mkdirSync(depotPath, { recursive: true });
-                        const staging = fs.mkdtempSync(path.join(depotPath, '.restore-'));
+                        removeStaleStagingDirs(depotPath);
+                        const staging = fs.mkdtempSync(path.join(depotPath, STAGING_PREFIX));
+                        let restoredPaths = 0;
                         try {
                             const inStream = fileToStream.createReadStream();
                             await streamGcsRestore({ inStream, useZstd, cwd: staging });
                             for (const p of cachePaths) {
                                 if (p.startsWith('!')) continue;
                                 const unpacked = path.join(staging, path.relative(root, p));
-                                if (fs.existsSync(unpacked)) moveInto(unpacked, p);
+                                if (lstatOrUndefined(unpacked) === undefined) continue;
+                                try {
+                                    moveInto(unpacked, followDirSymlink(p));
+                                } catch (error) {
+                                    throw new Error(`moving the restored ${p} into place failed, so the depot may be partially restored: ${getErrorMessage(error)}`);
+                                }
+                                restoredPaths++;
                             }
                         } finally {
-                            fs.rmSync(staging, { recursive: true, force: true });
+                            try {
+                                fs.rmSync(staging, { recursive: true, force: true });
+                            } catch (error) {
+                                core.warning(`Could not remove restore staging directory ${staging}: ${getErrorMessage(error)}`);
+                            }
                         }
-                        cacheHit = restoredKey === key ? 'true' : '';
-                        core.info(`Cache restored from GCS key: ${restoredKey}`);
-                        core.saveState('cache-matched-key', restoredKey);
+                        if (restoredPaths > 0) {
+                            cacheHit = restoredKey === key ? 'true' : '';
+                            core.info(`Cache restored from GCS key: ${restoredKey}`);
+                            core.saveState('cache-matched-key', restoredKey);
+                        } else {
+                            core.warning(`The cache at GCS key ${restoredKey} contains none of the cache paths, so nothing was restored. It may have been saved with a different depot path.`);
+                        }
                     } else {
                         core.info('No cache found in GCS');
                     }

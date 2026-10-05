@@ -112,7 +112,7 @@ If you prefer the old behavior where caches are only saved on successful jobs, s
 > [!NOTE]
 > This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`. See https://github.com/julia-actions/cache/pull/169.
 
-Google Cloud-specific: a cache restored from Google Cloud Storage is unpacked into a staging directory inside the depot and only moved into place once the whole archive has arrived. If the restore fails part-way through (for example the connection drops while the archive is streaming in), the depot is left as it was, so a truncated file can never end up in the depot or in the cache saved at the end of the job.
+Google Cloud-specific: a cache restored from Google Cloud Storage is unpacked into a staging directory inside the depot and only moved into place once the whole archive has arrived, so a restore that fails part-way (for example because the connection drops) leaves the depot as it was. As on the GitHub cache path, a restore that does not complete is never saved at the end of the job, and cached registries are not restored over registries already in the depot.
 
 ### Cache Garbage Collection
 
