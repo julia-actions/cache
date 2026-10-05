@@ -96,6 +96,13 @@ async function run() {
             return;
         }
 
+        // Never save a depot that may contain a partially restored cache, e.g., because the
+        // job was cancelled while restoring. That would poison the cache for later runs.
+        if (core.getState('restore-complete') !== 'true') {
+            core.info('Restoring the cache did not complete. Skipping cache save.');
+            return;
+        }
+
         const deleteOldCachesMode = parseDeleteOldCachesMode(deleteOldCachesState);
         const deleteOldCaches = deleteOldCachesMode !== DeleteOldCachesMode.Disabled;
         const requireOldCacheDeletion = deleteOldCachesMode === DeleteOldCachesMode.Required;

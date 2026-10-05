@@ -20,11 +20,11 @@
     "@actions/cache": "^6.1.0",
     "@actions/core": "^3.0.0",
     "@actions/exec": "^3.0.0",
-    "@google-cloud/storage": "^7.21.0"
+    "@google-cloud/storage": "^8.2.0"
   },
   "devDependencies": {
-    "@types/node": "^24.13.3",
-    "@vercel/ncc": "^0.44.0",
+    "@types/node": "^26.6.2",
+    "@vercel/ncc": "^0.45.0",
     "typescript": "^5.9.3"
   }
 }

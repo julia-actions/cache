@@ -266,6 +266,11 @@ async function run() {
 
         // Restore cache
         let cacheHit = '';
+        // Whether the depot is in a consistent state, i.e., the restore either completed or
+        // did not start. Only then may the post step save it: if restoring failed, or if the job
+        // gets cancelled while restoring, the depot may contain partially extracted files, and
+        // saving it would poison the cache for later runs.
+        let restoreComplete = true;
         if (cachePaths.length > 0) {
             if (gcpBucket) {
                 try {
@@ -320,6 +325,7 @@ async function run() {
                         core.info('No cache found in GCS');
                     }
                 } catch (error) {
+                    restoreComplete = false;
                     core.warning(`Failed to restore cache from GCS: ${getErrorMessage(error)}`);
                 }
             } else {
@@ -333,9 +339,13 @@ async function run() {
                         core.info('No cache found');
                     }
                 } catch (error) {
+                    restoreComplete = false;
                     core.warning(`Failed to restore cache: ${getErrorMessage(error)}`);
                 }
             }
+        }
+        if (restoreComplete) {
+            core.saveState('restore-complete', 'true');
         }
 
         core.setOutput('cache-hit', cacheHit);
