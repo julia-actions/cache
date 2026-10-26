@@ -134934,6 +134934,8 @@ async function run() {
         saveState('restore-key', restoreKey);
         saveState('depot', depotPath);
         saveState('cache-registries', cacheRegistries.toString());
+        saveState('cache-objcache', cacheObjcache.toString());
+        saveState('start-time', (Date.now() / 1000).toString());
         saveState('delete-old-caches', deleteOldCachesMode);
         saveState('token', token);
         saveState('save-always', saveAlways.toString());

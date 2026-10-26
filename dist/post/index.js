@@ -64355,6 +64355,7 @@ function escapeProperty(s) {
 var external_crypto_ = __nccwpck_require__(6982);
 // EXTERNAL MODULE: external "fs"
 var external_fs_ = __nccwpck_require__(9896);
+var external_fs_default = /*#__PURE__*/__nccwpck_require__.n(external_fs_);
 ;// CONCATENATED MODULE: ./node_modules/@actions/core/lib/file-command.js
 // For internal use, subject to change.
 // We use any as a valid input type
@@ -134654,6 +134655,7 @@ function parseDeleteOldCachesMode(inputValue) {
 
 
 
+
 const post_dirname = external_path_default().dirname((0,external_url_.fileURLToPath)(import.meta.url));
 function post_getErrorMessage(error) {
     return error instanceof Error ? error.message : String(error);
@@ -134703,6 +134705,15 @@ function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, i
         compressProc.stdout.pipe(outStream);
     });
 }
+// Julia 1.14 and later keep the objcache in `cache/v<major>.<minor>/objcache-lmdb1` in the depot.
+function hasObjcache(depotPath) {
+    try {
+        return external_fs_default().readdirSync(external_path_default().join(depotPath, 'cache')).some(name => external_fs_default().existsSync(external_path_default().join(depotPath, 'cache', name, 'objcache-lmdb1')));
+    }
+    catch {
+        return false;
+    }
+}
 async function run() {
     try {
         // Get state from main action
@@ -134719,6 +134730,8 @@ async function run() {
         const gcpBucket = getState('gcp-bucket');
         const gcpCompression = getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
+        const cacheObjcache = getState('cache-objcache') === 'true';
+        const startTime = getState('start-time');
         if (!cachePathsJson || !cacheKey) {
             info('No cache state found. Skipping post action.');
             return;
@@ -134748,6 +134761,30 @@ async function run() {
         if (cacheMatchedKey === cacheKey) {
             info('Cache hit occurred on the exact key, not saving cache.');
             return;
+        }
+        // GITHUB_ACTION_PATH points to the action root directory
+        // __dirname points to dist/post/ when bundled, so go up two levels to get to root
+        const actionPath = process.env.GITHUB_ACTION_PATH || external_path_default().resolve(post_dirname, '..', '..');
+        if (cacheObjcache && startTime && hasObjcache(getState('depot'))) {
+            // The objcache file never shrinks, so drop the entries this job did not use and
+            // save a compacted copy instead.
+            info('Pruning the objcache...');
+            try {
+                await exec_exec('julia', [
+                    '--startup-file=no',
+                    external_path_default().join(actionPath, 'prune_objcache.jl'),
+                    getState('depot'),
+                    startTime
+                ], {
+                    env: {
+                        ...process.env,
+                        JULIA_OBJCACHE: '0'
+                    }
+                });
+            }
+            catch (error) {
+                warning(`Failed to prune the objcache: ${post_getErrorMessage(error)}`);
+            }
         }
         let cacheSaved = false;
         if (cachePaths.length > 0) {
@@ -134819,9 +134856,6 @@ async function run() {
         const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
         // Run Pkg.gc() and handle old caches using the Julia script
         if (deleteOldCaches && !isDefaultBranch) {
-            // GITHUB_ACTION_PATH points to the action root directory
-            // __dirname points to dist/post/ when bundled, so go up two levels to get to root
-            const actionPath = process.env.GITHUB_ACTION_PATH || external_path_default().resolve(post_dirname, '..', '..');
             const handleCachesScript = external_path_default().join(actionPath, 'handle_caches.jl');
             const allowFailure = (!requireOldCacheDeletion).toString();
             info(`Running Pkg.gc() and cleaning up old caches...`);
