@@ -1,6 +1,7 @@
 import * as core from '@actions/core';
 import * as exec from '@actions/exec';
 import * as cache from '@actions/cache';
+import fs from 'fs';
 import path from 'path';
 import { spawn, execSync } from 'child_process';
 import { fileURLToPath } from 'url';
@@ -74,6 +75,16 @@ function streamSave({ outStream, compressCmd, compressArgs, cwd, excludePaths, i
     });
 }
 
+// Julia 1.14 and later keep the objcache in `cache/v<major>.<minor>/objcache-lmdb1` in the depot.
+function hasObjcache(depotPath: string): boolean {
+    try {
+        return fs.readdirSync(path.join(depotPath, 'cache')).some(name =>
+            fs.existsSync(path.join(depotPath, 'cache', name, 'objcache-lmdb1')));
+    } catch {
+        return false;
+    }
+}
+
 async function run() {
     try {
         // Get state from main action
@@ -90,6 +101,8 @@ async function run() {
         const gcpBucket = core.getState('gcp-bucket');
         const gcpCompression = core.getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
+        const cacheObjcache = core.getState('cache-objcache') === 'true';
+        const startTime = core.getState('start-time');
 
         if (!cachePathsJson || !cacheKey) {
             core.info('No cache state found. Skipping post action.');
@@ -125,6 +138,31 @@ async function run() {
         if (cacheMatchedKey === cacheKey) {
             core.info('Cache hit occurred on the exact key, not saving cache.');
             return;
+        }
+
+        // GITHUB_ACTION_PATH points to the action root directory
+        // __dirname points to dist/post/ when bundled, so go up two levels to get to root
+        const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
+
+        if (cacheObjcache && startTime && hasObjcache(core.getState('depot'))) {
+            // The objcache file never shrinks, so drop the entries this job did not use and
+            // save a compacted copy instead.
+            core.info('Pruning the objcache...');
+            try {
+                await exec.exec('julia', [
+                    '--startup-file=no',
+                    path.join(actionPath, 'prune_objcache.jl'),
+                    core.getState('depot'),
+                    startTime
+                ], {
+                    env: {
+                        ...process.env,
+                        JULIA_OBJCACHE: '0'
+                    }
+                });
+            } catch (error) {
+                core.warning(`Failed to prune the objcache: ${getErrorMessage(error)}`);
+            }
         }
 
         let cacheSaved = false;
@@ -202,9 +240,6 @@ async function run() {
 
         // Run Pkg.gc() and handle old caches using the Julia script
         if (deleteOldCaches && !isDefaultBranch) {
-            // GITHUB_ACTION_PATH points to the action root directory
-            // __dirname points to dist/post/ when bundled, so go up two levels to get to root
-            const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
             const handleCachesScript = path.join(actionPath, 'handle_caches.jl');
             const allowFailure = (!requireOldCacheDeletion).toString();
 

@@ -302,6 +302,8 @@ async function run() {
         core.saveState('restore-key', restoreKey);
         core.saveState('depot', depotPath);
         core.saveState('cache-registries', cacheRegistries.toString());
+        core.saveState('cache-objcache', cacheObjcache.toString());
+        core.saveState('start-time', (Date.now() / 1000).toString());
         core.saveState('delete-old-caches', deleteOldCachesMode);
         core.saveState('token', token);
         core.saveState('save-always', saveAlways.toString());
