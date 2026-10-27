@@ -134731,6 +134731,7 @@ async function run() {
         const gcpCompression = getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
         const cacheObjcache = getState('cache-objcache') === 'true';
+        const objcacheMaxAge = getState('objcache-max-age');
         const startTime = getState('start-time');
         if (!cachePathsJson || !cacheKey) {
             info('No cache state found. Skipping post action.');
@@ -134765,16 +134766,30 @@ async function run() {
         // GITHUB_ACTION_PATH points to the action root directory
         // __dirname points to dist/post/ when bundled, so go up two levels to get to root
         const actionPath = process.env.GITHUB_ACTION_PATH || external_path_default().resolve(post_dirname, '..', '..');
-        if (cacheObjcache && startTime && hasObjcache(getState('depot'))) {
-            // The objcache file never shrinks, so drop the entries this job did not use and
+        if (cacheObjcache && objcacheMaxAge && startTime && hasObjcache(getState('depot'))) {
+            // The objcache file never shrinks, so drop the entries not used recently and
             // save a compacted copy instead.
-            info('Pruning the objcache...');
+            const now = Date.now() / 1000;
+            let maxAge;
+            if (objcacheMaxAge === 'job') {
+                maxAge = now - parseFloat(startTime);
+            }
+            else if (objcacheMaxAge === 'inf') {
+                // Nothing was used before the epoch, so this removes no entries but still compacts the file.
+                maxAge = now;
+            }
+            else {
+                maxAge = parseFloat(objcacheMaxAge);
+            }
+            info(objcacheMaxAge === 'inf'
+                ? 'Compacting the objcache...'
+                : `Pruning the objcache entries not used in the last ${Math.round(maxAge)} seconds...`);
             try {
                 await exec_exec('julia', [
                     '--startup-file=no',
                     external_path_default().join(actionPath, 'prune_objcache.jl'),
                     getState('depot'),
-                    startTime
+                    maxAge.toString()
                 ], {
                     env: {
                         ...process.env,
