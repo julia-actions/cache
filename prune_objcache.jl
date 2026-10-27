@@ -19,7 +19,7 @@ function prune_objcaches()
             cmd = `$(Base.julia_cmd()) --startup-file=no -e "print(Base.Experimental.prune_objcache(ARGS[1]; age=$age))" $out`
             cmd = addenv(cmd, "JULIA_OBJCACHE" => "1", "JULIA_OBJCACHE_PATH" => dir)
             removed = try
-                read(cmd, String)
+                readchomp(cmd)
             catch err
                 @warn "Could not prune the objcache in $dir" exception=err
                 return
