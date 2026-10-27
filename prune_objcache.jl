@@ -1,16 +1,16 @@
-# Remove the native code cache (objcache) entries that this job did not use, and replace each
-# cache file with a compacted copy, so that the saved cache holds only the job's working set.
+# Remove the native code cache (objcache) entries that have not been used in the last `age`
+# seconds, and replace each cache file with a compacted copy, so that the saved cache holds only
+# the recent working set.
 # Run with `JULIA_OBJCACHE=0`: the caches are replaced while this script runs, so it must not
 # have one open itself.
 function prune_objcaches()
-    depot, start_time = ARGS[1], parse(Float64, ARGS[2])
+    depot, age = ARGS[1], parse(Float64, ARGS[2])
     root = joinpath(depot, "cache", "v$(VERSION.major).$(VERSION.minor)", "objcache-lmdb1")
     isdir(root) || return
     if !isdefined(Base.Experimental, :prune_objcache)
         @info "This Julia version cannot prune the objcache. Saving it as it is."
         return
     end
-    age = time() - start_time
     for (dir, _, files) in walkdir(root)
         "data.mdb" in files || continue
         file = joinpath(dir, "data.mdb")

@@ -102,6 +102,7 @@ async function run() {
         const gcpCompression = core.getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
         const cacheObjcache = core.getState('cache-objcache') === 'true';
+        const objcacheMaxAge = core.getState('objcache-max-age');
         const startTime = core.getState('start-time');
 
         if (!cachePathsJson || !cacheKey) {
@@ -144,16 +145,28 @@ async function run() {
         // __dirname points to dist/post/ when bundled, so go up two levels to get to root
         const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');
 
-        if (cacheObjcache && startTime && hasObjcache(core.getState('depot'))) {
-            // The objcache file never shrinks, so drop the entries this job did not use and
+        if (cacheObjcache && objcacheMaxAge && startTime && hasObjcache(core.getState('depot'))) {
+            // The objcache file never shrinks, so drop the entries not used recently and
             // save a compacted copy instead.
-            core.info('Pruning the objcache...');
+            const now = Date.now() / 1000;
+            let maxAge: number;
+            if (objcacheMaxAge === 'job') {
+                maxAge = now - parseFloat(startTime);
+            } else if (objcacheMaxAge === 'inf') {
+                // Nothing was used before the epoch, so this removes no entries but still compacts the file.
+                maxAge = now;
+            } else {
+                maxAge = parseFloat(objcacheMaxAge);
+            }
+            core.info(objcacheMaxAge === 'inf'
+                ? 'Compacting the objcache...'
+                : `Pruning the objcache entries not used in the last ${Math.round(maxAge)} seconds...`);
             try {
                 await exec.exec('julia', [
                     '--startup-file=no',
                     path.join(actionPath, 'prune_objcache.jl'),
                     core.getState('depot'),
-                    startTime
+                    maxAge.toString()
                 ], {
                     env: {
                         ...process.env,
