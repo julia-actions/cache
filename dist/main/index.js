@@ -134677,6 +134677,19 @@ function parseGcpCompressionInput(inputVal) {
     }
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
+const durationUnits = { s: 1, m: 60, h: 60 * 60, d: 24 * 60 * 60, w: 7 * 24 * 60 * 60 };
+// Returns the age in seconds, 'job' for the time since the action started, or 'inf' for no limit.
+function parseObjcacheMaxAgeInput(inputVal) {
+    const val = (inputVal || '1w').trim().toLowerCase();
+    if (val === 'job' || val === 'inf') {
+        return val;
+    }
+    const match = /^(\d+(?:\.\d+)?)([smhdw]?)$/.exec(val);
+    if (!match) {
+        throw new Error(`Invalid value for input 'objcache-max-age': '${inputVal}'. Expected a duration such as '30m', '12h', '1d' or '2w', 'job' or 'inf'.`);
+    }
+    return parseFloat(match[1]) * durationUnits[match[2] || 's'];
+}
 // Resolves once the child process has exited with status 0.
 function exited(proc, name) {
     return new Promise((resolve, reject) => {
@@ -134806,6 +134819,7 @@ async function run() {
         const cacheScratchspaces = getInput('cache-scratchspaces') === 'true';
         const cacheLogs = getInput('cache-logs') === 'true';
         const cacheObjcache = getInput('cache-objcache') === 'true';
+        const objcacheMaxAge = parseObjcacheMaxAgeInput(getInput('objcache-max-age'));
         const deleteOldCachesMode = parseDeleteOldCachesMode(getInput('delete-old-caches'));
         const token = getInput('token');
         const saveAlways = getInput('save-always') === 'true';
@@ -134934,6 +134948,9 @@ async function run() {
         saveState('restore-key', restoreKey);
         saveState('depot', depotPath);
         saveState('cache-registries', cacheRegistries.toString());
+        saveState('cache-objcache', cacheObjcache.toString());
+        saveState('objcache-max-age', objcacheMaxAge.toString());
+        saveState('start-time', (Date.now() / 1000).toString());
         saveState('delete-old-caches', deleteOldCachesMode);
         saveState('token', token);
         saveState('save-always', saveAlways.toString());
