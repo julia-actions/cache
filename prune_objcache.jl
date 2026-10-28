@@ -16,6 +16,8 @@ function prune_objcaches()
         file = joinpath(dir, "data.mdb")
         mktempdir(depot) do tmp
             out = joinpath(tmp, "objcache")
+            before = filesize(file)
+            t0 = time()
             cmd = `$(Base.julia_cmd()) --startup-file=no -e "print(Base.Experimental.prune_objcache(ARGS[1]; age=$age))" $out`
             cmd = addenv(cmd, "JULIA_OBJCACHE" => "1", "JULIA_OBJCACHE_PATH" => dir)
             removed = try
@@ -25,9 +27,8 @@ function prune_objcaches()
                 return
             end
             removed == "nothing" && return
-            before = filesize(file)
             mv(joinpath(out, "data.mdb"), file; force=true)
-            @info "Pruned the objcache in $dir: removed $removed entries, $(Base.format_bytes(before)) -> $(Base.format_bytes(filesize(file)))"
+            @info "Pruned the objcache in $dir: removed $removed entries, $(Base.format_bytes(before)) -> $(Base.format_bytes(filesize(file))) in $(round(time() - t0; digits=1)) s"
         end
     end
 end
