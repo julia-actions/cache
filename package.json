@@ -23,7 +23,7 @@
     "@google-cloud/storage": "^8.2.0"
   },
   "devDependencies": {
-    "@types/node": "^26.6.2",
+    "@types/node": "^26.6.5",
     "@vercel/ncc": "^0.45.0",
     "typescript": "^5.9.3"
   }
