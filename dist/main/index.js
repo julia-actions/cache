@@ -135981,7 +135981,7 @@ async function run() {
         const deleteOldCachesMode = parseDeleteOldCachesMode(getInput('delete-old-caches'));
         const token = getInput('token');
         const save = getBooleanInput('save');
-        const saveAlways = getInput('save-always') === 'true';
+        const saveAlways = getBooleanInput('save-always');
         const gcpBucket = getInput('gcp-bucket');
         const gcpCompression = parseGcpCompressionInput(getInput('gcp-compression'));
         const keyPrefix = getInput('key-prefix');
@@ -136100,7 +136100,6 @@ async function run() {
         // Get GitHub context from inputs (for post action)
         const repository = getInput('_github-repository') || process.env.GITHUB_REPOSITORY;
         const ref = getInput('_github-ref') || process.env.GITHUB_REF;
-        const defaultBranch = getInput('_github-event-repository-default-branch') || 'main';
         // Save state for post action
         saveState('cache-paths', JSON.stringify(cachePaths));
         saveState('cache-key', key);
@@ -136113,7 +136112,6 @@ async function run() {
         saveState('save-always', saveAlways.toString());
         saveState('repository', repository);
         saveState('ref', ref);
-        saveState('default-branch', defaultBranch);
         saveState('gcp-bucket', gcpBucket);
         saveState('gcp-compression', gcpCompression);
         // Restore cache
