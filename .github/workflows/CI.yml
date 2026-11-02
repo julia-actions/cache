@@ -253,6 +253,31 @@ jobs:
             @assert !isempty(readdir(objcache_dir))
         end
 
+  # Test that an existing cache is restored when save: false
+  test-restore-no-save:
+    needs: test-save-nomatrix
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Restore cache with save disabled
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-save-nomatrix.outputs.cache-name }}
+        save: false
+    - name: Test cache-hit output
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "true"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check packages dir was restored
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isempty(readdir(packages_dir))
+
   test-save-cloned-registry:
     needs: generate-prefix
     runs-on: ubuntu-latest
@@ -426,6 +451,60 @@ jobs:
         @show ENV["cache-hit"]
         # Cache should NOT have been saved because save-always: false and job failed
         @assert ENV["cache-hit"] == "" "Cache should NOT have been saved when save-always: false and job failed"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check Example package was NOT cached
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isdir(joinpath(packages_dir, "Example")) "Example package should NOT be in cache"
+
+  # Test that cache is NOT saved when save: false, even if the job succeeds
+  test-no-save:
+    needs: generate-prefix
+    runs-on: ubuntu-latest
+    outputs:
+      cache-name: ${{ steps.cache-name.outputs.cache-name }}
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Set cache-name
+      id: cache-name
+      run: |
+        echo "cache-name=${{ needs.generate-prefix.outputs.cache-prefix }}-${{ github.job }}" >>"$GITHUB_OUTPUT"
+    - uses: julia-actions/setup-julia@v3
+      with:
+        version: "1"
+    - name: Restore cache with save disabled
+      uses: ./
+      with:
+        cache-name: ${{ steps.cache-name.outputs.cache-name }}
+        save: false
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: Install a package to populate depot
+      shell: julia --color=yes {0}
+      run: |
+        using Pkg
+        Pkg.add(PackageSpec(name="Example", version="0.5"))
+
+  test-no-restore-after-no-save:
+    needs: test-no-save
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - uses: julia-actions/setup-julia@v3
+      with:
+        version: "1"
+    - name: Try to restore cache (should not exist)
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-no-save.outputs.cache-name }}
+        delete-old-caches: ${{ github.event.pull_request.head.repo.fork && 'false' || 'required' }}
+    - name: "Test cache was NOT restored (save: false worked)"
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "" "Cache should NOT have been saved when save: false"
       env:
         cache-hit: ${{ steps.cache.outputs.cache-hit }}
     - name: Check Example package was NOT cached
