@@ -253,6 +253,31 @@ jobs:
             @assert !isempty(readdir(objcache_dir))
         end
 
+  # Test that an existing cache is restored when save: false
+  test-restore-no-save:
+    needs: test-save-nomatrix
+    runs-on: ubuntu-latest
+    steps:
+    - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+    - name: Restore cache with save disabled
+      id: cache
+      uses: ./
+      with:
+        cache-name: ${{ needs.test-save-nomatrix.outputs.cache-name }}
+        save: false
+    - name: Test cache-hit output
+      shell: julia --color=yes {0}
+      run: |
+        @show ENV["cache-hit"]
+        @assert ENV["cache-hit"] == "true"
+      env:
+        cache-hit: ${{ steps.cache.outputs.cache-hit }}
+    - name: Check packages dir was restored
+      shell: julia --color=yes {0}
+      run: |
+        packages_dir = joinpath(first(DEPOT_PATH), "packages")
+        @assert !isempty(readdir(packages_dir))
+
   test-save-cloned-registry:
     needs: generate-prefix
     runs-on: ubuntu-latest

@@ -82,11 +82,11 @@ async function run() {
         const restoreKey = core.getState('restore-key');
         const deleteOldCachesState = core.getState('delete-old-caches');
         const token = core.getState('token');
+        const save = core.getState('save') === 'true';
         const saveAlways = core.getState('save-always') === 'true';
         const cacheMatchedKey = core.getState('cache-matched-key');
         const repository = core.getState('repository');
         const ref = core.getState('ref');
-        const defaultBranch = core.getState('default-branch');
         const gcpBucket = core.getState('gcp-bucket');
         const gcpCompression = core.getState('gcp-compression');
         const useZstd = gcpCompression === 'zstd';
@@ -96,7 +96,7 @@ async function run() {
             return;
         }
 
-        if (core.getState('save') !== 'true') {
+        if (!save) {
             core.info('Saving the cache is disabled (`save: false`). Skipping cache save.');
             return;
         }
@@ -202,11 +202,8 @@ async function run() {
             return;
         }
 
-        // Check if on default branch
-        const isDefaultBranch = ref === `refs/heads/${defaultBranch}`;
-
         // Run Pkg.gc() and handle old caches using the Julia script
-        if (deleteOldCaches && !isDefaultBranch) {
+        if (deleteOldCaches) {
             // GITHUB_ACTION_PATH points to the action root directory
             // __dirname points to dist/post/ when bundled, so go up two levels to get to root
             const actionPath = process.env.GITHUB_ACTION_PATH || path.resolve(__dirname, '..', '..');

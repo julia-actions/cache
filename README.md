@@ -119,7 +119,7 @@ Google Cloud-specific: a cache restored from Google Cloud Storage is unpacked in
 
 In the GitHub Actions cache, a cache saved by a pull request can only be restored by later runs of the same pull request, while a cache saved on the default branch can be restored by all branches and pull requests.
 Since all caches of a repository share one storage limit, caches saved by pull requests can cause GitHub to evict the caches of the default branch.
-To save caches only on the default branch (here `main`) and only restore them everywhere else, use
+To save caches only on the default branch and only restore them everywhere else, use
 
 ```yaml
     - uses: julia-actions/cache@v3
@@ -127,9 +127,12 @@ To save caches only on the default branch (here `main`) and only restore them ev
         save: ${{ github.ref == 'refs/heads/main' }}
 ```
 
+where `main` must be replaced by the name of the default branch of your repository, e.g., `master`.
+Otherwise, no cache is ever saved.
 The workflow must then also run on pushes to the default branch, e.g., with `on: push: branches: [main]`, so that there are caches to restore.
 Pull requests then always start from the cache of the default branch, so any packages they add or change are installed and precompiled again in every run.
-With `save: false`, the post step neither saves the cache nor runs `Pkg.gc()` or deletes old caches, so the `actions: write` permission is not needed.
+With `save: false`, the post step neither saves the cache nor runs `Pkg.gc()` or deletes old caches, so the `actions: write` permission is not needed for pull requests.
+On the default branch, old caches are deleted as described in [Cache Retention](#cache-retention).
 
 ### Cache Garbage Collection
 
