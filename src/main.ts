@@ -43,6 +43,21 @@ function parseGcpCompressionInput(inputVal: string): GcpCompression {
     throw new Error(`Invalid compression value for input 'gcp-compression': '${inputVal}'. Expected 'zstd' or 'gzip'.`);
 }
 
+const durationUnits: Record<string, number> = { s: 1, m: 60, h: 60 * 60, d: 24 * 60 * 60, w: 7 * 24 * 60 * 60 };
+
+// Returns the age in seconds, 'job' for the time since the action started, or 'inf' for no limit.
+function parseObjcacheMaxAgeInput(inputVal: string): number | 'job' | 'inf' {
+    const val = (inputVal || '1w').trim().toLowerCase();
+    if (val === 'job' || val === 'inf') {
+        return val;
+    }
+    const match = /^(\d+(?:\.\d+)?)([smhdw]?)$/.exec(val);
+    if (!match) {
+        throw new Error(`Invalid value for input 'objcache-max-age': '${inputVal}'. Expected a duration such as '30m', '12h', '1d' or '2w', 'job' or 'inf'.`);
+    }
+    return parseFloat(match[1]) * durationUnits[match[2] || 's'];
+}
+
 // Resolves once the child process has exited with status 0.
 function exited(proc: ChildProcess, name: string): Promise<void> {
     return new Promise<void>((resolve, reject) => {
@@ -169,6 +184,7 @@ async function run() {
         const cacheScratchspaces = core.getInput('cache-scratchspaces') === 'true';
         const cacheLogs = core.getInput('cache-logs') === 'true';
         const cacheObjcache = core.getInput('cache-objcache') === 'true';
+        const objcacheMaxAge = parseObjcacheMaxAgeInput(core.getInput('objcache-max-age'));
         const deleteOldCachesMode = parseDeleteOldCachesMode(core.getInput('delete-old-caches'));
         const token = core.getInput('token');
         const saveAlways = core.getInput('save-always') === 'true';
@@ -302,6 +318,9 @@ async function run() {
         core.saveState('restore-key', restoreKey);
         core.saveState('depot', depotPath);
         core.saveState('cache-registries', cacheRegistries.toString());
+        core.saveState('cache-objcache', cacheObjcache.toString());
+        core.saveState('objcache-max-age', objcacheMaxAge.toString());
+        core.saveState('start-time', (Date.now() / 1000).toString());
         core.saveState('delete-old-caches', deleteOldCachesMode);
         core.saveState('token', token);
         core.saveState('save-always', saveAlways.toString());

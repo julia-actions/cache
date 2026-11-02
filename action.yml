@@ -48,6 +48,9 @@ inputs:
   cache-objcache:
     description: Whether to cache the depot's `cache` directory, which holds the LLVM object cache (`objcache`) used by Julia 1.14 and later.
     default: 'true'
+  objcache-max-age:
+    description: Before saving, remove the `objcache` entries not used within this period. A duration such as `30m`, `12h`, `1d` or `2w` (a bare number is seconds), `job` to keep only the entries used since this action started, or `inf` to remove nothing and only compact the file. Needs a Julia version that provides `Base.Experimental.prune_objcache`.
+    default: '1w'
   delete-old-caches:
     description: Whether to delete old caches for the given key.
     default: 'true'
