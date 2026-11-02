@@ -123051,7 +123051,7 @@ class GaxiosInterceptorManager extends Set {
 // WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
 // See the License for the specific language governing permissions and
 // limitations under the License.
-var _a;
+var gaxios_a;
 
 
 
@@ -123117,10 +123117,10 @@ class Gaxios {
         }
         // prepare headers
         if (input && typeof input === 'object' && 'headers' in input) {
-            _a.mergeHeaders(headers, input.headers);
+            gaxios_a.mergeHeaders(headers, input.headers);
         }
         if (init) {
-            _a.mergeHeaders(headers, new Headers(init.headers));
+            gaxios_a.mergeHeaders(headers, new Headers(init.headers));
         }
         // prepare request
         if (typeof input === 'object' && !(input instanceof URL)) {
@@ -123144,7 +123144,7 @@ class Gaxios {
     async _defaultAdapter(config) {
         const fetchImpl = config.fetchImplementation ||
             this.defaults.fetchImplementation ||
-            (await _a.#getFetch());
+            (await gaxios_a.#getFetch());
         // node-fetch v3 warns when `data` is present
         // https://github.com/node-fetch/node-fetch/issues/1000
         const preparedOpts = { ...config };
@@ -123330,7 +123330,7 @@ class Gaxios {
     async #prepareRequest(options) {
         // Prepare Headers - copy in order to not mutate the original objects
         const preparedHeaders = new Headers(this.defaults.headers);
-        _a.mergeHeaders(preparedHeaders, options.headers);
+        gaxios_a.mergeHeaders(preparedHeaders, options.headers);
         // Merge options
         const opts = node_modules_extend(true, {}, this.defaults, options);
         if (!opts.url) {
@@ -123420,7 +123420,7 @@ class Gaxios {
             // don't do any of the following options - use the user-provided agent.
         }
         else if (proxy && this.#urlMayUseProxy(opts.url, opts.noProxy)) {
-            const HttpsProxyAgent = await _a.#getProxyAgent();
+            const HttpsProxyAgent = await gaxios_a.#getProxyAgent();
             if (this.agentCache.has(proxy)) {
                 opts.agent = this.agentCache.get(proxy);
             }
@@ -123594,7 +123594,7 @@ class Gaxios {
         return base;
     }
 }
-_a = Gaxios;
+gaxios_a = Gaxios;
 //# sourceMappingURL=gaxios.js.map
 ;// CONCATENATED MODULE: ./node_modules/gaxios/build/esm/src/index.js
 // Copyright 2018 Google LLC
