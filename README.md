@@ -41,7 +41,8 @@ By default all depot directories called out below are cached.
 - `cache-scratchspaces` - Whether to cache the depot's `scratchspaces` directory. Defaults to `true`.
 - `cache-logs` - Whether to cache the depot's `logs` directory. Defaults to `true`. Helps auto-`Pkg.gc()` keep the cache small.
 - `cache-objcache` - Whether to cache the depot's `cache` directory. Defaults to `true`. On Julia 1.14 and later this holds the LLVM object cache (`objcache`), which stores native code for compiled LLVM IR so it does not have to be regenerated in later runs. Its size is bounded by Julia (512 MB by default, see `JULIA_OBJCACHE_CAPACITY`).
-- `save-always` - Whether to save the cache even if the job fails. Defaults to `true`.
+- `save` - Whether to save the cache at the end of the job. Defaults to `true`. Set to `false` to only restore the cache. See [Saving caches only on the default branch](#saving-caches-only-on-the-default-branch).
+- `save-always` - Whether to save the cache even if the job fails. Defaults to `true`. Has no effect if `save` is `false`.
 - `delete-old-caches` - Whether to delete old caches for the given key. Defaults to `true`.
 - `token` - A [GitHub PAT](https://docs.github.com/en/authentication/keeping-your-account-and-data-secure/managing-your-personal-access-tokens). Defaults to `github.token`. Requires `repo` scope to enable the deletion of old caches.
 
@@ -113,6 +114,22 @@ If you prefer the old behavior where caches are only saved on successful jobs, s
 > This behavior was changed in v3, which switched from a composite action to a JavaScript action to enable proper post-step cache saving regardless of job status. In v2, saving on failure required a manual workaround with `actions/cache/save`. See https://github.com/julia-actions/cache/pull/169.
 
 Google Cloud-specific: a cache restored from Google Cloud Storage is unpacked into a staging directory inside the depot and only moved into place once the whole archive has arrived, so a restore that fails part-way (for example because the connection drops) leaves the depot as it was. As on the GitHub cache path, a restore that does not complete is never saved at the end of the job, and cached registries are not restored over registries already in the depot.
+
+### Saving caches only on the default branch
+
+In the GitHub Actions cache, a cache saved by a pull request can only be restored by later runs of the same pull request, while a cache saved on the default branch can be restored by all branches and pull requests.
+Since all caches of a repository share one storage limit, caches saved by pull requests can cause GitHub to evict the caches of the default branch.
+To save caches only on the default branch (here `main`) and only restore them everywhere else, use
+
+```yaml
+    - uses: julia-actions/cache@v3
+      with:
+        save: ${{ github.ref == 'refs/heads/main' }}
+```
+
+The workflow must then also run on pushes to the default branch, e.g., with `on: push: branches: [main]`, so that there are caches to restore.
+Pull requests then always start from the cache of the default branch, so any packages they add or change are installed and precompiled again in every run.
+With `save: false`, the post step neither saves the cache nor runs `Pkg.gc()` or deletes old caches, so the `actions: write` permission is not needed.
 
 ### Cache Garbage Collection
 

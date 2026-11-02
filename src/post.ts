@@ -96,6 +96,11 @@ async function run() {
             return;
         }
 
+        if (core.getState('save') !== 'true') {
+            core.info('Saving the cache is disabled (`save: false`). Skipping cache save.');
+            return;
+        }
+
         // Never save a depot that may contain a partially restored cache, e.g., because the
         // job was cancelled while restoring. That would poison the cache for later runs.
         if (core.getState('restore-complete') !== 'true') {

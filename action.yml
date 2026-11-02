@@ -54,8 +54,13 @@ inputs:
   token:
     description: A GitHub PAT. Requires `repo` scope to enable the deletion of old caches.
     default: ${{ github.token }}
+  save:
+    description: >-
+      Whether to save the cache at the end of the job. Set to false to only restore the cache.
+      Set to the expression `github.ref == 'refs/heads/main'` to save caches only on the main branch.
+    default: 'true'
   save-always:
-    description: Save the cache even if the job fails. Set to false to only save cache on successful jobs.
+    description: Save the cache even if the job fails. Set to false to only save cache on successful jobs. Has no effect if `save` is false.
     default: 'true'
   # Internal inputs - do not use directly
   _matrix-json:

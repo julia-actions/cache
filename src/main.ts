@@ -171,6 +171,7 @@ async function run() {
         const cacheObjcache = core.getInput('cache-objcache') === 'true';
         const deleteOldCachesMode = parseDeleteOldCachesMode(core.getInput('delete-old-caches'));
         const token = core.getInput('token');
+        const save = core.getBooleanInput('save');
         const saveAlways = core.getInput('save-always') === 'true';
         const gcpBucket = core.getInput('gcp-bucket');
         const gcpCompression = parseGcpCompressionInput(core.getInput('gcp-compression'));
@@ -304,6 +305,7 @@ async function run() {
         core.saveState('cache-registries', cacheRegistries.toString());
         core.saveState('delete-old-caches', deleteOldCachesMode);
         core.saveState('token', token);
+        core.saveState('save', save.toString());
         core.saveState('save-always', saveAlways.toString());
         core.saveState('repository', repository);
         core.saveState('ref', ref);
